@@ -1,3 +1,6 @@
+# Inanna
+Starting point for Entur Open Source frontend applications. Example only with dummy data.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
