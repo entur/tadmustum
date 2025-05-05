@@ -5,14 +5,12 @@ import { AppBar, IconButton, Toolbar, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import React, { useState } from "react";
-import { useIntl } from "react-intl";
 import logo from "../assets/react.svg";
 import { useSearch } from "./SearchContext";
 import Settings from "./Settings";
 
 const Header: React.FC = () => {
-  const intl = useIntl();
-  const title = intl.formatMessage({ id: "_title" });
+  const title = "Title";
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { searchBox } = useSearch();
