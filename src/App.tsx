@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Home from "./pages/Home";
 import MapView from "./pages/MapView";
 import { SearchProvider } from "./components/SearchContext";
+import DataOverview from "./pages/DataOverview";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Toolbar />
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/data" element={<DataOverview />} />
             <Route path="/map" element={<MapView />} />
           </Routes>
         </Box>

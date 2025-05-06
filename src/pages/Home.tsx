@@ -1,3 +1,3 @@
 export default function Home() {
-  return <div>Welcome to the data centric page!</div>;
+  return <div>Welcome to the Inanna home page!</div>;
 }

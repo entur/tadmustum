@@ -12,6 +12,7 @@ type SideMenuProps = {
 
 const menuItems = [
   { text: "Home", path: "/" },
+  { text: "Data overview", path: "/data" },
   { text: "Map view", path: "/map" },
 ];
 

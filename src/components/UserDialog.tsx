@@ -4,6 +4,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
+import { useAuth } from "../auth/Auth.tsx";
 
 interface UserDialogProps {
   open: boolean;
@@ -11,12 +12,15 @@ interface UserDialogProps {
 }
 
 export default function UserDialog({ open, onClose }: UserDialogProps) {
+  const auth = useAuth();
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>User Account</DialogTitle>
       <DialogContent dividers>
         {/* Add user info or profile settings here */}
-        <Typography variant="body1">User details go here.</Typography>
+        <Typography variant="caption">Username: </Typography>
+        <Typography variant="body1">{auth.user?.name}</Typography>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
