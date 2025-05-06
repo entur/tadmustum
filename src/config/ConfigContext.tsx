@@ -1,4 +1,4 @@
-import type {OidcClientSettings} from "oidc-client-ts";
+import type { OidcClientSettings } from "oidc-client-ts";
 import React, { useContext } from "react";
 
 export interface Config {

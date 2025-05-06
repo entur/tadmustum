@@ -25,13 +25,8 @@ export interface Auth {
  * the auth state.
  */
 export const useAuth = (): Auth => {
-  const {
-    isLoading,
-    isAuthenticated,
-    user,
-    signoutRedirect,
-    signinRedirect,
-  } = useOidcAuth();
+  const { isLoading, isAuthenticated, user, signoutRedirect, signinRedirect } =
+    useOidcAuth();
 
   const { claimsNamespace, preferredNameNamespace } = useConfig();
 

@@ -1,24 +1,25 @@
-import type {Config} from "./ConfigContext";
+import type { Config } from "./ConfigContext";
 
 let fetchedConfig: Config | undefined = undefined;
 
 export const fetchConfig = async (): Promise<Config> => {
-    const overrides: Config = {};
+  const overrides: Config = {};
 
-    if (import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL) {
-        overrides.applicationBaseUrl = import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL;
-    }
+  if (import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL) {
+    overrides.applicationBaseUrl =
+      import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL;
+  }
 
-    if (fetchedConfig) {
-        return Object.assign({}, fetchedConfig, overrides);
-    }
-
-    const response = await fetch(`${import.meta.env.BASE_URL}config.json`);
-    fetchedConfig = await response.json();
-
+  if (fetchedConfig) {
     return Object.assign({}, fetchedConfig, overrides);
+  }
+
+  const response = await fetch(`${import.meta.env.BASE_URL}config.json`);
+  fetchedConfig = await response.json();
+
+  return Object.assign({}, fetchedConfig, overrides);
 };
 
 export const getFetchedConfig = () => {
-    return fetchedConfig;
+  return fetchedConfig;
 };
