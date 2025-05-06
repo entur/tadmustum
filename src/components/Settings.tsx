@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import React, { useState } from "react";
 
-
 const Settings: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -33,41 +32,41 @@ const Settings: React.FC = () => {
   };
 
   return (
-      <>
-        <IconButton
-            aria-label="settings menu"
-            onClick={handleOpen}
-            color="inherit"
-        >
-          <SettingsIcon />
-        </IconButton>
+    <>
+      <IconButton
+        aria-label="settings menu"
+        onClick={handleOpen}
+        color="inherit"
+      >
+        <SettingsIcon />
+      </IconButton>
 
-        <Popover
-            id="settings-menu"
-            open={Boolean(anchorEl)}
-            anchorEl={anchorEl}
-            onClose={handleClose}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-            className="settings-menu-container"
-        >
-          <MenuList dense>
-            <MenuItem onClick={handleGoToMapView} className="settings-menu-item">
-              <MdReport className="settings-icon" />
-              MapView
-            </MenuItem>
-            <Divider />
+      <Popover
+        id="settings-menu"
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        className="settings-menu-container"
+      >
+        <MenuList dense>
+          <MenuItem onClick={handleGoToMapView} className="settings-menu-item">
+            <MdReport className="settings-icon" />
+            MapView
+          </MenuItem>
+          <Divider />
 
-            <MenuItem onClick={handleAuthToggle} className="settings-menu-item">
-              <MdAccount
-                  className="settings-icon"
-                  style={{ color: isAuthenticated ? "#e57373" : "#81c784" }}
-              />
-              {isAuthenticated ? "Logout user" : "Login user"}
-            </MenuItem>
-          </MenuList>
-        </Popover>
-      </>
+          <MenuItem onClick={handleAuthToggle} className="settings-menu-item">
+            <MdAccount
+              className="settings-icon"
+              style={{ color: isAuthenticated ? "#e57373" : "#81c784" }}
+            />
+            {isAuthenticated ? "Logout user" : "Login user"}
+          </MenuItem>
+        </MenuList>
+      </Popover>
+    </>
   );
 };
 

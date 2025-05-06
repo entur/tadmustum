@@ -24,14 +24,15 @@ interface SearchProviderProps {
 }
 
 export const SearchProvider: React.FC<SearchProviderProps> = ({
-                                                                children,
-                                                                initialSearchBox = null,
-                                                              }) => {
-  const [searchBox, setSearchBox] = useState<SearchBoxComponent>(initialSearchBox);
+  children,
+  initialSearchBox = null,
+}) => {
+  const [searchBox, setSearchBox] =
+    useState<SearchBoxComponent>(initialSearchBox);
 
   return (
-      <SearchContext.Provider value={{ searchBox, setSearchBox }}>
-        {children}
-      </SearchContext.Provider>
+    <SearchContext.Provider value={{ searchBox, setSearchBox }}>
+      {children}
+    </SearchContext.Provider>
   );
 };
