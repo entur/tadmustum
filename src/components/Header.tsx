@@ -12,11 +12,13 @@ import SideMenu from "./SideMenu";
 import SettingsDialog from "./SettingsDialog";
 import UserDialog from "./UserDialog";
 import logo from "../assets/react.svg";
+import { useAuth } from "../auth/Auth.tsx";
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const auth = useAuth();
 
   const toggleDrawer = () => setDrawerOpen((o) => !o);
 
@@ -33,7 +35,17 @@ export default function Header() {
           <IconButton color="inherit" onClick={() => setSettingsOpen(true)}>
             <SettingsIcon />
           </IconButton>
-          <IconButton color="inherit" onClick={() => setUserOpen(true)}>
+          <IconButton
+            color="inherit"
+            onClick={() => {
+              console.log("Auth", auth);
+              if (!auth.isAuthenticated) {
+                auth.login();
+              } else {
+                setUserOpen(true);
+              }
+            }}
+          >
             <AccountCircle />
           </IconButton>
           <IconButton color="inherit" onClick={toggleDrawer}>
