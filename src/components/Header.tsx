@@ -1,12 +1,20 @@
 import { useState } from "react";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
-import Box from "@mui/material/Box";
+import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
+  Box,
+  TextField,
+  InputAdornment,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AccountCircle from "@mui/icons-material/AccountCircle";
+import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from "@mui/icons-material/Close";
 
 import SideMenu from "./SideMenu";
 import SettingsDialog from "./SettingsDialog";
@@ -18,54 +26,141 @@ export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const auth = useAuth();
 
-  const toggleDrawer = () => setDrawerOpen((o) => !o);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <>
       <AppBar position="fixed">
         <Toolbar>
-          <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
-            <img src={logo} alt="logo" height={48} />
-            <Typography variant="h6" component="span" sx={{ ml: 1 }}>
-              My App
-            </Typography>
-          </Box>
-          <IconButton color="inherit" onClick={() => setSettingsOpen(true)}>
-            <SettingsIcon />
-          </IconButton>
-          <IconButton
-            color="inherit"
-            onClick={() => {
-              console.log("Auth", auth);
-              if (!auth.isAuthenticated) {
-                auth.login();
-              } else {
-                setUserOpen(true);
-              }
-            }}
-          >
-            <AccountCircle />
-          </IconButton>
-          <IconButton color="inherit" onClick={toggleDrawer}>
-            <MenuIcon />
-          </IconButton>
+          {isMobile && searchActive ? (
+            <Box sx={{ flexGrow: 1 }}>
+              <TextField
+                autoFocus
+                size="small"
+                placeholder="Search…"
+                variant="outlined"
+                fullWidth
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setSearchActive(false);
+                            setSearchQuery("");
+                          }}
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={{ backgroundColor: "#fff" }}
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <img src={logo} alt="logo" height={36} />
+                <Typography variant="h6" component="span" sx={{ ml: 1 }}>
+                  My App
+                </Typography>
+              </Box>
+
+              {!isMobile && (
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    placeholder="Search…"
+                    variant="outlined"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    fullWidth
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{
+                      backgroundColor: "#fff",
+                      width: "100%",
+                      maxWidth: 400,
+                    }}
+                  />
+                </Box>
+              )}
+
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                {isMobile && (
+                  <IconButton
+                    color="inherit"
+                    onClick={() => setSearchActive(true)}
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                )}
+                <IconButton
+                  color="inherit"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <SettingsIcon />
+                </IconButton>
+                <IconButton
+                  color="inherit"
+                  onClick={() =>
+                    auth.isAuthenticated ? setUserOpen(true) : auth.login()
+                  }
+                >
+                  <AccountCircle />
+                </IconButton>
+                <IconButton
+                  color="inherit"
+                  onClick={() => setDrawerOpen((o) => !o)}
+                >
+                  <MenuIcon />
+                </IconButton>
+              </Box>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
-      <SideMenu open={drawerOpen} onClose={toggleDrawer} />
+      <SideMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <SettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
       <UserDialog
         open={userOpen}
-        onClose={() => {
-          auth
-            .logout({ returnTo: `${window.location.origin}/` })
-            .then(() => setUserOpen(false));
-        }}
+        onClose={() =>
+          auth.logout({ returnTo: `${window.location.origin}/` }).then(() => {
+            setUserOpen(false);
+          })
+        }
       />
     </>
   );
