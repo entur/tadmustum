@@ -6,8 +6,12 @@ import Home from "./pages/Home";
 import MapView from "./pages/MapView";
 import { SearchProvider } from "./components/SearchContext";
 import DataOverview from "./pages/DataOverview";
+import { useAuth } from "./auth/Auth";
+import LoginRedirect from "./auth/LoginRedirect";
 
 export default function App() {
+  const auth = useAuth();
+
   return (
     <BrowserRouter>
       <SearchProvider>
@@ -16,7 +20,12 @@ export default function App() {
           <Toolbar />
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/data" element={<DataOverview />} />
+            <Route
+              path="/data"
+              element={
+                auth.isAuthenticated ? <DataOverview /> : <LoginRedirect />
+              }
+            />
             <Route path="/map" element={<MapView />} />
           </Routes>
         </Box>

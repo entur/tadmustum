@@ -25,7 +25,7 @@ export default function UserDialog({ open, onClose }: UserDialogProps) {
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
         <Button onClick={onClose} variant="contained">
-          Edit
+          Log out
         </Button>
       </DialogActions>
     </Dialog>

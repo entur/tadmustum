@@ -59,7 +59,14 @@ export default function Header() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
-      <UserDialog open={userOpen} onClose={() => setUserOpen(false)} />
+      <UserDialog
+        open={userOpen}
+        onClose={() => {
+          auth
+            .logout({ returnTo: `${window.location.origin}/` })
+            .then(() => setUserOpen(false));
+        }}
+      />
     </>
   );
 }
