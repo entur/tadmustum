@@ -81,14 +81,14 @@ export default function Header() {
                 </Typography>
               </Box>
 
-              {!isMobile && (
-                <Box
-                  sx={{
-                    flexGrow: 1,
-                    display: "flex",
-                    justifyContent: "center",
-                  }}
-                >
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                {!isMobile && (
                   <TextField
                     size="small"
                     placeholder="Search…"
@@ -111,10 +111,10 @@ export default function Header() {
                       maxWidth: 400,
                     }}
                   />
-                </Box>
-              )}
+                )}
+              </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Box sx={{ display: "flex", alignItems: "right" }}>
                 {isMobile && (
                   <IconButton
                     color="inherit"
@@ -125,18 +125,19 @@ export default function Header() {
                 )}
                 <IconButton
                   color="inherit"
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  <SettingsIcon />
-                </IconButton>
-                <IconButton
-                  color="inherit"
                   onClick={() =>
                     auth.isAuthenticated ? setUserOpen(true) : auth.login()
                   }
                 >
                   <AccountCircle />
                 </IconButton>
+                <IconButton
+                  color="inherit"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <SettingsIcon />
+                </IconButton>
+
                 <IconButton
                   color="inherit"
                   onClick={() => setDrawerOpen((o) => !o)}
