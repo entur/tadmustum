@@ -27,7 +27,7 @@ export default function Header() {
       <AppBar position="fixed">
         <Toolbar>
           <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
-            <img src={logo} alt="logo" height={32} />
+            <img src={logo} alt="logo" height={48} />
             <Typography variant="h6" component="span" sx={{ ml: 1 }}>
               My App
             </Typography>
