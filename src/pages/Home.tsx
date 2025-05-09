@@ -8,9 +8,10 @@ export default function Home() {
           Welcome to Inanna
         </Typography>
         <Typography variant="subtitle1">
-          Inanna is your React starter kit for Entur applications— providing a
-          consistent, Material-UI based design system and out-of-the-box support
-          for authentication, routing, and common data workflows.
+          Inanna is your React starter kit for Entur Open Source applications—
+          providing a consistent, Material-UI based design system and
+          out-of-the-box support for authentication, routing, and common data
+          workflows.
         </Typography>
         <Typography variant="body1">With Inanna you get:</Typography>
         <Box
