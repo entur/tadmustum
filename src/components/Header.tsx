@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   AppBar,
   Toolbar,
@@ -7,12 +7,13 @@ import {
   Box,
   TextField,
   InputAdornment,
+  Avatar,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SettingsIcon from "@mui/icons-material/Settings";
-import AccountCircle from "@mui/icons-material/AccountCircle";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -32,6 +33,19 @@ export default function Header() {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const initials = useMemo(() => {
+    const profile = auth.user;
+    if (!profile) return "";
+    if ("name" in profile && typeof profile.name === "string") {
+      const parts = profile.name.trim().split(" ");
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return profile.name.slice(0, 2).toUpperCase();
+    }
+    return "";
+  }, [auth.user]);
 
   return (
     <>
@@ -76,19 +90,19 @@ export default function Header() {
             <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <img src={logo} alt="logo" height={36} />
-                <Typography variant="h6" component="span" sx={{ ml: 1 }}>
-                  My App
+                <Typography variant="h6" sx={{ ml: 1 }}>
+                  INANNA
                 </Typography>
               </Box>
 
-              <Box
-                sx={{
-                  flexGrow: 1,
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                {!isMobile && (
+              {!isMobile && (
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
                   <TextField
                     size="small"
                     placeholder="Search…"
@@ -111,10 +125,10 @@ export default function Header() {
                       maxWidth: 400,
                     }}
                   />
-                )}
-              </Box>
+                </Box>
+              )}
 
-              <Box sx={{ display: "flex", alignItems: "right" }}>
+              <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
                 {isMobile && (
                   <IconButton
                     color="inherit"
@@ -123,21 +137,34 @@ export default function Header() {
                     <SearchIcon />
                   </IconButton>
                 )}
+
                 <IconButton
                   color="inherit"
                   onClick={() =>
                     auth.isAuthenticated ? setUserOpen(true) : auth.login()
                   }
                 >
-                  <AccountCircle />
+                  {auth.isAuthenticated && initials ? (
+                    <Avatar
+                      className="avatar"
+                      sx={{
+                        bgcolor: theme.palette.common.white,
+                        color: theme.palette.primary.main,
+                      }}
+                    >
+                      <Typography className="initials">{initials}</Typography>
+                    </Avatar>
+                  ) : (
+                    <AccountCircleIcon />
+                  )}
                 </IconButton>
+
                 <IconButton
                   color="inherit"
                   onClick={() => setSettingsOpen(true)}
                 >
                   <SettingsIcon />
                 </IconButton>
-
                 <IconButton
                   color="inherit"
                   onClick={() => setDrawerOpen((o) => !o)}

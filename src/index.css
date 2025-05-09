@@ -42,3 +42,14 @@ body {
   flex: 1;
   position: relative;
 }
+
+.initials {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+
+}
