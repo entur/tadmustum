@@ -44,12 +44,12 @@ body {
 }
 
 .initials {
-  font-size: 12px;
+  font-size: 11px !important;
   font-weight: bold;
 }
 
 .avatar {
-  width: 24px;
-  height: 24px;
+  width: 24px !important;
+  height: 24px !important;
 
 }
