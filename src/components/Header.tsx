@@ -16,11 +16,9 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
-
 import SideMenu from "./SideMenu";
 import SettingsDialog from "./SettingsDialog";
 import UserDialog from "./UserDialog";
-import logo from "../assets/react.svg";
 import { useAuth } from "../auth/Auth.tsx";
 
 export default function Header() {
@@ -89,7 +87,7 @@ export default function Header() {
           ) : (
             <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <img src={logo} alt="logo" height={36} />
+                <img src={theme.logoUrl} alt="logo" height={36} />
                 <Typography variant="h6" sx={{ ml: 1 }}>
                   INANNA
                 </Typography>
