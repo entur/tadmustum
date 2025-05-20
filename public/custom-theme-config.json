@@ -2,7 +2,8 @@
   "palette": {
     "primary": { "main": "#181C56" },
     "secondary": { "main": "#ff5959" },
-    "background": { "default": "#ffffff" }
+    "background": { "default": "#ffffff" },
+    "info": { "main": "#ff5959" }
   },
   "typography": {
     "fontFamily": "\"Open Sans\", sans-serif",

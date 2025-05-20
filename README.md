@@ -1,57 +1,61 @@
-# Inanna
-Starting point for Entur Open Source frontend applications. Example only with dummy data.
+# Inanna 
 
-# React + TypeScript + Vite
+A Structured Starting Point for Frontend Applications.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+##  What is Inanna?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**Inanna** is an open-source starter template designed to streamline the creation of structured, maintainable, and scalable frontend applications. Leveraging modern best practices, Inanna provides a robust foundational framework that developers can easily customize to kickstart their projects.
 
-## Expanding the ESLint configuration
+###  Core Technologies
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **React** with **TypeScript**
+- **Vite** for fast and efficient builds
+- **Material UI (MUI)** for consistent and configurable UI components
+- **MapLibre** for interactive map functionalities
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Features
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Configurable Theming:**  
+  Customize your application's look and feel dynamically via a simple configuration file—perfect for branding, logos, and color schemes.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+- **Responsive Layout:**  
+  Ensures your application maintains aesthetic appeal across desktop and mobile devices.
+
+- **State Management:**  
+  Integrates modern state management techniques (React Context, optional Redux) for efficient application state handling.
+
+- **Interactive Maps:**  
+  Pre-configured interactive mapping components powered by MapLibre, excellent for building location-based applications.
+
+---
+
+## How to Use Inanna in Your Project
+
+### Getting Started
+
+1. **Clone the repository:**
+   ```
+   git clone https://github.com/entur/inanna.git
+2. **Install dependencies:**
+   ```
+   npm install
+3. **Run the development server::**
+   ```
+   npm run dev
+## Customizing the Project
+
+**Update Theme Configuration:**
+Modify/create custom-theme-config.json to quickly adjust colors, logos, and typography. For an overview of the things you can change to the MUI theme have a look here: https://mui.com/material-ui/customization/default-theme/
+
+**Add New Pages and Components:**
+Follow provided examples (Home.tsx, MapView.tsx) to create your own pages. Components are neatly organized in the components/ directory.
+
+**Customize the Map:**
+Adjust the map view via mapStyle.ts, or add layers and interactivity directly.
+
+**Bring your own icons:**
+Don't want to use the default icons under /icons folder? No problem, just add your own icon with the same name in the /customIcons folder then you have your own icons. **TODO - not done yet**
