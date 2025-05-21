@@ -12,8 +12,8 @@ type SideMenuProps = {
 
 const menuItems = [
   { text: "Home", path: "/" },
-  { text: "Data overview", path: "/data" },
-  { text: "Map view", path: "/map" },
+  { text: "Plan trip", path: "/plan-trip" },
+  { text: "Trips", path: "/trips" },
 ];
 
 export default function SideMenu({ open, onClose }: SideMenuProps) {

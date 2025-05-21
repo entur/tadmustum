@@ -91,7 +91,7 @@ export default function Header() {
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <img src={logo} alt="logo" height={36} />
                 <Typography variant="h6" sx={{ ml: 1 }}>
-                  INANNA
+                  EnTur Car Pooling POC
                 </Typography>
               </Box>
 

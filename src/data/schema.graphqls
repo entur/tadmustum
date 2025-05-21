@@ -1,0 +1,358 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+type Query {
+    userContext: UserContext
+    situationElements(codespace: String!, authority: String!): [SituationElement]
+    cancellations(codespace: String!, authority: String!): [Cancellation]
+    extrajourneys(codespace: String!, authority: String!, showCompletedTrips: Boolean!): [Extrajourney]
+}
+
+type UserContext {
+
+    # Codespaces that the current user has access to
+    allowedCodespaces: [Codespace]
+}
+
+type Codespace {
+    id: String!
+    permissions: [Permission!]!
+}
+
+enum Permission {
+    MESSAGES,
+    CANCELLATIONS,
+    EXTRAJOURNEYS
+}
+
+type Mutation {
+    createOrUpdateSituationElement(codespace: String!, authority: String!, input: SituationElementInput!): String
+    createOrUpdateCancellation(codespace: String!, authority: String!, input: CancellationInput!): String
+    createOrUpdateExtrajourney(codespace: String!, authority: String!, input: ExtrajourneyInput!): String
+}
+
+type SituationElement {
+    id: ID!
+    creationTime: String
+    participantRef: String
+    situationNumber: String
+    source: Source
+    progress: String
+    validityPeriod: ValidityPeriod
+    severity: String
+    reportType: String
+    summary: Text
+    description: Text
+    advice: Text
+    affects: Affects
+    infoLinks: InfoLinks
+}
+
+input SituationElementInput {
+    id: ID
+    creationTime: String
+    participantRef: String
+    situationNumber: String
+    source: SourceInput
+    progress: String
+    validityPeriod: ValidityPeriodInput
+    severity: String
+    reportType: String
+    summary: TextInput
+    description: TextInput
+    advice: TextInput
+    affects: AffectsInput
+    infoLinks: InfoLinksInput
+}
+
+type Source {
+    sourceType: String
+}
+
+input SourceInput {
+    sourceType: String
+}
+
+type ValidityPeriod {
+    startTime: String
+    endTime: String
+}
+
+input ValidityPeriodInput {
+    startTime: String
+    endTime: String
+}
+
+type Text {
+    attributes: Attributes
+    text: String
+}
+
+input TextInput {
+    attributes: AttributesInput
+    text: String
+}
+
+type Attributes {
+    xmlLang: String
+}
+
+input AttributesInput {
+    xmlLang: String
+}
+
+
+type Affects {
+    networks: Networks
+    stopPoints: StopPoints
+    vehicleJourneys: VehicleJourneys
+}
+
+input AffectsInput {
+    networks: NetworksInput
+    stopPoints: StopPointsInput
+    vehicleJourneys: VehicleJourneysInput
+}
+
+type Networks {
+    affectedNetwork: AffectedNetwork
+}
+
+input NetworksInput {
+    affectedNetwork: AffectedNetworkInput
+}
+
+type AffectedNetwork {
+    affectedLine: AffectedLine
+}
+
+input AffectedNetworkInput {
+    affectedLine: AffectedLineInput
+}
+
+type AffectedLine {
+    lineRef: String
+    routes: Routes
+}
+
+input AffectedLineInput {
+    lineRef: String
+    routes: RoutesInput
+}
+
+type Routes {
+    affectedRoute: Route
+}
+
+input RoutesInput {
+    affectedRoute: RouteInput
+}
+
+type Route {
+    stopPoints: StopPoints
+}
+
+input RouteInput {
+    stopPoints: StopPointsInput
+}
+
+type StopPoints {
+    affectedStopPoint: [AffectedStopPoint]
+}
+
+input StopPointsInput {
+    affectedStopPoint: [AffectedStopPointInput]
+}
+
+type AffectedStopPoint {
+    stopPointRef: String
+}
+
+input AffectedStopPointInput {
+    stopPointRef: String
+}
+
+type InfoLinks {
+    infoLink: InfoLink
+}
+
+input InfoLinksInput {
+    infoLink: InfoLinkInput
+}
+
+type InfoLink {
+    uri: String
+    label: String
+}
+
+input InfoLinkInput {
+    uri: String
+    label: String
+}
+
+type VehicleJourneys {
+    affectedVehicleJourney: AffectedVehicleJourney
+}
+
+input VehicleJourneysInput {
+    affectedVehicleJourney: AffectedVehicleJourneyInput
+}
+
+type AffectedVehicleJourney {
+    framedVehicleJourneyRef: FramedVehicleJourneyRef
+    route: Route
+}
+
+input AffectedVehicleJourneyInput {
+    framedVehicleJourneyRef: FramedVehicleJourneyRefInput
+    route: RouteInput
+}
+
+type FramedVehicleJourneyRef {
+    dataFrameRef: String
+    datedVehicleJourneyRef: String
+}
+
+input FramedVehicleJourneyRefInput {
+    dataFrameRef: String
+    datedVehicleJourneyRef: String
+}
+
+type Cancellation {
+    id: ID
+    estimatedVehicleJourney: EstimatedVehicleJourney
+}
+
+type Extrajourney {
+    id: ID
+    estimatedVehicleJourney: EstimatedVehicleJourney
+}
+
+input CancellationInput {
+    id: ID
+    estimatedVehicleJourney: EstimatedVehicleJourneyInput!
+}
+
+input ExtrajourneyInput {
+    id: ID
+    estimatedVehicleJourney: EstimatedVehicleJourneyInput!
+}
+
+type EstimatedVehicleJourney {
+    recordedAtTime: String
+    lineRef: String
+    directionRef: String
+    framedVehicleJourneyRef: FramedVehicleJourneyRef
+    cancellation: Boolean
+    estimatedVehicleJourneyCode: String
+    extraJourney: Boolean
+    vehicleMode: String
+    routeRef: String
+    publishedLineName: String
+    groupOfLinesRef: String
+    operatorRef: String
+    monitored: Boolean
+    dataSource: String
+    estimatedCalls: EstimatedCalls
+    isCompleteStopSequence: Boolean
+    expiresAtEpochMs: Float
+}
+
+input EstimatedVehicleJourneyInput {
+    recordedAtTime: String
+    lineRef: String
+    directionRef: String
+    framedVehicleJourneyRef: FramedVehicleJourneyRefInput
+    cancellation: Boolean
+    estimatedVehicleJourneyCode: String
+    extraJourney: Boolean
+    vehicleMode: String
+    routeRef: String
+    publishedLineName: String
+    groupOfLinesRef: String
+    externalLineRef: String
+    operatorRef: String
+    monitored: Boolean
+    dataSource: String
+    estimatedCalls: EstimatedCallsInput
+    isCompleteStopSequence: Boolean
+    expiresAtEpochMs: Float
+}
+
+type EstimatedCalls {
+    estimatedCall: [EstimatedCall]
+}
+
+input EstimatedCallsInput {
+    estimatedCall: [EstimatedCallInput]
+}
+
+type EstimatedCall {
+    stopPointRef: String
+    order: Int
+    stopPointName: String
+    cancellation: Boolean
+    requestStop: Boolean
+    destinationDisplay: String
+    aimedArrivalTime: String
+    expectedArrivalTime: String
+    aimedDepartureTime: String
+    expectedDepartureTime: String
+    arrivalStatus: String
+    arrivalBoardingActivity: String
+    departureStatus: String
+    departureBoardingActivity: String
+    departureStopAssignment: DepartureStopAssignment
+}
+
+input EstimatedCallInput {
+    stopPointRef: String
+    order: Int
+    stopPointName: String
+    cancellation: Boolean
+    requestStop: Boolean
+    destinationDisplay: String
+    aimedArrivalTime: String
+    expectedArrivalTime: String
+    aimedDepartureTime: String
+    expectedDepartureTime: String
+    arrivalStatus: String
+    arrivalBoardingActivity: String
+    departureStatus: String
+    departureBoardingActivity: String
+    departureStopAssignment: DepartureStopAssignmentInput
+}
+
+type DepartureStopAssignment {
+    expectedFlexibleArea: ExpectedFlexibleArea
+}
+
+input DepartureStopAssignmentInput {
+    expectedFlexibleArea: ExpectedFlexibleAreaInput
+}
+
+type ExpectedFlexibleArea {
+    polygon: Polygon
+}
+
+input ExpectedFlexibleAreaInput {
+    polygon: PolygonInput
+}
+
+type Polygon {
+    exterior: LinearRing
+}
+
+input PolygonInput {
+    exterior: LinearRingInput
+}
+
+type LinearRing {
+    posList: String
+}
+
+input LinearRingInput {
+    posList: String
+}

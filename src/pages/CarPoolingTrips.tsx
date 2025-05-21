@@ -7,7 +7,7 @@ import type {
 } from "../data/StopPlaceContext.tsx";
 import { DataGrid } from "@mui/x-data-grid";
 
-export default function DataOverview() {
+export default function CarPoolingTrips() {
   const [stopPlaces, setStopPlaces] = useState<StopPlaceContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
