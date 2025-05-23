@@ -81,7 +81,6 @@ export default function Header() {
                     ),
                   },
                 }}
-                sx={{ backgroundColor: "#fff" }}
               />
             </Box>
           ) : (
@@ -118,7 +117,6 @@ export default function Header() {
                       },
                     }}
                     sx={{
-                      backgroundColor: "#fff",
                       width: "100%",
                       maxWidth: 400,
                     }}
