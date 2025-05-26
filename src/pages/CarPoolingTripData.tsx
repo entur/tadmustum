@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -15,23 +15,21 @@ import Typography from "@mui/material/Typography";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { Dayjs } from "dayjs";
 import { gql, useMutation } from "@apollo/client";
-import {
-  type Polygon,
-  type FeatureOf,
-} from "@deck.gl-community/editable-layers";
+import type { Feature, Polygon } from "geojson";
+import type { CarPoolingMapMode } from "./CarPoolingMapMode.tsx";
 
 export interface WorkAreaContentProps {
-  departureStop: FeatureOf<Polygon> | null;
-  arrivalStop: FeatureOf<Polygon> | null;
-  onSetDepartureStop: (poly: FeatureOf<Polygon> | null) => void;
-  onSetArrivalStop: (poly: FeatureOf<Polygon> | null) => void;
+  mapDrawMode: CarPoolingMapMode;
+  onAddFlexibleStop: () => void;
+  onRemoveFlexibleStop: (id: string) => void;
+  onStopCreatedCallback: () => null | Feature;
   onSave?: (data: {
     lineName: string;
     destinationDisplay: string;
-    departureDate: Dayjs | null;
+    departureDate: null | Dayjs;
     departureStopName: string;
     destinationStopName: string;
-    arrivalDate: Dayjs | null;
+    arrivalDate: null | Dayjs;
   }) => void;
   onCancel?: () => void;
   onDetailsOpen?: () => void;
@@ -51,21 +49,51 @@ const CREATE_EXTRA_JOURNEY = gql`
   }
 `;
 
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T | undefined>(undefined);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
+
 const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
-  const { departureStop, onSetDepartureStop, arrivalStop, onSetArrivalStop } =
-    stops;
+  const {
+    mapDrawMode,
+    onAddFlexibleStop,
+    onRemoveFlexibleStop,
+    onStopCreatedCallback,
+  } = stops;
   const [lineName, setLineName] = useState<string>("");
   const [departureDate, setDepartureDate] = useState<Dayjs | null>(null);
   const [arrivalDate, setArrivalDate] = useState<Dayjs | null>(null);
   const [destinationDisplay, setDestinationDisplay] = useState<string>("");
   const [departureStopName, setDepartureStopName] = useState<string>("");
   const [destinationStopName, seSetDestinationStopName] = useState<string>("");
+  const [departureStop, setDepartureStop] = useState<Feature | null>(null);
+  const [arrivalStop, setArrivalStop] = useState<Feature | null>(null);
+  const [currentStop, setCurrentStop] = useState<
+    null | "departure" | "arrival"
+  >(null);
+  const prevDrawMode = usePrevious(mapDrawMode);
+
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [createOrUpdateExtrajourney, { loading }] =
     useMutation(CREATE_EXTRA_JOURNEY);
 
   const handleSave = () => {
     // TODO: implement save logic or call onSave prop
+    const departureOuterRing = (departureStop?.geometry as Polygon)
+      .coordinates[0];
+    const departurePoslist = departureOuterRing
+      .map((coord) => coord.join(" "))
+      .join(" ");
+
+    const destinationOuterRing = (arrivalStop?.geometry as Polygon)
+      .coordinates[0];
+    const destinationPoslist = destinationOuterRing
+      .map((coord) => coord.join(" "))
+      .join(" \n");
 
     createOrUpdateExtrajourney({
       variables: {
@@ -95,6 +123,15 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
                   aimedDepartureTime: departureDate,
                   expectedDepartureTime: departureDate,
                   departureBoardingActivity: "boarding",
+                  departureStopAssignment: {
+                    expectedFlexibleArea: {
+                      polygon: {
+                        exterior: {
+                          posList: departurePoslist,
+                        },
+                      },
+                    },
+                  },
                 },
                 {
                   order: 2,
@@ -103,6 +140,15 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
                   aimedArrivalTime: arrivalDate,
                   expectedArrivalTime: arrivalDate,
                   arrivalBoardingActivity: "alighting",
+                  departureStopAssignment: {
+                    expectedFlexibleArea: {
+                      polygon: {
+                        exterior: {
+                          posList: destinationPoslist,
+                        },
+                      },
+                    },
+                  },
                 },
               ],
             },
@@ -110,8 +156,6 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
         },
       },
     }).then();
-
-    console.log({ lineName: lineName });
   };
 
   const handleCancel = () => {
@@ -120,6 +164,8 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
     setDestinationDisplay("");
     setDepartureStopName("");
     seSetDestinationStopName("");
+    removeDepartureStop();
+    removeArrivalStop();
   };
 
   const handleDetailsClose = () => {
@@ -127,11 +173,45 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
   };
 
   const removeDepartureStop = () => {
-    onSetDepartureStop(null);
+    if (departureStop) {
+      onRemoveFlexibleStop(departureStop?.id as string);
+    }
+    setDepartureStop(null);
   };
   const removeArrivalStop = () => {
-    onSetArrivalStop(null);
+    if (arrivalStop) {
+      onRemoveFlexibleStop(arrivalStop?.id as string);
+    }
+    setArrivalStop(null);
   };
+
+  const startAddDepartureStop = () => {
+    setCurrentStop("departure");
+    onAddFlexibleStop();
+  };
+
+  const startAddArrivalStop = () => {
+    setCurrentStop("arrival");
+    onAddFlexibleStop();
+  };
+
+  useEffect(() => {
+    console.log("effect, ", prevDrawMode, mapDrawMode);
+    if (prevDrawMode == "drawing" && mapDrawMode != "drawing") {
+      const stopCreatedCallback = onStopCreatedCallback();
+
+      console.log("Result", stopCreatedCallback);
+      if (currentStop == "departure") {
+        console.log("set departure");
+        setDepartureStop(stopCreatedCallback);
+      } else if (currentStop == "arrival") {
+        console.log("set arrival");
+        setArrivalStop(stopCreatedCallback);
+      }
+      setCurrentStop(null);
+      console.log("mode changed, ", prevDrawMode, mapDrawMode);
+    }
+  }, [currentStop, mapDrawMode, onStopCreatedCallback, prevDrawMode]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
@@ -167,7 +247,11 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
           value={departureDate}
           onChange={(newValue) => setDepartureDate(newValue)}
         />
-        <Button variant="contained" disabled={departureStop != null}>
+        <Button
+          variant="contained"
+          disabled={departureStop != null || mapDrawMode != "viewing"}
+          onClick={startAddDepartureStop}
+        >
           Add stop
         </Button>
         <Button
@@ -194,7 +278,11 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
           value={arrivalDate}
           onChange={(newValue) => setArrivalDate(newValue)}
         />
-        <Button variant="contained" disabled={arrivalStop != null}>
+        <Button
+          variant="contained"
+          disabled={arrivalStop != null || mapDrawMode != "viewing"}
+          onClick={startAddArrivalStop}
+        >
           Add stop
         </Button>
         <Button
