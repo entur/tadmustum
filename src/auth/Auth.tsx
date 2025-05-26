@@ -1,6 +1,5 @@
 import { AuthProvider as OidcAuthProvider } from 'react-oidc-context';
 import { useConfig } from '../config/ConfigContext';
-import { Auth, useAuth } from './authUtils';
 
 /**
  * Wraps AuthProvider from react-oidc-context to add the signing callback
@@ -21,7 +20,3 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </OidcAuthProvider>
   );
 };
-
-// Re-export the Auth interface and useAuth hook
-export type { Auth };
-export { useAuth };

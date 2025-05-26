@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "copy:config": "ncp ./config-dev.json public/config.json",
     "lint": "eslint .",
+    "check": "prettier . --check",
     "format": "prettier --write .",
     "prepare": "husky",
     "preview": "vite preview"

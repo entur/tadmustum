@@ -4,7 +4,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { useAuth } from '../auth/Auth.tsx';
+import { useAuth } from '../auth/index';
 
 interface UserDialogProps {
   open: boolean;

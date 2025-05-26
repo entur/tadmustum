@@ -14,8 +14,10 @@ export default function MapView() {
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
-  const handleMapLoad = (event: { target: MapRef }) => {
-    mapRef.current = event.target;
+  // Use a type assertion to safely handle the map load event
+  const handleMapLoad = (event: { target: unknown }) => {
+    // We know from the library that event.target will be compatible with MapRef
+    mapRef.current = event.target as MapRef;
   };
 
   useEffect(() => {

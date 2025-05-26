@@ -19,7 +19,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import SideMenu from './SideMenu';
 import SettingsDialog from './SettingsDialog';
 import UserDialog from './UserDialog';
-import { useAuth } from '../auth/Auth.tsx';
+import { useAuth } from '../auth/index';
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);

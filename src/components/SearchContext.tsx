@@ -1,15 +1,7 @@
-import React, { createContext, useState } from 'react';
+import React, { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useSearch } from './searchUtils';
-
-type SearchBoxComponent = ReactNode;
-
-interface SearchContextProps {
-  searchBox: SearchBoxComponent;
-  setSearchBox: (component: SearchBoxComponent) => void;
-}
-
-const SearchContext = createContext<SearchContextProps | undefined>(undefined);
+import type { SearchBoxComponent } from './searchTypes';
+import { SearchContext } from './SearchContextInstance';
 
 interface SearchProviderProps {
   children: ReactNode;
@@ -26,6 +18,3 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({
     <SearchContext.Provider value={{ searchBox, setSearchBox }}>{children}</SearchContext.Provider>
   );
 };
-
-// Re-export the hook
-export { useSearch };
