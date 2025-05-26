@@ -1,18 +1,13 @@
 {
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
   "compilerOptions": {
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "importsNotUsedAsValues": "remove",
-    "isolatedModules": false
-  },
-  "include": [
-    "src",               // your code folder
-    "vite.config.ts"     // if you want TS to type-check your Vite config
-  ]
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  }
 }

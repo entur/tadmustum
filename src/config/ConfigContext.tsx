@@ -1,5 +1,5 @@
-import type { OidcClientSettings } from "oidc-client-ts";
-import React, { useContext } from "react";
+import type { OidcClientSettings } from 'oidc-client-ts';
+import React, { useContext } from 'react';
 
 export interface Config {
   applicationBaseUrl?: string;

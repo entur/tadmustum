@@ -9,7 +9,19 @@
     "build": "tsc -b && vite build",
     "copy:config": "ncp ./config-dev.json public/config.json",
     "lint": "eslint .",
+    "check": "prettier . --check",
+    "format": "prettier --write .",
+    "prepare": "husky",
     "preview": "vite preview"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -36,6 +48,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.0.0",
     "ncp": "^2.0.0",
     "prettier": "^3.5.3",
     "typescript": "~5.8.3",

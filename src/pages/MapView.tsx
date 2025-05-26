@@ -1,15 +1,10 @@
-import { useRef, useState, useEffect } from "react";
-import {
-  Map,
-  NavigationControl,
-  GeolocateControl,
-  type MapRef,
-} from "react-map-gl/maplibre";
-import { mapStyle } from "./mapStyle";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useTheme, Box, IconButton } from "@mui/material";
-import { ChevronLeft, ChevronRight } from "@mui/icons-material";
-import WorkAreaContent from "./WorkAreaContent.tsx";
+import { useRef, useState, useEffect } from 'react';
+import { Map, NavigationControl, GeolocateControl, type MapRef } from 'react-map-gl/maplibre';
+import { mapStyle } from './mapStyle';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useTheme, Box, IconButton } from '@mui/material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import WorkAreaContent from './WorkAreaContent.tsx';
 
 export default function MapView() {
   const mapRef = useRef<MapRef>(null);
@@ -19,8 +14,10 @@ export default function MapView() {
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
-  const handleMapLoad = (event: any) => {
-    mapRef.current = event.target;
+  // Use a type assertion to safely handle the map load event
+  const handleMapLoad = (event: { target: unknown }) => {
+    // We know from the library that event.target will be compatible with MapRef
+    mapRef.current = event.target as MapRef;
   };
 
   useEffect(() => {
@@ -34,16 +31,16 @@ export default function MapView() {
     const handleMouseUp = () => {
       setIsResizing(false);
     };
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing, collapsed]);
 
   const toggleSidebar = () => {
-    setCollapsed((prev) => !prev);
+    setCollapsed(prev => !prev);
   };
 
   return (
@@ -79,9 +76,7 @@ export default function MapView() {
           border: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <IconButton size="small">
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </IconButton>
+        <IconButton size="small">{collapsed ? <ChevronRight /> : <ChevronLeft />}</IconButton>
       </Box>
 
       <Box className="map-box">

@@ -1,11 +1,11 @@
-import type { ThemeOptions } from "@mui/material/styles";
+import type { ThemeOptions } from '@mui/material/styles';
 
 export interface ThemeConfig extends ThemeOptions {
   logoUrl: string;
   //add your own custom additions here.
 }
 
-declare module "@mui/material/styles" {
+declare module '@mui/material/styles' {
   interface Theme {
     /** URL from your config.json */
     logoUrl: string;

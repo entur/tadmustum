@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom";
-import Drawer from "@mui/material/Drawer";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
+import { Link } from 'react-router-dom';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 
 type SideMenuProps = {
   open: boolean;
@@ -11,19 +11,14 @@ type SideMenuProps = {
 };
 
 const menuItems = [
-  { text: "Home", path: "/" },
-  { text: "Data overview", path: "/data" },
-  { text: "Map view", path: "/map" },
+  { text: 'Home', path: '/' },
+  { text: 'Data overview', path: '/data' },
+  { text: 'Map view', path: '/map' },
 ];
 
 export default function SideMenu({ open, onClose }: SideMenuProps) {
   return (
-    <Drawer
-      variant="temporary"
-      open={open}
-      onClose={onClose}
-      ModalProps={{ keepMounted: true }}
-    >
+    <Drawer variant="temporary" open={open} onClose={onClose} ModalProps={{ keepMounted: true }}>
       <List>
         {menuItems.map(({ text, path }) => (
           <ListItem key={path} disablePadding>

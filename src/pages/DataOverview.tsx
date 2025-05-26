@@ -1,11 +1,7 @@
-import { useEffect, useState } from "react";
-import { fetchStopPlaces } from "../data/fetchStopPlaces.tsx";
-import type {
-  Name,
-  StopPlace,
-  StopPlaceContext,
-} from "../data/StopPlaceContext.tsx";
-import { DataGrid } from "@mui/x-data-grid";
+import { useEffect, useState } from 'react';
+import { fetchStopPlaces } from '../data/fetchStopPlaces.tsx';
+import type { Name, StopPlace, StopPlaceContext } from '../data/StopPlaceContext.tsx';
+import { DataGrid } from '@mui/x-data-grid';
 
 export default function DataOverview() {
   const [stopPlaces, setStopPlaces] = useState<StopPlaceContext | null>(null);
@@ -14,12 +10,12 @@ export default function DataOverview() {
 
   useEffect(() => {
     fetchStopPlaces()
-      .then((data) => {
+      .then(data => {
         setStopPlaces(data);
         setLoading(false);
       })
       .catch(() => {
-        setError("Failed to fetch data");
+        setError('Failed to fetch data');
         setLoading(false);
       });
   }, []);
@@ -32,15 +28,15 @@ export default function DataOverview() {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  console.log("data", stopPlaces);
+  console.log('data', stopPlaces);
 
   const rows = stopPlaces?.data.stopPlace;
 
   const columns = [
-    { field: "id", headerName: "ID" },
+    { field: 'id', headerName: 'ID' },
     {
-      field: "nameValue",
-      headerName: "Name",
+      field: 'nameValue',
+      headerName: 'Name',
       valueGetter: (_value: Name, row: StopPlace) => row.name.value,
     },
   ];
