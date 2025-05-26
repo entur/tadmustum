@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Box,
   TextField,
@@ -15,9 +15,9 @@ import {
   DialogActions,
   Tooltip,
   IconButton,
-} from "@mui/material";
-import { InfoOutlined } from "@mui/icons-material";
-import Typography from "@mui/material/Typography";
+} from '@mui/material';
+import { InfoOutlined } from '@mui/icons-material';
+import Typography from '@mui/material/Typography';
 
 export interface WorkAreaContentProps {
   onSave?: (data: { name: string; type: string; include: boolean }) => void;
@@ -26,8 +26,8 @@ export interface WorkAreaContentProps {
 }
 
 const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
-  const [name, setName] = useState<string>("");
-  const [type, setType] = useState<string>("train");
+  const [name, setName] = useState<string>('');
+  const [type, setType] = useState<string>('train');
   const [include, setInclude] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
@@ -38,8 +38,8 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
 
   const handleCancel = () => {
     // TODO: implement cancel logic or call onCancel prop
-    setName("");
-    setType("train");
+    setName('');
+    setType('train');
     setInclude(false);
   };
 
@@ -53,17 +53,12 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
       <Typography variant="h5" component="h1">
         Work Area
       </Typography>
 
-      <TextField
-        label="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        fullWidth
-      />
+      <TextField label="Name" value={name} onChange={e => setName(e.target.value)} fullWidth />
 
       <FormControl fullWidth>
         <InputLabel id="type-label">Type</InputLabel>
@@ -71,7 +66,7 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
           labelId="type-label"
           label="Type"
           value={type}
-          onChange={(e) => setType(e.target.value)}
+          onChange={e => setType(e.target.value)}
         >
           <MenuItem value="train">Train</MenuItem>
           <MenuItem value="bus">Bus</MenuItem>
@@ -81,16 +76,11 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
       </FormControl>
 
       <FormControlLabel
-        control={
-          <Checkbox
-            checked={include}
-            onChange={(e) => setInclude(e.target.checked)}
-          />
-        }
+        control={<Checkbox checked={include} onChange={e => setInclude(e.target.checked)} />}
         label="Include"
       />
 
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button variant="contained" onClick={handleSave}>
           Save
         </Button>

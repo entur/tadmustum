@@ -1,4 +1,4 @@
-import type { StopPlaceContext } from "./StopPlaceContext.tsx";
+import type { StopPlaceContext } from './StopPlaceContext.tsx';
 
 let fetchedStopPlaces: StopPlaceContext | undefined = undefined;
 

@@ -1,4 +1,4 @@
-declare module "virtual:theme-config" {
+declare module 'virtual:theme-config' {
   export interface ThemeConfig {
     palette: {
       primary: { main: string };
