@@ -1,5 +1,7 @@
 {
   "applicationBaseUrl": "https://api.dev.entur.io/stop-places/v1/graphql",
+  "deviation-messages-api": "https://api.dev.entur.io/deviation-messages/v2/graphql",
+  "journey-planner-api": "https://api.dev.entur.io/journey-planner/v3/graphql",
   "applicationEnv": "development",
   "claimsNamespace": "https://ror.entur.io/role_assignments",
   "preferredNameNamespace": "https://ror.entur.io/preferred_name",

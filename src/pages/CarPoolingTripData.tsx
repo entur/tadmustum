@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -7,6 +7,9 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   Tooltip,
 } from "@mui/material";
@@ -17,6 +20,7 @@ import { Dayjs } from "dayjs";
 import { gql, useMutation } from "@apollo/client";
 import type { Feature, Polygon } from "geojson";
 import type { CarPoolingMapMode } from "./CarPoolingMapMode.tsx";
+import { useOrganizations } from "../hooks/useOrganizations.tsx";
 
 export interface WorkAreaContentProps {
   mapDrawMode: CarPoolingMapMode;
@@ -64,6 +68,10 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
     onRemoveFlexibleStop,
     onStopCreatedCallback,
   } = stops;
+  const { organizations, allowedCodespaces } = useOrganizations();
+  const [selectedOrganization, setSelectedOrganization] = useState<
+    null | string
+  >(null);
   const [lineName, setLineName] = useState<string>("");
   const [departureDate, setDepartureDate] = useState<Dayjs | null>(null);
   const [arrivalDate, setArrivalDate] = useState<Dayjs | null>(null);
@@ -97,8 +105,8 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
 
     createOrUpdateExtrajourney({
       variables: {
-        codespace: "ENT", // TODO: Remove hard coding
-        authority: "ENT:Authority:ENT", // TODO: Remove hard coding
+        codespace: allowedCodespaces[0].id, // TODO: Remove hard coding
+        authority: selectedOrganization,
         input: {
           estimatedVehicleJourney: {
             recordedAtTime: "", //TODO: Generate iso time stamp
@@ -195,8 +203,7 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
     onAddFlexibleStop();
   };
 
-  useEffect(() => {
-    console.log("effect, ", prevDrawMode, mapDrawMode);
+  const handleFlexibleStopDrawingState = useCallback(() => {
     if (prevDrawMode == "drawing" && mapDrawMode != "drawing") {
       const stopCreatedCallback = onStopCreatedCallback();
 
@@ -213,12 +220,32 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
     }
   }, [currentStop, mapDrawMode, onStopCreatedCallback, prevDrawMode]);
 
+  useEffect(() => {
+    handleFlexibleStopDrawingState();
+
+    if (organizations.length && !selectedOrganization) {
+      setSelectedOrganization(organizations[0].id);
+    }
+  }, [handleFlexibleStopDrawingState, organizations, selectedOrganization]);
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
       <Typography variant="h5" component="h1">
         Trip data
       </Typography>
-
+      <InputLabel id="authority-select-label">Authority</InputLabel>
+      <Select
+        labelId="authority-select-label"
+        value={selectedOrganization}
+        label="Authority"
+        onChange={(e) => setSelectedOrganization(e.target.value)}
+      >
+        {organizations.map((organisation) => (
+          <MenuItem key={organisation.id} value={organisation.id}>
+            {organisation.name}
+          </MenuItem>
+        ))}
+      </Select>
       <TextField
         label="Line name"
         value={lineName}

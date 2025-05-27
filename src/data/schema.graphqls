@@ -3,11 +3,27 @@ schema {
     mutation: Mutation
 }
 
+"Add timing data to prometheus, if Actuator API is enabled"
+directive @timingData on FIELD_DEFINITION
+
 type Query {
+    authorities: [Authority]! @timingData
+
     userContext: UserContext
     situationElements(codespace: String!, authority: String!): [SituationElement]
     cancellations(codespace: String!, authority: String!): [Cancellation]
     extrajourneys(codespace: String!, authority: String!, showCompletedTrips: Boolean!): [Extrajourney]
+}
+
+"Authority involved in public transportation. An organisation under which the responsibility of organising the transport service in a certain area is placed."
+type Authority {
+    fareUrl: String
+    id: ID!
+    lang: String
+    name: String!
+    phone: String
+    timezone: String!
+    url: String
 }
 
 type UserContext {

@@ -7,6 +7,8 @@ export interface Config {
   preferredNameNamespace?: string;
   claimsNamespace?: string;
   oidcConfig?: OidcClientSettings;
+  "deviation-messages-api"?: string;
+  "journey-planner-api"?: string;
 }
 
 export const ConfigContext = React.createContext<Config>({});
