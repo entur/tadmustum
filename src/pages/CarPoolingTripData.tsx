@@ -21,6 +21,7 @@ import { gql, useMutation } from "@apollo/client";
 import type { Feature, Polygon } from "geojson";
 import type { CarPoolingMapMode } from "./CarPoolingMapMode.tsx";
 import { useOrganizations } from "../hooks/useOrganizations.tsx";
+import { useOperators } from "../hooks/useOperators.tsx";
 
 export interface WorkAreaContentProps {
   mapDrawMode: CarPoolingMapMode;
@@ -68,10 +69,10 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
     onRemoveFlexibleStop,
     onStopCreatedCallback,
   } = stops;
-  const { organizations, allowedCodespaces } = useOrganizations();
-  const [selectedOrganization, setSelectedOrganization] = useState<
-    null | string
-  >(null);
+  const { authorities, allowedCodespaces } = useOrganizations();
+  const [selectedAutority, setSelectedAutority] = useState<string>("");
+  const operators = useOperators();
+  const [selectedOperator, setSelectedOperator] = useState<string>("");
   const [lineName, setLineName] = useState<string>("");
   const [departureDate, setDepartureDate] = useState<Dayjs | null>(null);
   const [arrivalDate, setArrivalDate] = useState<Dayjs | null>(null);
@@ -106,7 +107,7 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
     createOrUpdateExtrajourney({
       variables: {
         codespace: allowedCodespaces[0].id, // TODO: Remove hard coding
-        authority: selectedOrganization,
+        authority: selectedAutority,
         input: {
           estimatedVehicleJourney: {
             recordedAtTime: "", //TODO: Generate iso time stamp
@@ -119,7 +120,7 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
             publishedLineName: lineName,
             groupOfLinesRef: "",
             externalLineRef: "",
-            operatorRef: "", // TODO: Pick operator
+            operatorRef: selectedOperator, // TODO: Pick operator
             monitored: true,
             dataSource: "ENT", // TODO: Remove hard coding
             estimatedCalls: {
@@ -223,10 +224,10 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
   useEffect(() => {
     handleFlexibleStopDrawingState();
 
-    if (organizations.length && !selectedOrganization) {
-      setSelectedOrganization(organizations[0].id);
+    if (authorities.length && !selectedAutority) {
+      setSelectedAutority(authorities[0].id);
     }
-  }, [handleFlexibleStopDrawingState, organizations, selectedOrganization]);
+  }, [handleFlexibleStopDrawingState, authorities, selectedAutority]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
@@ -236,13 +237,26 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
       <InputLabel id="authority-select-label">Authority</InputLabel>
       <Select
         labelId="authority-select-label"
-        value={selectedOrganization}
+        value={selectedAutority}
         label="Authority"
-        onChange={(e) => setSelectedOrganization(e.target.value)}
+        onChange={(e) => setSelectedAutority(e.target.value)}
       >
-        {organizations.map((organisation) => (
+        {authorities.map((organisation) => (
           <MenuItem key={organisation.id} value={organisation.id}>
             {organisation.name}
+          </MenuItem>
+        ))}
+      </Select>
+      <InputLabel id="operator-select-label">Operator</InputLabel>
+      <Select
+        labelId="operator-select-label"
+        value={selectedOperator}
+        label="Operator"
+        onChange={(e) => setSelectedOperator(e.target.value)}
+      >
+        {operators.map((operator) => (
+          <MenuItem key={operator.id} value={operator.id}>
+            {operator.name}
           </MenuItem>
         ))}
       </Select>

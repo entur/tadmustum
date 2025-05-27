@@ -39,6 +39,24 @@ const getAuthorities = (uri: string) => async () => {
     .then((response) => response);
 };
 
+const getOperators = (uri: string) => async () => {
+  const client = createClient(uri);
+
+  const query = gql`
+    query GetOperators {
+      operators {
+        id
+        name
+      }
+    }
+  `;
+
+  return client
+    .query({ query })
+    .catch((error) => error)
+    .then((response) => response);
+};
+
 const getUserContext = (uri: string, auth: AuthState) => async () => {
   if (!auth.user?.access_token) {
     throw new Error("Authentication token is missing");
@@ -65,6 +83,7 @@ const getUserContext = (uri: string, auth: AuthState) => async () => {
 
 const api = (config: Config, auth?: AuthState) => ({
   getAuthorities: getAuthorities(config["journey-planner-api"] as string),
+  getOperators: getOperators(config["journey-planner-api"] as string),
   getUserContext: getUserContext(
     config["deviation-messages-api"] as string,
     auth as AuthState,

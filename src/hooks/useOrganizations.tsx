@@ -22,7 +22,7 @@ type Codespace = {
 };
 
 export const useOrganizations: () => {
-  organizations: Organization[];
+  authorities: Organization[];
   allowedCodespaces: Codespace[];
 } = () => {
   const auth = useAuth();
@@ -68,5 +68,5 @@ export const useOrganizations: () => {
     fetchAuthorities().then();
   }, [auth, config]);
 
-  return { organizations, allowedCodespaces };
+  return { authorities: organizations, allowedCodespaces };
 };

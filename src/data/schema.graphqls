@@ -8,6 +8,7 @@ directive @timingData on FIELD_DEFINITION
 
 type Query {
     authorities: [Authority]! @timingData
+    operators: [Operator]! @timingData
 
     userContext: UserContext
     situationElements(codespace: String!, authority: String!): [SituationElement]
@@ -23,6 +24,13 @@ type Authority {
     name: String!
     phone: String
     timezone: String!
+    url: String
+}
+
+type Operator {
+    id: ID!
+    name: String!
+    phone: String
     url: String
 }
 
