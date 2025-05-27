@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  InputLabel,
   MenuItem,
   Select,
   TextField,
@@ -234,26 +233,30 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
       <Typography variant="h5" component="h1">
         Trip data
       </Typography>
-      <InputLabel id="authority-select-label">Authority</InputLabel>
       <Select
         labelId="authority-select-label"
         value={selectedAutority}
-        label="Authority"
+        label="Select an authority"
         onChange={(e) => setSelectedAutority(e.target.value)}
       >
+        <MenuItem value="" disabled>
+          <em>Authority</em>
+        </MenuItem>
         {authorities.map((organisation) => (
           <MenuItem key={organisation.id} value={organisation.id}>
             {organisation.name}
           </MenuItem>
         ))}
       </Select>
-      <InputLabel id="operator-select-label">Operator</InputLabel>
       <Select
         labelId="operator-select-label"
         value={selectedOperator}
-        label="Operator"
+        label="Select an operator"
         onChange={(e) => setSelectedOperator(e.target.value)}
       >
+        <MenuItem value="" disabled>
+          <em>Operator</em>
+        </MenuItem>
         {operators.map((operator) => (
           <MenuItem key={operator.id} value={operator.id}>
             {operator.name}
@@ -273,10 +276,10 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
         fullWidth
       />
 
-      <Box>
-        <Typography variant="h6" component="h2">
-          Departure
-        </Typography>
+      <Typography variant="h6" component="h2">
+        Departure
+      </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
         <TextField
           label="Departure stop name"
           value={departureStopName}
@@ -304,10 +307,10 @@ const CarPoolingTripData: React.FC<WorkAreaContentProps> = (stops) => {
         </Button>
       </Box>
 
-      <Box>
-        <Typography variant="h6" component="h2">
-          Arrival
-        </Typography>
+      <Typography variant="h6" component="h2">
+        Arrival
+      </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
         <TextField
           label="Destination stop name"
           value={destinationStopName}
