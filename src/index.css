@@ -44,8 +44,8 @@ body {
 }
 
 .initials {
-  font-size: 11px !important;
-  font-weight: bold;
+  font-size: 12px !important;
+  font-weight: bold !important;
 }
 
 .avatar {

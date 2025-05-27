@@ -1,0 +1,246 @@
+{
+  "data": {
+    "stopPlace": [
+      {
+        "id": "NSR:StopPlace:31026",
+        "version": "7",
+        "geometry": {
+          "legacyCoordinates": [[6.414846, 60.629528]],
+          "__typename": "GeoJSON"
+        },
+        "name": {
+          "value": "Voss stasjon",
+          "lang": "nor",
+          "__typename": "EmbeddableMultilingualString"
+        },
+        "topographicPlace": {
+          "id": "KVE:TopographicPlace:4621",
+          "name": {
+            "value": "Voss",
+            "__typename": "EmbeddableMultilingualString"
+          },
+          "topographicPlaceType": "municipality",
+          "__typename": "TopographicPlace"
+        },
+        "validBetween": {
+          "fromDate": "2020-02-19T09:58:22.408+0100",
+          "toDate": "2020-02-19T09:58:22.408+0100",
+          "__typename": "ValidBetween"
+        },
+        "modificationEnumeration": "delete",
+        "__typename": "StopPlace",
+        "stopPlaceType": "onstreetBus",
+        "submode": null,
+        "permissions": {
+          "allowedStopPlaceTypes": [],
+          "allowedSubmodes": [],
+          "bannedStopPlaceTypes": [],
+          "bannedSubmodes": [],
+          "canDelete": true,
+          "canEdit": true,
+          "__typename": "EntityPermissions"
+        }
+      },
+      {
+        "id": "NSR:StopPlace:31273",
+        "version": "2",
+        "geometry": {
+          "legacyCoordinates": [[6.407357, 60.629414]],
+          "__typename": "GeoJSON"
+        },
+        "name": {
+          "value": "Gullfjordungsvegen aust",
+          "lang": "nor",
+          "__typename": "EmbeddableMultilingualString"
+        },
+        "topographicPlace": {
+          "id": "KVE:TopographicPlace:4621",
+          "name": {
+            "value": "Voss",
+            "__typename": "EmbeddableMultilingualString"
+          },
+          "topographicPlaceType": "municipality",
+          "__typename": "TopographicPlace"
+        },
+        "validBetween": {
+          "fromDate": "2020-10-12T09:41:35.990+0200",
+          "toDate": "2020-10-12T09:41:35.990+0200",
+          "__typename": "ValidBetween"
+        },
+        "modificationEnumeration": null,
+        "__typename": "StopPlace",
+        "stopPlaceType": "onstreetBus",
+        "submode": null,
+        "permissions": {
+          "allowedStopPlaceTypes": [],
+          "allowedSubmodes": [],
+          "bannedStopPlaceTypes": [],
+          "bannedSubmodes": [],
+          "canDelete": true,
+          "canEdit": true,
+          "__typename": "EntityPermissions"
+        }
+      },
+      {
+        "id": "NSR:StopPlace:440",
+        "version": "10",
+        "geometry": {
+          "legacyCoordinates": [[6.410174, 60.628982]],
+          "__typename": "GeoJSON"
+        },
+        "name": {
+          "value": "Voss stasjon",
+          "lang": "nor",
+          "__typename": "EmbeddableMultilingualString"
+        },
+        "topographicPlace": {
+          "id": "KVE:TopographicPlace:1235",
+          "name": {
+            "value": "Voss",
+            "__typename": "EmbeddableMultilingualString"
+          },
+          "topographicPlaceType": "municipality",
+          "__typename": "TopographicPlace"
+        },
+        "validBetween": {
+          "fromDate": "2018-05-24T15:58:51.000+0200",
+          "toDate": "2019-02-05T11:43:20.999+0100",
+          "__typename": "ValidBetween"
+        },
+        "modificationEnumeration": null,
+        "__typename": "StopPlace",
+        "stopPlaceType": "railStation",
+        "submode": null,
+        "permissions": {
+          "allowedStopPlaceTypes": [],
+          "allowedSubmodes": [],
+          "bannedStopPlaceTypes": [],
+          "bannedSubmodes": [],
+          "canDelete": true,
+          "canEdit": true,
+          "__typename": "EntityPermissions"
+        }
+      },
+      {
+        "id": "NSR:StopPlace:443",
+        "version": "4",
+        "geometry": {
+          "legacyCoordinates": [[6.411315, 60.628953]],
+          "__typename": "GeoJSON"
+        },
+        "name": {
+          "value": "Voss stasjon",
+          "lang": "nor",
+          "__typename": "EmbeddableMultilingualString"
+        },
+        "topographicPlace": {
+          "id": "KVE:TopographicPlace:1235",
+          "name": {
+            "value": "Voss",
+            "__typename": "EmbeddableMultilingualString"
+          },
+          "topographicPlaceType": "municipality",
+          "__typename": "TopographicPlace"
+        },
+        "validBetween": {
+          "fromDate": "2018-02-28T09:54:25.000+0100",
+          "toDate": "2019-02-05T11:43:20.999+0100",
+          "__typename": "ValidBetween"
+        },
+        "modificationEnumeration": null,
+        "__typename": "StopPlace",
+        "stopPlaceType": "onstreetBus",
+        "submode": null,
+        "permissions": {
+          "allowedStopPlaceTypes": [],
+          "allowedSubmodes": [],
+          "bannedStopPlaceTypes": [],
+          "bannedSubmodes": [],
+          "canDelete": true,
+          "canEdit": true,
+          "__typename": "EntityPermissions"
+        }
+      },
+      {
+        "id": "NSR:StopPlace:61047",
+        "version": "4",
+        "geometry": {
+          "legacyCoordinates": [[6.410325, 60.628471]],
+          "__typename": "GeoJSON"
+        },
+        "name": {
+          "value": "Voss stasjon",
+          "lang": "nor",
+          "__typename": "EmbeddableMultilingualString"
+        },
+        "topographicPlace": {
+          "id": "KVE:TopographicPlace:4621",
+          "name": {
+            "value": "Voss",
+            "__typename": "EmbeddableMultilingualString"
+          },
+          "topographicPlaceType": "municipality",
+          "__typename": "TopographicPlace"
+        },
+        "validBetween": {
+          "fromDate": "2020-10-12T09:48:22.000+0200",
+          "toDate": "2020-10-12T09:49:40.432+0200",
+          "__typename": "ValidBetween"
+        },
+        "modificationEnumeration": null,
+        "__typename": "StopPlace",
+        "stopPlaceType": "onstreetBus",
+        "submode": "railReplacementBus",
+        "permissions": {
+          "allowedStopPlaceTypes": [],
+          "allowedSubmodes": [],
+          "bannedStopPlaceTypes": [],
+          "bannedSubmodes": [],
+          "canDelete": true,
+          "canEdit": true,
+          "__typename": "EntityPermissions"
+        }
+      },
+      {
+        "id": "NSR:StopPlace:61391",
+        "version": "1",
+        "geometry": {
+          "legacyCoordinates": [[6.411182, 60.629114]],
+          "__typename": "GeoJSON"
+        },
+        "name": {
+          "value": "Voss stasjon",
+          "lang": "nor",
+          "__typename": "EmbeddableMultilingualString"
+        },
+        "topographicPlace": {
+          "id": "KVE:TopographicPlace:4621",
+          "name": {
+            "value": "Voss",
+            "__typename": "EmbeddableMultilingualString"
+          },
+          "topographicPlaceType": "municipality",
+          "__typename": "TopographicPlace"
+        },
+        "validBetween": {
+          "fromDate": "2021-04-19T15:06:53.000+0200",
+          "toDate": "2021-04-19T15:10:01.564+0200",
+          "__typename": "ValidBetween"
+        },
+        "modificationEnumeration": null,
+        "__typename": "StopPlace",
+        "stopPlaceType": "liftStation",
+        "submode": "telecabin",
+        "permissions": {
+          "allowedStopPlaceTypes": [],
+          "allowedSubmodes": [],
+          "bannedStopPlaceTypes": [],
+          "bannedSubmodes": [],
+          "canDelete": true,
+          "canEdit": true,
+          "__typename": "EntityPermissions"
+        }
+      }
+    ]
+  }
+}

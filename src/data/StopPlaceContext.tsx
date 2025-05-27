@@ -5,10 +5,14 @@ export type Name = {
 export type StopPlace = {
   id: string;
   name: Name;
+  geometry: {
+    legacyCoordinates: [number, number][];
+  };
+  stopPlaceType: string;
 };
 
 export type StopPlaceData = {
-  stopPlace: [StopPlace];
+  stopPlace: StopPlace[];
 };
 
 export type StopPlaceContext = {

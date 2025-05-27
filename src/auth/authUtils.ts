@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth as useOidcAuth } from 'react-oidc-context';
-import { useConfig } from '../config/ConfigContext';
+import { useConfig } from '../utils/ConfigContext.tsx';
 
 /**
  * Auth state facade

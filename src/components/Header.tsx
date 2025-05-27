@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -11,15 +12,13 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import SettingsIcon from '@mui/icons-material/Settings';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import SideMenu from './SideMenu';
 import SettingsDialog from './SettingsDialog';
 import UserDialog from './UserDialog';
-import { useAuth } from '../auth/index';
+import { useAuth } from '../auth';
+import { getIconUrl } from '../data/iconLoader.ts';
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -45,6 +44,15 @@ export default function Header() {
     return '';
   }, [auth.user]);
 
+  const renderIcon = (key: string, size = 24, colorSuffix = '') => (
+    <Box
+      component="img"
+      src={getIconUrl(key)}
+      alt={key}
+      sx={{ width: size, height: size, ...(colorSuffix && { filter: `invert(${colorSuffix})` }) }}
+    />
+  );
+
   return (
     <>
       <AppBar position="fixed">
@@ -61,6 +69,10 @@ export default function Header() {
                 onChange={e => setSearchQuery(e.target.value)}
                 slotProps={{
                   input: {
+                    sx: {
+                      backgroundColor: theme.palette.background.default,
+                    },
+
                     startAdornment: (
                       <InputAdornment position="start">
                         <SearchIcon />
@@ -86,10 +98,20 @@ export default function Header() {
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <img src={theme.logoUrl} alt="logo" height={36} />
-                <Typography variant="h6" sx={{ ml: 1 }}>
-                  INANNA
-                </Typography>
+                <Link
+                  to="/"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                  }}
+                >
+                  <img src={theme.logoUrl} alt="logo" height={theme.logoHeight} />
+                  <Typography variant="h6" sx={{ ml: 1 }}>
+                    {theme.applicationName}
+                  </Typography>
+                </Link>
               </Box>
 
               {!isMobile && (
@@ -109,6 +131,9 @@ export default function Header() {
                     fullWidth
                     slotProps={{
                       input: {
+                        sx: {
+                          backgroundColor: theme.palette.background.default,
+                        },
                         startAdornment: (
                           <InputAdornment position="start">
                             <SearchIcon />
@@ -140,21 +165,22 @@ export default function Header() {
                       className="avatar"
                       sx={{
                         bgcolor: theme.palette.common.white,
-                        color: theme.palette.primary.main,
+                        color: theme.palette.secondary.main,
+                        fontWeight: 'bold',
                       }}
                     >
                       <Typography className="initials">{initials}</Typography>
                     </Avatar>
                   ) : (
-                    <AccountCircleIcon />
+                    renderIcon('user', 28)
                   )}
                 </IconButton>
 
                 <IconButton color="inherit" onClick={() => setSettingsOpen(true)}>
-                  <SettingsIcon />
+                  {renderIcon('settings', 28)}
                 </IconButton>
                 <IconButton color="inherit" onClick={() => setDrawerOpen(o => !o)}>
-                  <MenuIcon />
+                  {renderIcon('menu', 28)}
                 </IconButton>
               </Box>
             </Box>

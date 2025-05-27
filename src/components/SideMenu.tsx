@@ -1,33 +1,114 @@
 import { Link } from 'react-router-dom';
-import Drawer from '@mui/material/Drawer';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+  Divider,
+  Box,
+  Typography,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  styled,
+} from '@mui/material';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import { getIconUrl } from '../data/iconLoader';
 
-type SideMenuProps = {
-  open: boolean;
-  onClose: () => void;
-};
+const DESKTOP_WIDTH = 280;
+
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  '& .MuiDrawer-paper': {
+    boxSizing: 'border-box',
+    backgroundColor: theme.palette.background.paper,
+    transition: theme.transitions.create(['width'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+}));
 
 const menuItems = [
-  { text: 'Home', path: '/' },
-  { text: 'Data overview', path: '/data' },
-  { text: 'Map view', path: '/map' },
+  { text: 'Home', path: '/', iconKey: 'home' },
+  { text: 'Data overview', path: '/data', iconKey: 'data' },
+  { text: 'Map view', path: '/map', iconKey: 'map' },
 ];
 
+interface SideMenuProps {
+  open: boolean;
+  onClose: () => void;
+}
+
 export default function SideMenu({ open, onClose }: SideMenuProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
-    <Drawer variant="temporary" open={open} onClose={onClose} ModalProps={{ keepMounted: true }}>
-      <List>
-        {menuItems.map(({ text, path }) => (
+    <StyledDrawer
+      variant={isMobile ? 'temporary' : 'persistent'}
+      anchor="left"
+      open={open}
+      onClose={onClose}
+      ModalProps={{ keepMounted: true }}
+      slotProps={{
+        paper: {
+          sx: {
+            width: isMobile ? '100%' : DESKTOP_WIDTH,
+            borderRight: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
+          },
+        },
+      }}
+    >
+      <Toolbar
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 1,
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.common.white,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <img src={theme.logoUrl} alt="logo" height={24} />
+          <Typography variant="h6" noWrap sx={{ ml: 1 }}>
+            {theme.applicationName}
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} color="inherit">
+          <ChevronLeftIcon />
+        </IconButton>
+      </Toolbar>
+      <Divider />
+
+      <List disablePadding>
+        {menuItems.map(({ text, path, iconKey }) => (
           <ListItem key={path} disablePadding>
             <ListItemButton component={Link} to={path} onClick={onClose}>
+              <ListItemIcon>
+                <Box
+                  component="img"
+                  src={getIconUrl(iconKey)}
+                  alt={text}
+                  sx={{ width: 24, height: 24 }}
+                />
+              </ListItemIcon>
               <ListItemText primary={text} />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-    </Drawer>
+
+      <Box sx={{ flexGrow: 1 }} />
+      <Divider />
+      <Box p={2} textAlign="center">
+        <Typography variant="caption" color={theme.palette.secondary.main}>
+          {theme.companyName}
+        </Typography>
+      </Box>
+    </StyledDrawer>
   );
 }
