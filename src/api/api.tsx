@@ -1,6 +1,8 @@
 import { ApolloClient, gql, InMemoryCache } from "@apollo/client";
 import type { Config } from "../config/ConfigContext.tsx";
 import type { AuthState } from "react-oidc-context";
+import type { CarPoolingTripDataFormData } from "../pages/CarPoolingTripDataForm.tsx";
+import prepareCarpoolingFormData from "./prepareCarpoolingFormData.tsx";
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
@@ -20,6 +22,43 @@ const createClient = (uri: string, auth?: AuthState) => {
     }),
   });
 };
+
+const createOrUpdateExtrajourney =
+  (uri: string, auth: AuthState, formData: CarPoolingTripDataFormData) =>
+  async () => {
+    console.log("in api");
+    if (!auth.user?.access_token) {
+      throw new Error("Authentication token is missing");
+    }
+    const client = createClient(uri, auth);
+
+    const mutation = gql`
+      mutation CreateOrUpdateExtrajourney(
+        $codespace: String!
+        $authority: String!
+        $input: ExtrajourneyInput!
+      ) {
+        createOrUpdateExtrajourney(
+          codespace: $codespace
+          authority: $authority
+          input: $input
+        )
+      }
+    `;
+
+    const variables = prepareCarpoolingFormData(formData);
+
+    console.log("returning client", variables);
+    return client
+      .mutate({ mutation, variables })
+      .catch((error) => {
+        console.log("error", error);
+      })
+      .then((response) => {
+        console.log("response", response);
+        return response;
+      });
+  };
 
 const getAuthorities = (uri: string) => async () => {
   const client = createClient(uri);
@@ -82,6 +121,12 @@ const getUserContext = (uri: string, auth: AuthState) => async () => {
 };
 
 const api = (config: Config, auth?: AuthState) => ({
+  createOrUpdateExtrajourney: (formData: CarPoolingTripDataFormData) =>
+    createOrUpdateExtrajourney(
+      config["deviation-messages-api"] as string,
+      auth as AuthState,
+      formData,
+    ),
   getAuthorities: getAuthorities(config["journey-planner-api"] as string),
   getOperators: getOperators(config["journey-planner-api"] as string),
   getUserContext: getUserContext(

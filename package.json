@@ -15,6 +15,7 @@
     "@apollo/client": "^3.13.8",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@hookform/resolvers": "^5.0.1",
     "@mapbox/mapbox-gl-draw": "^1.4.3",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",
@@ -27,9 +28,11 @@
     "oidc-client-ts": "^3.2.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-hook-form": "^7.56.4",
     "react-map-gl": "^8.0.4",
     "react-oidc-context": "^3.3.0",
-    "react-router-dom": "^6.30.0"
+    "react-router-dom": "^6.30.0",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

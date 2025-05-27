@@ -26,7 +26,7 @@ export default function CarPoolingTrip() {
   const [drawTool, setDrawTool] = useState<null | MapboxDraw>(null);
 
   const [features, setFeatures] = useState({} as Record<string, Feature>);
-  const [currentFeature, setCurrentFeature] = useState<null | Feature>(null);
+  const [currentFeature, setCurrentFeature] = useState<Feature | null>(null);
 
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(false);
