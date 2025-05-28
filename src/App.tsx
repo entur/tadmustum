@@ -3,7 +3,7 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import DataOverview from './pages/DataOverview';
 import MapView from './pages/MapView';
-import { SearchProvider } from './components';
+import { SearchProvider } from './components/search';
 import { useAuth } from './auth';
 import LoginRedirect from './auth/LoginRedirect';
 import { CssBaseline, Toolbar, Box, ThemeProvider } from '@mui/material';

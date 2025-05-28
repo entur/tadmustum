@@ -15,8 +15,8 @@ import {
   IconButton,
   styled,
 } from '@mui/material';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { getIconUrl } from '../data/iconLoader';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { getIconUrl } from '../utils/iconLoader.ts';
 
 const DESKTOP_WIDTH = 280;
 
@@ -49,7 +49,7 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
   return (
     <StyledDrawer
       variant={isMobile ? 'temporary' : 'persistent'}
-      anchor="left"
+      anchor="right"
       open={open}
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
@@ -57,7 +57,7 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
         paper: {
           sx: {
             width: isMobile ? '100%' : DESKTOP_WIDTH,
-            borderRight: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
+            borderLeft: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
           },
         },
       }}
@@ -79,7 +79,7 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
           </Typography>
         </Box>
         <IconButton onClick={onClose} color="inherit">
-          <ChevronLeftIcon />
+          <ChevronRightIcon />
         </IconButton>
       </Toolbar>
       <Divider />

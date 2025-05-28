@@ -4,14 +4,15 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { useAuth } from '../auth/index';
+import { useAuth } from '../auth';
 
 interface UserDialogProps {
   open: boolean;
   onClose: () => void;
+  onLogout: () => void;
 }
 
-export default function UserDialog({ open, onClose }: UserDialogProps) {
+export default function UserDialog({ open, onClose, onLogout }: UserDialogProps) {
   const auth = useAuth();
 
   return (
@@ -24,7 +25,7 @@ export default function UserDialog({ open, onClose }: UserDialogProps) {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        <Button onClick={onClose} variant="contained">
+        <Button onClick={onLogout} variant="contained">
           Log out
         </Button>
       </DialogActions>

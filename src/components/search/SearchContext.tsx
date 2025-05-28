@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { SearchBoxComponent } from './searchTypes';
-import { SearchContext } from './SearchContextInstance';
+import type { SearchBoxComponent } from './searchTypes.ts';
+import { SearchContext } from './SearchContextInstance.ts';
 
 interface SearchProviderProps {
   children: ReactNode;

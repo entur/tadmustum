@@ -1,10 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
 import { Map, NavigationControl, GeolocateControl, type MapRef } from 'react-map-gl/maplibre';
-import { mapStyle } from './mapStyle';
+import { mapStyle } from '../map/mapStyle.ts';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useTheme, Box, IconButton } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
-import WorkAreaContent from './WorkAreaContent.tsx';
+import WorkAreaContent from '../components/WorkAreaContent.tsx';
 
 export default function MapView() {
   const mapRef = useRef<MapRef>(null);

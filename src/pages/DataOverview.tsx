@@ -1,74 +1,84 @@
-import { useEffect, useState } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
-import { fetchStopPlaces } from '../data/fetchStopPlaces.tsx';
-import type { Name, StopPlace, StopPlaceContext } from '../data/StopPlaceContext.tsx';
-import { getIconUrl } from '../data/iconLoader.ts';
+import {
+  Paper,
+  TableContainer,
+  Table,
+  TableBody,
+  TablePagination,
+  Box,
+  Typography,
+  CircularProgress,
+  Alert,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import DataTableHeader from '../components/data/DataTableHeader.tsx';
+import DataTableRow from '../components/data/DataTableRow.tsx';
+import { useStopPlaces } from '../data/useStopPlaces';
 
-export default function DataOverview() {
-  const [stopPlaces, setStopPlaces] = useState<StopPlaceContext | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function DataOverviewResponsiveTable() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const {
+    data,
+    totalCount,
+    loading,
+    error,
+    order,
+    orderBy,
+    handleRequestSort,
+    page,
+    rowsPerPage,
+    setPage,
+    setRowsPerPage,
+  } = useStopPlaces();
 
-  useEffect(() => {
-    fetchStopPlaces()
-      .then(data => {
-        setStopPlaces(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to fetch data');
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) return <div className="alert alert-info">Loading...</div>;
-  if (error) return <div className="alert alert-danger">{error}</div>;
-
-  const rows = stopPlaces?.data.stopPlace || [];
-
-  const columns = [
-    { field: 'id', headerName: 'ID', width: 200 },
-    {
-      field: 'nameValue',
-      headerName: 'Name',
-      width: 250,
-      valueGetter: (_value: Name, row: StopPlace) => row.name.value,
-    },
-    {
-      field: 'longitude',
-      headerName: 'Longitude',
-      width: 150,
-      valueGetter: (_value: number, row: StopPlace) =>
-        row.geometry.legacyCoordinates?.[0]?.[0] ?? '',
-    },
-    {
-      field: 'latitude',
-      headerName: 'Latitude',
-      width: 150,
-      valueGetter: (_value: number, row: StopPlace) =>
-        row.geometry.legacyCoordinates?.[0]?.[1] ?? '',
-    },
-    {
-      field: 'stopPlaceType',
-      headerName: 'Type',
-      width: 100,
-      renderCell: ({ row }: { row: StopPlace }) => {
-        const url = getIconUrl(row.stopPlaceType);
-
-        return (
-          <img
-            src={url}
-            alt={row.stopPlaceType}
-            style={{ width: 48, height: 48, objectFit: 'contain' }}
-          />
-        );
-      },
-    },
-  ];
+  if (loading)
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    );
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <div style={{ height: 600, width: '100%' }}>
-      <DataGrid rows={rows} columns={columns} />
-    </div>
+    <Paper>
+      <Box p={2}>
+        <Typography variant="h3" align="center">
+          Data display
+        </Typography>
+      </Box>
+      <Box px={2} pb={2}>
+        <Typography>Total entries: {totalCount}</Typography>
+      </Box>
+
+      <TableContainer sx={{ maxHeight: '70vh', overflowX: 'auto' }}>
+        <Table stickyHeader>
+          <DataTableHeader
+            isMobile={isMobile}
+            order={order}
+            orderBy={orderBy}
+            onRequestSort={handleRequestSort}
+          />
+          <TableBody>
+            {data.map(sp => (
+              <DataTableRow key={sp.id} sp={sp} isMobile={isMobile} />
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <TablePagination
+        component="div"
+        count={totalCount}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        onPageChange={(_, p) => setPage(p)}
+        onRowsPerPageChange={e => {
+          setRowsPerPage(+e.target.value);
+          setPage(0);
+        }}
+        rowsPerPageOptions={[10, 25, 50, 100]}
+      />
+    </Paper>
   );
 }

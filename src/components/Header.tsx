@@ -18,7 +18,7 @@ import SideMenu from './SideMenu';
 import SettingsDialog from './SettingsDialog';
 import UserDialog from './UserDialog';
 import { useAuth } from '../auth';
-import { getIconUrl } from '../data/iconLoader.ts';
+import { getIconUrl } from '../utils/iconLoader.ts';
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -108,7 +108,7 @@ export default function Header() {
                   }}
                 >
                   <img src={theme.logoUrl} alt="logo" height={theme.logoHeight} />
-                  <Typography variant="h6" sx={{ ml: 1 }}>
+                  <Typography variant="h6" sx={{ ml: 1, mr: 1, fontWeight: 'bold' }}>
                     {theme.applicationName}
                   </Typography>
                 </Link>
@@ -192,11 +192,12 @@ export default function Header() {
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <UserDialog
         open={userOpen}
-        onClose={() =>
+        onLogout={() =>
           auth.logout({ returnTo: `${window.location.origin}/` }).then(() => {
             setUserOpen(false);
           })
         }
+        onClose={() => setUserOpen(false)}
       />
     </>
   );
