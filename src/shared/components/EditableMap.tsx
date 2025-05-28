@@ -99,7 +99,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
           });
         }
       },
-      [mapMode, props],
+      [props],
     );
 
     const onMapboxDrawSelection = useCallback(
@@ -168,7 +168,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
 
     useEffect(() => {
       emitChangeMapModeEvent(prevMode, mapMode);
-    }, [mapMode]);
+    }, [emitChangeMapModeEvent, mapMode, prevMode]);
 
     useImperativeHandle(ref, () => ({
       drawFeature,

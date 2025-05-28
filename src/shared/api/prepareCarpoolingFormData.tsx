@@ -61,7 +61,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
   input: { estimatedVehicleJourney: EstimatedVehicleJourneyInput };
 } {
   return {
-    codespace: formData.codespace, // TODO: Remove hard coding
+    codespace: formData.codespace,
     authority: formData.authority,
     input: {
       estimatedVehicleJourney: {
@@ -75,7 +75,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         publishedLineName: formData.lineName,
         groupOfLinesRef: "",
         externalLineRef: "",
-        operatorRef: formData.operator, // TODO: Pick operator
+        operatorRef: formData.operator,
         monitored: true,
         dataSource: "ENT", // TODO: Remove hard coding
         estimatedCalls: {
