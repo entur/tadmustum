@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAuth } from "./Auth";
+import { useAuth } from "./Auth.tsx";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useConfig } from "../config/ConfigContext.tsx";
 

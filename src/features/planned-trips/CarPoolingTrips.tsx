@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { fetchStopPlaces } from "../data/fetchStopPlaces.tsx";
+import { fetchStopPlaces } from "../../shared/data/fetchStopPlaces.tsx";
 import type {
   Name,
   StopPlace,
   StopPlaceContext,
-} from "../data/StopPlaceContext.tsx";
+} from "../../shared/data/StopPlaceContext.tsx";
 import { DataGrid } from "@mui/x-data-grid";
 
 export default function CarPoolingTrips() {

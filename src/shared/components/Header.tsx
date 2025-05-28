@@ -12,10 +12,10 @@ import MenuIcon from "@mui/icons-material/Menu";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-import SideMenu from "./SideMenu";
-import SettingsDialog from "./SettingsDialog";
-import UserDialog from "./UserDialog";
-import logo from "../assets/react.svg";
+import SideMenu from "./SideMenu.tsx";
+import SettingsDialog from "./SettingsDialog.tsx";
+import UserDialog from "./UserDialog.tsx";
+import logo from "../../assets/react.svg";
 import { useAuth } from "../auth/Auth.tsx";
 
 export default function Header() {

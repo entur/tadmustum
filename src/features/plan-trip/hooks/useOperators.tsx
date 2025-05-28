@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useConfig } from "../config/ConfigContext";
-import api from "../api/api";
+import { useConfig } from "../../../shared/config/ConfigContext.tsx";
+import api from "../../../shared/api/api.tsx";
 
 export type Operator = {
   id: string;

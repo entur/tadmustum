@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useConfig } from "../config/ConfigContext";
+import { useConfig } from "../config/ConfigContext.tsx";
 import { useAuth } from "react-oidc-context";
 import api from "../api/api.tsx";
 

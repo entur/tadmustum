@@ -1,5 +1,6 @@
+import * as dayjs from "dayjs";
 import { Dayjs } from "dayjs";
-import { useForm, Controller } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
 import {
@@ -14,11 +15,11 @@ import {
 import Typography from "@mui/material/Typography";
 import { useEffect } from "react";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import * as dayjs from "dayjs";
-import { useOrganizations } from "../hooks/useOrganizations.tsx";
+import { useOrganizations } from "../../../shared/hooks/useOrganizations.tsx";
 import { useOperators } from "../hooks/useOperators.tsx";
 import type { Feature } from "geojson";
-import featureToPoslist from "./featureToPoslist.tsx";
+import featureToPoslist from "../../../shared/util/featureToPoslist.tsx";
+import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
 
 declare module "yup" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -71,20 +72,6 @@ const schema = Yup.object({
     ),
   destinationFlexibleStop: Yup.string().required(),
 });
-
-export type CarPoolingTripDataFormData = {
-  codespace: string;
-  authority: string;
-  operator: string;
-  lineName: string;
-  destinationDisplay: string;
-  departureStopName: string;
-  departureDatetime: Dayjs;
-  departureFlexibleStop: string;
-  destinationStopName: string;
-  destinationDatetime: Dayjs;
-  destinationFlexibleStop: string;
-};
 
 export interface CarPoolingTripDataFormProps {
   onAddDeparturestopClick: () => void;

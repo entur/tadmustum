@@ -1,4 +1,4 @@
-import type { CarPoolingTripDataFormData } from "../pages/CarPoolingTripDataForm.tsx";
+import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
 
 interface EstimatedVehicleJourneyInput {
   recordedAtTime: string;

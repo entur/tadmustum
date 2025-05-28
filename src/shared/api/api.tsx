@@ -1,8 +1,8 @@
 import { ApolloClient, gql, InMemoryCache } from "@apollo/client";
 import type { Config } from "../config/ConfigContext.tsx";
 import type { AuthState } from "react-oidc-context";
-import type { CarPoolingTripDataFormData } from "../pages/CarPoolingTripDataForm.tsx";
 import prepareCarpoolingFormData from "./prepareCarpoolingFormData.tsx";
+import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
@@ -26,7 +26,6 @@ const createClient = (uri: string, auth?: AuthState) => {
 const createOrUpdateExtrajourney =
   (uri: string, auth: AuthState, formData: CarPoolingTripDataFormData) =>
   async () => {
-    console.log("in api");
     if (!auth.user?.access_token) {
       throw new Error("Authentication token is missing");
     }
@@ -48,16 +47,10 @@ const createOrUpdateExtrajourney =
 
     const variables = prepareCarpoolingFormData(formData);
 
-    console.log("returning client", variables);
     return client
       .mutate({ mutation, variables })
-      .catch((error) => {
-        console.log("error", error);
-      })
-      .then((response) => {
-        console.log("response", response);
-        return response;
-      });
+      .catch((error) => error)
+      .then((response) => response);
   };
 
 const getAuthorities = (uri: string) => async () => {

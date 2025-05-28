@@ -1,0 +1,196 @@
+import { mapStyle } from "../util/mapStyle.ts";
+import {
+  GeolocateControl,
+  Map,
+  type MapRef,
+  NavigationControl,
+} from "react-map-gl/maplibre";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import type { Feature } from "geojson";
+import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from "../util/MAPBOXDRAW_DEFAULT_CONSTRUCTOR.tsx";
+import type { IControl } from "maplibre-gl";
+import usePrevious from "../util/usePrevious.tsx";
+
+type EditableMapEventType = "editableMap.mapModeChange";
+
+interface EditableMapModeEvent {
+  type: EditableMapEventType;
+}
+
+export interface EditableMapModeChangeEvent extends EditableMapModeEvent {
+  prevMode: MapModes;
+  mode: MapModes;
+  type: "editableMap.mapModeChange";
+}
+
+export type EditableMapCallbacks = {
+  onEditableMapModeChange?: (e: EditableMapModeChangeEvent) => void;
+};
+
+export type EditableMapProps = EditableMapCallbacks & {};
+
+export type MapModes = MapMode[keyof MapMode];
+
+export type EditableMapHandle = {
+  drawFeature: () => void;
+  currentFeature: () => Feature | null;
+  removeFeature: (id: string) => void;
+};
+
+export interface MapMode {
+  Drawing: "drawing";
+  Editing: "editing";
+  Viewing: "viewing";
+}
+
+const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
+  (props, ref) => {
+    const mapRef = useRef<null | MapRef>(null);
+
+    const [mapMode, setMapMode] = useState<MapModes>("viewing");
+    const prevMode = usePrevious<MapModes>(mapMode, mapMode);
+    const [drawTool, setDrawTool] = useState<null | MapboxDraw>(null);
+
+    const [features, setFeatures] = useState({} as Record<string, Feature>);
+    const [currentFeature, setCurrentFeature] = useState<Feature | null>(null);
+
+    const onMapboxDrawUpdate = useCallback(
+      (e: { features: Feature[]; type: string }) => {
+        setFeatures((currFeatures) => {
+          const newFeatures = { ...currFeatures };
+          for (const f of e.features) {
+            newFeatures[f.id as string] = f;
+          }
+          return newFeatures;
+        });
+      },
+      [],
+    );
+    const onMapboxDrawDelete = useCallback((e: { features: Feature[] }) => {
+      setFeatures((currFeatures) => {
+        const newFeatures = { ...currFeatures };
+        for (const f of e.features) {
+          delete newFeatures[f.id as string];
+        }
+        return newFeatures;
+      });
+    }, []);
+
+    const emitChangeMapModeEvent = useCallback(
+      (prevMode: MapModes, newMode: MapModes) => {
+        if (prevMode === newMode) {
+          return;
+        }
+
+        const { onEditableMapModeChange } = props;
+        if (onEditableMapModeChange) {
+          onEditableMapModeChange({
+            prevMode: prevMode,
+            mode: newMode,
+            type: "editableMap.mapModeChange",
+          });
+        }
+      },
+      [mapMode, props],
+    );
+
+    const onMapboxDrawSelection = useCallback(
+      (e: { features: Feature[]; type: string }) => {
+        if (e.features && e.features.length === 1) {
+          setMapMode("editing");
+          setCurrentFeature(e.features[0]);
+        } else {
+          setMapMode("viewing");
+          setCurrentFeature(null);
+        }
+      },
+      [],
+    );
+    const mapBoxDrawDefaultOnAdd = useCallback(
+      (map: MapRef | null): void => {
+        map?.on("draw.create", onMapboxDrawUpdate);
+        map?.on("draw.update", onMapboxDrawUpdate);
+        map?.on("draw.delete", onMapboxDrawDelete);
+        map?.on("draw.selectionchange", onMapboxDrawSelection);
+      },
+      [onMapboxDrawDelete, onMapboxDrawSelection, onMapboxDrawUpdate],
+    );
+    // const mapBoxDrawDefaultOnRemove = useCallback(
+    //   (map: MapRef | null): void => {
+    //     map?.off("draw.create", onUpdate);
+    //     map?.off("draw.update", onUpdate);
+    //     map?.off("draw.delete", onDelete);
+    //   },
+    //   [onDelete, onUpdate],
+    // );
+
+    const drawFeature = useCallback(() => {
+      setMapMode("drawing");
+
+      if (drawTool === null) {
+        const mapBoxDraw = new MapboxDraw(MAPBOXDRAW_DEFAULT_CONSTRUCTOR);
+        mapBoxDrawDefaultOnAdd(mapRef.current);
+        mapRef.current?.addControl(
+          mapBoxDraw as unknown as IControl,
+          "top-left",
+        );
+        setDrawTool(mapBoxDraw);
+        mapBoxDraw.changeMode("draw_polygon");
+      } else {
+        (drawTool as unknown as MapboxDraw).changeMode("draw_polygon");
+      }
+    }, [drawTool, mapBoxDrawDefaultOnAdd]);
+
+    const removeFeature = useCallback(
+      (id: string) => {
+        if (drawTool) {
+          const newFeatures = { ...features };
+          delete newFeatures[id];
+          setFeatures(newFeatures);
+          drawTool.delete([id]);
+
+          const noFeatures = Object.values(newFeatures).length === 0;
+          if (noFeatures) {
+            setMapMode("viewing");
+          }
+        }
+      },
+      [drawTool, features],
+    );
+
+    useEffect(() => {
+      emitChangeMapModeEvent(prevMode, mapMode);
+    }, [mapMode]);
+
+    useImperativeHandle(ref, () => ({
+      drawFeature,
+      currentFeature: () => currentFeature,
+      removeFeature,
+    }));
+
+    return (
+      <Map
+        ref={mapRef}
+        initialViewState={{
+          longitude: 10.813701152801514,
+          latitude: 59.90490269568961,
+          zoom: 8,
+        }}
+        mapStyle={mapStyle}
+      >
+        <NavigationControl position="bottom-right" />
+        <GeolocateControl position="bottom-right" />
+      </Map>
+    );
+  },
+);
+
+export default EditableMap;

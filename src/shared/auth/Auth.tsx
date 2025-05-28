@@ -3,7 +3,7 @@ import {
   AuthProvider as OidcAuthProvider,
   useAuth as useOidcAuth,
 } from "react-oidc-context";
-import { useConfig } from "../config/ConfigContext";
+import { useConfig } from "../config/ConfigContext.tsx";
 
 /**
  * Auth state facade
