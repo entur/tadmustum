@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { InfoOutlined } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 export interface WorkAreaContentProps {
   onSave?: (data: { name: string; type: string; include: boolean }) => void;
@@ -26,18 +27,15 @@ export interface WorkAreaContentProps {
 }
 
 const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
+  const { t } = useTranslation(); // Initialize t function
   const [name, setName] = useState<string>('');
-  const [type, setType] = useState<string>('train');
+  const [type, setType] = useState<string>('train'); // Default value for the select
   const [include, setInclude] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
-  const handleSave = () => {
-    // TODO: implement save logic or call onSave prop
-    console.log({ name, type, include });
-  };
+  const handleSave = () => {};
 
   const handleCancel = () => {
-    // TODO: implement cancel logic or call onCancel prop
     setName('');
     setType('train');
     setInclude(false);
@@ -45,52 +43,64 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
 
   const handleDetailsOpen = () => {
     setDialogOpen(true);
-    // TODO: call onDetailsOpen prop if provided
   };
 
   const handleDetailsClose = () => {
     setDialogOpen(false);
   };
 
+  const typeOptions = [
+    { value: 'train', labelKey: 'workArea.types.train' },
+    { value: 'bus', labelKey: 'workArea.types.bus' },
+    { value: 'ferry', labelKey: 'workArea.types.ferry' },
+    { value: 'tram', labelKey: 'workArea.types.tram' },
+  ];
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
       <Typography variant="h5" component="h1">
-        Work Area
+        {t('workArea.title', 'Work Area')}
       </Typography>
 
-      <TextField label="Name" value={name} onChange={e => setName(e.target.value)} fullWidth />
+      <TextField
+        label={t('workArea.nameLabel', 'Name')}
+        value={name}
+        onChange={e => setName(e.target.value)}
+        fullWidth
+      />
 
       <FormControl fullWidth>
-        <InputLabel id="type-label">Type</InputLabel>
+        <InputLabel id="type-label">{t('workArea.typeLabel', 'Type')}</InputLabel>
         <Select
           labelId="type-label"
-          label="Type"
+          label={t('workArea.typeLabel', 'Type')}
           value={type}
           onChange={e => setType(e.target.value)}
         >
-          <MenuItem value="train">Train</MenuItem>
-          <MenuItem value="bus">Bus</MenuItem>
-          <MenuItem value="ferry">Ferry</MenuItem>
-          <MenuItem value="tram">Tram</MenuItem>
+          {typeOptions.map(option => (
+            <MenuItem key={option.value} value={option.value}>
+              {t(option.labelKey, option.value.charAt(0).toUpperCase() + option.value.slice(1))}
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
 
       <FormControlLabel
         control={<Checkbox checked={include} onChange={e => setInclude(e.target.checked)} />}
-        label="Include"
+        label={t('workArea.includeLabel', 'Include')}
       />
 
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button variant="contained" onClick={handleSave}>
-          Save
+          {t('save')}
         </Button>
         <Button variant="outlined" onClick={handleCancel}>
-          Cancel
+          {t('cancel')}
         </Button>
         <Button variant="text" onClick={handleDetailsOpen}>
-          Details
+          {t('details')}
         </Button>
-        <Tooltip title="More info">
+        <Tooltip title={t('workArea.moreInfoTooltip', 'More info')}>
           <IconButton>
             <InfoOutlined />
           </IconButton>
@@ -98,10 +108,10 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
       </Box>
 
       <Dialog open={dialogOpen} onClose={handleDetailsClose} fullWidth>
-        <DialogTitle>Details</DialogTitle>
+        <DialogTitle>{t('details')}</DialogTitle>
         <DialogContent>{/* TODO: add details content here */}</DialogContent>
         <DialogActions>
-          <Button onClick={handleDetailsClose}>Close</Button>
+          <Button onClick={handleDetailsClose}>{t('close', 'Close')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

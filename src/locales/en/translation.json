@@ -1,6 +1,8 @@
 {
   "close": "Close",
   "save": "Save",
+  "cancel": "Cancel",
+  "details": "Details",
 
   "map": "Map view",
 
@@ -53,5 +55,15 @@
   "home.features.ui.headline": "Themeable & Accessible",
   "home.features.ui.description": "A themeable, accessible UI foundation so you can focus on your unique business logic—not boilerplate.",
   "home.features.localization.headline": "Multi-Language Support",
-  "home.features.localization.description": "Experience the application in your preferred language with the localization feature"
+  "home.features.localization.description": "Experience the application in your preferred language with the localization feature",
+
+  "workArea.title": "Work area",
+  "workArea.nameLabel": "Name",
+  "workArea.typeLabel": "Type",
+  "workArea.types.train": "Train",
+  "workArea.types.bus": "Bus",
+  "workArea.types.ferry": "Ferry",
+  "workArea.types.tram": "Tram",
+  "workArea.includeLabel": "Include",
+  "workArea.moreInfoTooltip": "More info"
 }

@@ -1,6 +1,8 @@
 {
   "close": "Lukk",
   "save": "Lagre",
+  "cancel": "Avbryt",
+  "details": "Detaljer",
 
   "map": "Kartvisning",
 
@@ -53,5 +55,15 @@
   "home.features.ui.headline": "Tema-basert & tilgjengelig",
   "home.features.ui.description": "Et tema-basert UI-fundament slik at du kan fokusere på din unike forretningslogikk – ikke standardkode.",
   "home.features.localization.headline": "Støtte for flere språk",
-  "home.features.localization.description": "Opplev applikasjonen på ditt foretrukne språk med lokaliseringsfunksjonen. Også støtte for RTL-språk."
+  "home.features.localization.description": "Opplev applikasjonen på ditt foretrukne språk med lokaliseringsfunksjonen. Også støtte for RTL-språk.",
+
+  "workArea.title": "Arbeidsområde",
+  "workArea.nameLabel": "Navn",
+  "workArea.typeLabel": "Type",
+  "workArea.types.train": "Tog",
+  "workArea.types.bus": "Buss",
+  "workArea.types.ferry": "Ferge",
+  "workArea.types.tram": "Trikk",
+  "workArea.includeLabel": "Inkluder",
+  "workArea.moreInfoTooltip": "Mer info"
 }
