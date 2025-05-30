@@ -5,6 +5,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth';
+import { useTranslation } from 'react-i18next';
 
 interface UserDialogProps {
   open: boolean;
@@ -13,20 +14,22 @@ interface UserDialogProps {
 }
 
 export default function UserDialog({ open, onClose, onLogout }: UserDialogProps) {
+  const { t } = useTranslation();
   const auth = useAuth();
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>User Account</DialogTitle>
+      <DialogTitle>{t('user.userAccount')}</DialogTitle>
       <DialogContent dividers>
-        {/* Add user info or profile settings here */}
-        <Typography variant="caption">Username: </Typography>
+        <Typography variant="caption">{t('user.name')}: </Typography>
         <Typography variant="body1">{auth.user?.name}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
         <Button onClick={onLogout} variant="contained">
-          Log out
+          {t('user.logout')}
+        </Button>
+        <Button onClick={onClose} variant="outlined">
+          {t('close')}
         </Button>
       </DialogActions>
     </Dialog>

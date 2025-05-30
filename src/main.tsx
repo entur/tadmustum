@@ -7,6 +7,8 @@ import { ConfigContext } from './utils/ConfigContext.tsx';
 import { AuthProvider } from './auth';
 import { CustomizationProvider } from './utils/CustomizationContext.tsx';
 
+import './i18n';
+
 fetchConfig().then(config => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

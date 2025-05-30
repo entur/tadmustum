@@ -19,6 +19,7 @@ import SettingsDialog from './SettingsDialog';
 import UserDialog from './UserDialog';
 import { useAuth } from '../auth';
 import { getIconUrl } from '../utils/iconLoader.ts';
+import { useTranslation } from 'react-i18next';
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -27,6 +28,7 @@ export default function Header() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const auth = useAuth();
+  const { t } = useTranslation();
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -62,7 +64,7 @@ export default function Header() {
               <TextField
                 autoFocus
                 size="small"
-                placeholder="Search…"
+                placeholder={t('search.searchPlaceholder')}
                 variant="outlined"
                 fullWidth
                 value={searchQuery}
@@ -124,7 +126,7 @@ export default function Header() {
                 >
                   <TextField
                     size="small"
-                    placeholder="Search…"
+                    placeholder={t('search.searchPlaceholder')}
                     variant="outlined"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}

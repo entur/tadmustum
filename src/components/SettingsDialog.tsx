@@ -1,13 +1,20 @@
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
-import Box from '@mui/material/Box';
-import { useCustomization } from '../utils/CustomizationContext.tsx';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Switch,
+  Box,
+  FormControl,
+  Select,
+  MenuItem,
+  Stack,
+  type SelectChangeEvent,
+} from '@mui/material';
+import { useCustomization } from '../utils/CustomizationContext';
+import { useTranslation } from 'react-i18next';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -16,28 +23,46 @@ interface SettingsDialogProps {
 
 export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const { useCustomFeatures, toggleCustomFeatures } = useCustomization();
+  const { i18n, t } = useTranslation();
+
+  const handleLanguageChange = (event: SelectChangeEvent) => {
+    i18n.changeLanguage(event.target.value as string);
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Settings</DialogTitle>
+      <DialogTitle>{t('settings')}</DialogTitle>
       <DialogContent dividers>
-        <Typography variant="body1">Settings content goes here.</Typography>
-        <Box sx={{ mt: 2 }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={useCustomFeatures}
-                onChange={toggleCustomFeatures}
-                name="customFeaturesSwitch"
-              />
-            }
-            label="Enable Custom Theme & Icons"
-          />
-        </Box>
+        <Stack spacing={3}>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography>{t('settings.enableCustomTheme')}</Typography>
+            <Switch
+              checked={useCustomFeatures}
+              onChange={toggleCustomFeatures}
+              name="customFeaturesSwitch"
+            />
+          </Box>
+
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography>{t('settings.language')}</Typography>
+            <FormControl>
+              <Select
+                labelId="language-select-label"
+                value={i18n.resolvedLanguage}
+                onChange={handleLanguageChange}
+                label={t('settings.language')}
+                notched={false}
+              >
+                <MenuItem value="en">English</MenuItem>
+                <MenuItem value="nb">Norsk (Bokmål)</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-        <Button onClick={onClose} variant="contained">
-          Save
+        <Button variant="outlined" onClick={onClose}>
+          {t('close')}
         </Button>
       </DialogActions>
     </Dialog>

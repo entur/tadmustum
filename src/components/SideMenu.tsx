@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getIconUrl } from '../utils/iconLoader.ts';
+import { useTranslation } from 'react-i18next';
 
 const DESKTOP_WIDTH = 280;
 
@@ -32,9 +33,9 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 }));
 
 const menuItems = [
-  { text: 'Home', path: '/', iconKey: 'home' },
-  { text: 'Data overview', path: '/data', iconKey: 'data' },
-  { text: 'Map view', path: '/map', iconKey: 'map' },
+  { textKey: 'home', path: '/', iconKey: 'home' },
+  { textKey: 'data', path: '/data', iconKey: 'data' },
+  { textKey: 'map', path: '/map', iconKey: 'map' },
 ];
 
 interface SideMenuProps {
@@ -43,6 +44,7 @@ interface SideMenuProps {
 }
 
 export default function SideMenu({ open, onClose }: SideMenuProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -85,18 +87,18 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
       <Divider />
 
       <List disablePadding>
-        {menuItems.map(({ text, path, iconKey }) => (
+        {menuItems.map(({ textKey, path, iconKey }) => (
           <ListItem key={path} disablePadding>
             <ListItemButton component={Link} to={path} onClick={onClose}>
               <ListItemIcon>
                 <Box
                   component="img"
                   src={getIconUrl(iconKey)}
-                  alt={text}
+                  alt={t(textKey)}
                   sx={{ width: 24, height: 24 }}
                 />
               </ListItemIcon>
-              <ListItemText primary={text} />
+              <ListItemText primary={t(textKey)} />
             </ListItemButton>
           </ListItem>
         ))}

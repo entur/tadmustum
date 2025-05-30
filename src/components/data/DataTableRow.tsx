@@ -4,6 +4,7 @@ import type { StopPlace } from '../../data/StopPlaceContext.tsx';
 import DataTableDetail from './DataTableDetail.tsx';
 import { useState } from 'react';
 import { getIconUrl } from '../../utils/iconLoader.ts';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   sp: StopPlace;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function DataTableRow({ sp, isMobile }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [lng, lat] = sp.geometry.legacyCoordinates?.[0] ?? ['', ''];
   const iconUrl = getIconUrl(sp.stopPlaceType);
@@ -35,15 +37,20 @@ export default function DataTableRow({ sp, isMobile }: Props) {
         {!isMobile && <TableCell>{lat || '—'}</TableCell>}
         {!isMobile && (
           <TableCell>
-            <Box component="img" src={iconUrl} alt={sp.stopPlaceType} sx={{ width: 32 }} />
+            <Box
+              component="img"
+              src={iconUrl}
+              alt={t('data.table.row.typeIconAlt', 'Stop place type icon')}
+              sx={{ width: 32 }}
+            />
           </TableCell>
         )}
       </TableRow>
       {isMobile && (
         <DataTableDetail
           open={open}
-          lng={lng}
-          lat={lat}
+          lng={lng as number}
+          lat={lat as number}
           iconUrl={iconUrl}
           stopPlaceType={sp.stopPlaceType}
         />
