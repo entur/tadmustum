@@ -66,15 +66,15 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
     input: {
       estimatedVehicleJourney: {
         recordedAtTime: "", //TODO: Generate iso time stamp
-        lineRef: "", // TODO: Generate CodeSpaced "ENT:LINE" UUID reference
+        lineRef: "", // TODO: Generate CodeSpaced "ENT:Line:<uuid>" UUID reference
         directionRef: "0",
-        estimatedVehicleJourneyCode: "", // TODO: ...
+        estimatedVehicleJourneyCode: "", // TODO: Generate "<codespace>:ServiceJourney:<uuid>".
         extraJourney: true,
         vehicleMode: "car",
-        routeRef: "", // TODO: ...
+        routeRef: "", // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
         publishedLineName: formData.lineName,
-        groupOfLinesRef: "",
-        externalLineRef: "",
+        groupOfLinesRef: "", // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
+        externalLineRef: "", // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
         operatorRef: formData.operator,
         monitored: true,
         dataSource: "ENT", // TODO: Remove hard coding
