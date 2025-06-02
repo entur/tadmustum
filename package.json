@@ -7,7 +7,7 @@
     "predev": "run-p --race copy:config",
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "copy:config": "ncp ./config-dev.json public/config.json",
+    "copy:config": "ncp .github/environments/config-dev.json public/config.json",
     "lint": "eslint .",
     "preview": "vite preview"
   },
