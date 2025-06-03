@@ -41,7 +41,16 @@ export default function App() {
                       )
                     }
                   />
-                  <Route path="/plan-trip" element={<CarPoolingTrip />} />
+                  <Route
+                    path="/plan-trip"
+                    element={
+                      auth.isAuthenticated ? (
+                        <CarPoolingTrip />
+                      ) : (
+                        <LoginRedirect />
+                      )
+                    }
+                  />
                 </Routes>
               </Box>
             </Box>
