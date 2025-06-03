@@ -5,38 +5,42 @@ export default function Home() {
     <Container maxWidth="md">
       <Box sx={{ my: 8, textAlign: "center" }}>
         <Typography variant="h3" component="h1" gutterBottom>
-          Welcome to Inanna
+          Welcome to Tadmuštum
         </Typography>
         <Typography variant="subtitle1">
-          Inanna is your React starter kit for Entur applications— providing a
-          consistent, Material-UI based design system and out-of-the-box support
-          for authentication, routing, and common data workflows.
+          Tadmuštum Enturs PoC frontend app for testing creation of Car Pooling
+          messages for making such trips available in a journey planner. This
+          app uses a GraphQL api to create trips in a backend app called Enlil,
+          Enlil will then relay these to the journey planner in SIRI format.
         </Typography>
-        <Typography variant="body1">With Inanna you get:</Typography>
+        <Typography variant="body1">
+          Tadmuštum cannot at the moment describe:
+        </Typography>
         <Box
           component="ul"
           sx={{ textAlign: "left", display: "inline-block", pl: 2 }}
         >
           <Typography component="li" variant="body1">
-            A responsive AppBar + Drawer layout, with built-in search and user
-            menus.
+            Contact details about the driver, amongst these the name
           </Typography>
           <Typography component="li" variant="body1">
-            A MapView scaffold powered by React-Map-GL/MapLibre for geospatial
-            features.
+            Make and model of the car or other identifying features such as
+            license plate or colour
           </Typography>
           <Typography component="li" variant="body1">
-            A DataOverview page template for listing, filtering, and visualizing
-            your Entur data.
-          </Typography>
-          <Typography component="li" variant="body1">
-            End-to-end authentication wiring via the <code>useAuth</code> hook.
-          </Typography>
-          <Typography component="li" variant="body1">
-            A themeable, accessible UI foundation so you can focus on your
-            unique business logic—not boilerplate.
+            Number of free seats in the car
           </Typography>
         </Box>
+        <Typography variant="body1">
+          The current state of the PoC is to enable non technical users to
+          create SIRI messages that can be consumed by a journey planner, and
+          verify that the journey planner can create flexible temporary stop
+          places for Car Pooling trips.
+        </Typography>
+        <Typography variant="body1">
+          Next step is to see if SIRI is a good fit for Car Pooling messages and
+          what needs to be put into a profile to facilitate it's adoption.
+        </Typography>
       </Box>
     </Container>
   );
