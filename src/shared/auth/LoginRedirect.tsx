@@ -11,7 +11,7 @@ const LoginRedirect = () => {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      login(oidcConfig?.redirect_uri || window.location.origin + returnUrl);
+      login(oidcConfig?.redirect_uri).then();
     } else if (isAuthenticated) {
       navigate(returnUrl);
     }
