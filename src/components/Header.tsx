@@ -15,8 +15,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import SideMenu from './SideMenu';
-import SettingsDialog from './SettingsDialog';
-import UserDialog from './UserDialog';
+import SettingsDialog from './dialogs/SettingsDialog.tsx';
+import UserDialog from './dialogs/UserDialog.tsx';
 import { useAuth } from '../auth';
 import { getIconUrl } from '../utils/iconLoader.ts';
 import { useTranslation } from 'react-i18next';

@@ -4,11 +4,13 @@ export type Name = {
 
 export type StopPlace = {
   id: string;
+  version: number;
   name: Name;
   geometry: {
     legacyCoordinates: [number, number][];
   };
   stopPlaceType: string;
+  __typename: string;
 };
 
 export type StopPlaceData = {

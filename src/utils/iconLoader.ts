@@ -32,27 +32,31 @@ function areCustomFeaturesEnabled(): boolean {
   return true;
 }
 
-export function getIconUrl(name: string): string {
+export function getIconUrl(name: string, excludeSVG: boolean = false): string {
   const svgName = `${name}.svg`;
   const pngName = `${name}.png`;
   const useCustom = areCustomFeaturesEnabled();
   if (useCustom) {
-    const customSvg = findByName(customSvgModules, svgName);
-    if (customSvg) return customSvg;
+    if (!excludeSVG) {
+      const customSvg = findByName(customSvgModules, svgName);
+      if (customSvg) return customSvg;
+    }
 
     const customPng = findByName(customPngModules, pngName);
     if (customPng) return customPng;
   }
-
-  const defaultSvg = findByName(defaultSvgModules, svgName);
-  if (defaultSvg) return defaultSvg;
+  if (!excludeSVG) {
+    const defaultSvg = findByName(defaultSvgModules, svgName);
+    if (defaultSvg) return defaultSvg;
+  }
 
   const defaultPng = findByName(defaultPngModules, pngName);
   if (defaultPng) return defaultPng;
 
-  const fallbackSvg = findByName(defaultSvgModules, 'default.svg');
-  if (fallbackSvg) return fallbackSvg;
-
+  if (!excludeSVG) {
+    const fallbackSvg = findByName(defaultSvgModules, 'default.svg');
+    if (fallbackSvg) return fallbackSvg;
+  }
   const fallbackPng = findByName(defaultPngModules, 'default.png');
   return fallbackPng ?? '';
 }

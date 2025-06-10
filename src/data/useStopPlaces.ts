@@ -14,7 +14,7 @@ export function useStopPlaces() {
   const [orderBy, setOrderBy] = useState<OrderBy>('name');
 
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     fetchStopPlaces()
@@ -42,6 +42,7 @@ export function useStopPlaces() {
   const paginated = sorted.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
 
   return {
+    allData: sorted,
     data: paginated,
     totalCount: data.length,
     loading,

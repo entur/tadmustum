@@ -15,7 +15,17 @@ export default function DataTableRow({ sp, isMobile }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [lng, lat] = sp.geometry.legacyCoordinates?.[0] ?? ['', ''];
-  const iconUrl = getIconUrl(sp.stopPlaceType);
+
+  let iconKey: string;
+  if (sp.__typename === 'ParentStopPlace') {
+    iconKey = 'parentStopPlace';
+  } else if (sp.stopPlaceType) {
+    iconKey = sp.stopPlaceType;
+  } else {
+    iconKey = 'default';
+  }
+
+  const iconUrl = getIconUrl(iconKey);
 
   return (
     <>

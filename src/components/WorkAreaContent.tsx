@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { InfoOutlined } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
-import { useTranslation } from 'react-i18next'; // Import useTranslation
+import { useTranslation } from 'react-i18next';
 
 export interface WorkAreaContentProps {
   onSave?: (data: { name: string; type: string; include: boolean }) => void;
@@ -27,9 +27,9 @@ export interface WorkAreaContentProps {
 }
 
 const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
-  const { t } = useTranslation(); // Initialize t function
+  const { t } = useTranslation();
   const [name, setName] = useState<string>('');
-  const [type, setType] = useState<string>('train'); // Default value for the select
+  const [type, setType] = useState<string>('train');
   const [include, setInclude] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
@@ -109,7 +109,7 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
 
       <Dialog open={dialogOpen} onClose={handleDetailsClose} fullWidth>
         <DialogTitle>{t('details')}</DialogTitle>
-        <DialogContent>{/* TODO: add details content here */}</DialogContent>
+        <DialogContent></DialogContent>
         <DialogActions>
           <Button onClick={handleDetailsClose}>{t('close', 'Close')}</Button>
         </DialogActions>

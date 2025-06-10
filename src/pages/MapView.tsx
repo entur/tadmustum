@@ -1,93 +1,71 @@
 import { useRef, useState, useEffect } from 'react';
-import { Map, NavigationControl, GeolocateControl, type MapRef } from 'react-map-gl/maplibre';
-import { mapStyle } from '../map/mapStyle.ts';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { useTheme, Box, IconButton } from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
-import WorkAreaContent from '../components/WorkAreaContent.tsx';
+import { Box } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import type { MapRef as ReactMapRef } from 'react-map-gl/maplibre';
+import type { Map as MaplibreMap, MapLibreEvent } from 'maplibre-gl';
+
+import { useStopsGeoJSON } from '../hooks/useStopsGeoJSON';
+import { useStopsSource } from '../hooks/useStopsSource';
+import { useResizableSidebar } from '../hooks/useResizableSidebar';
+
+import { createMapStyle } from '../map/mapStyle';
+import { Sidebar } from '../components/Sidebar';
+import { ToggleButton } from '../components/ToggleButton';
+import { MapContainer } from '../components/MapContainer';
+import { MapControls } from '../components/MapControls';
 
 export default function MapView() {
-  const mapRef = useRef<MapRef>(null);
   const theme = useTheme();
+  const mapStyle = createMapStyle(theme);
 
-  const [sidebarWidth, setSidebarWidth] = useState<number>(300);
-  const [isResizing, setIsResizing] = useState<boolean>(false);
-  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const { geojson: stopsGeoJSON, loading, error } = useStopsGeoJSON();
 
-  // Use a type assertion to safely handle the map load event
-  const handleMapLoad = (event: { target: unknown }) => {
-    // We know from the library that event.target will be compatible with MapRef
-    mapRef.current = event.target as MapRef;
+  const reactMapRef = useRef<ReactMapRef | null>(null);
+  const rawMapRef = useRef<MaplibreMap | null>(null);
+
+  const { width, collapsed, setIsResizing, toggle } = useResizableSidebar(300);
+
+  const [mapLoadedByComponent, setMapLoadedByComponent] = useState(false);
+
+  useStopsSource(rawMapRef, stopsGeoJSON, loading, error);
+
+  const handleMapLoad = (evt: MapLibreEvent) => {
+    rawMapRef.current = evt.target as MaplibreMap;
+    setMapLoadedByComponent(true);
   };
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing || collapsed) return;
-      const newWidth = e.clientX;
-      const min = 100;
-      const max = window.innerWidth * 0.8;
-      if (newWidth > min && newWidth < max) setSidebarWidth(newWidth);
-    };
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.overflow = original;
     };
-  }, [isResizing, collapsed]);
-
-  const toggleSidebar = () => {
-    setCollapsed(prev => !prev);
-  };
+  }, []);
 
   return (
-    <Box className="map-container">
+    <Box sx={{ position: 'relative', width: '100vw', height: '100vh' }}>
+      <Sidebar
+        width={width}
+        collapsed={collapsed}
+        onMouseDownResize={() => setIsResizing(true)}
+        theme={theme}
+        toggleCollapse={toggle}
+      />
+      <ToggleButton collapsed={collapsed} sidebarWidth={width} theme={theme} onClick={toggle} />
       <Box
-        className="sidebar"
+        className="map-box"
         sx={{
-          width: collapsed ? 0 : sidebarWidth,
-          minWidth: collapsed ? 0 : 100,
-          backgroundColor: theme.palette.background.paper,
-          borderRight: `1px solid ${theme.palette.divider}`,
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: collapsed ? 0 : width + 4,
+          right: 0,
+          zIndex: 1,
         }}
       >
-        <WorkAreaContent />
-      </Box>
-
-      {!collapsed && (
-        <Box
-          onMouseDown={() => setIsResizing(true)}
-          className="resizer"
-          sx={{
-            backgroundColor: theme.palette.divider,
-          }}
-        />
-      )}
-
-      <Box
-        onClick={toggleSidebar}
-        className="toggle-button"
-        sx={{
-          left: collapsed ? 0 : sidebarWidth,
-          backgroundColor: theme.palette.background.paper,
-          border: `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        <IconButton size="small">{collapsed ? <ChevronRight /> : <ChevronLeft />}</IconButton>
-      </Box>
-
-      <Box className="map-box">
-        <Map
-          initialViewState={{ longitude: 10.0, latitude: 65.5, zoom: 4 }}
-          mapStyle={mapStyle}
-          onLoad={handleMapLoad}
-        >
-          <NavigationControl position="bottom-right" />
-          <GeolocateControl position="bottom-right" />
-        </Map>
+        <MapContainer mapStyle={mapStyle} onLoad={handleMapLoad} mapRef={reactMapRef}>
+          {mapLoadedByComponent && <MapControls />}
+        </MapContainer>
       </Box>
     </Box>
   );
