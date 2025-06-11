@@ -1,8 +1,9 @@
-import { ApolloClient, gql, InMemoryCache } from "@apollo/client";
+import { ApolloClient, ApolloError, gql, InMemoryCache } from "@apollo/client";
 import type { Config } from "../config/ConfigContext.tsx";
 import type { AuthState } from "react-oidc-context";
 import prepareCarpoolingFormData from "./prepareCarpoolingFormData.tsx";
 import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
+import type { AppError } from "../error-message/AppError.tsx";
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
@@ -25,9 +26,9 @@ const createClient = (uri: string, auth?: AuthState) => {
 
 const createOrUpdateExtrajourney =
   (uri: string, auth: AuthState, formData: CarPoolingTripDataFormData) =>
-  async () => {
+  async (): Promise<{ data?: string; error?: AppError }> => {
     if (!auth.user?.access_token) {
-      throw new Error("Authentication token is missing");
+      throw new Error("Access token is missing");
     }
     const client = createClient(uri, auth);
 
@@ -47,10 +48,38 @@ const createOrUpdateExtrajourney =
 
     const variables = prepareCarpoolingFormData(formData);
 
-    return client
-      .mutate({ mutation, variables })
-      .catch((error) => error)
-      .then((response) => response);
+    try {
+      const result = await client.mutate({
+        mutation,
+        variables,
+        errorPolicy: "all",
+      });
+
+      if (result.errors?.length) {
+        const error: AppError = {
+          message: result.errors[0].message,
+          code:
+            (result.errors[0].extensions?.code as string) || "GRAPHQL_ERROR",
+          details: result.errors[0].path,
+        };
+        return { error };
+      }
+
+      return { data: result.data?.createOrUpdateExtrajourney };
+    } catch (err) {
+      const error = err as ApolloError;
+      const appError: AppError = {
+        message: error.message,
+        code:
+          (error.graphQLErrors?.[0]?.extensions?.code as string) ||
+          "NETWORK_ERROR",
+        details: {
+          networkError: error.networkError,
+          graphQLErrors: error.graphQLErrors,
+        },
+      };
+      return { error: appError };
+    }
   };
 
 const getAuthorities = (uri: string) => async () => {

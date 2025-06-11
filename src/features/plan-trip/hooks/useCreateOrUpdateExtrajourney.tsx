@@ -2,14 +2,26 @@ import { useConfig } from "../../../shared/config/ConfigContext.tsx";
 import api from "../../../shared/api/api.tsx";
 import { useAuth } from "react-oidc-context";
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
+import type { AppError } from "../../../shared/error-message/AppError.tsx";
 
 export const useCreateOrUpdateExtrajourney = () => {
   const config = useConfig();
   const auth = useAuth();
 
-  return async (formData: CarPoolingTripDataFormData) => {
-    if (!auth.user?.access_token) return;
+  return async (
+    formData: CarPoolingTripDataFormData,
+  ): Promise<{ data?: string; error?: AppError }> => {
+    if (!auth.user?.access_token)
+      return {
+        error: {
+          message: "Access token missing",
+          code: "ACCESS_TOKEN_MISSING",
+          details: "no auth.user.access_token",
+        },
+      };
 
-    await api(config, auth).createOrUpdateExtrajourney(formData).apply(this);
+    return await api(config, auth)
+      .createOrUpdateExtrajourney(formData)
+      .apply(this);
   };
 };

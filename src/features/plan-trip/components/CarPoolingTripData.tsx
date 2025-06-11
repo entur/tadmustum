@@ -5,6 +5,8 @@ import CarPoolingTripDataForm from "./CarPoolingTripDataForm.tsx";
 import { useCreateOrUpdateExtrajourney } from "../hooks/useCreateOrUpdateExtrajourney.tsx";
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
 import type { MapModes } from "../../../shared/components/EditableMap.tsx";
+import type { AppError } from "../../../shared/error-message/AppError.tsx";
+import { ErrorMessage } from "../../../shared/error-message/ErrorMessage.tsx";
 
 export interface CarPoolingTripDataProps {
   onAddFlexibleStop: () => void;
@@ -31,13 +33,13 @@ const CarPoolingTripData = forwardRef<
   const [currentStop, setCurrentStop] = useState<
     null | "departure" | "arrival"
   >(null);
+  const [error, setError] = useState<AppError | undefined>(undefined);
 
   const createOrUpdateExtrajourney = useCreateOrUpdateExtrajourney();
   const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
-    try {
-      createOrUpdateExtrajourney(formData).then();
-    } catch (error) {
-      console.error("Submission failed:", error);
+    const result = await createOrUpdateExtrajourney(formData);
+    if (result.error) {
+      setError(result.error);
     }
   };
 
@@ -90,6 +92,7 @@ const CarPoolingTripData = forwardRef<
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
+      <ErrorMessage error={error} />
       <CarPoolingTripDataForm
         onAddDeparturestopClick={startAddDepartureStop}
         onRemoveDepartureStopClick={removeDepartureStop}

@@ -6,7 +6,7 @@ export const fetchConfig = async (): Promise<Config> => {
   const overrides: Config = {};
 
   if (import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL) {
-    overrides.applicationBaseUrl =
+    overrides["deviation-messages-api"] =
       import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL;
   }
 
