@@ -3,7 +3,7 @@ import type { Config } from "./ConfigContext.tsx";
 let fetchedConfig: Config | undefined = undefined;
 
 export const fetchConfig = async (): Promise<Config> => {
-  const overrides: Config = {};
+  const overrides: Config = { showErrorDetails: false };
 
   if (import.meta.env.VITE_REACT_APP_APPLICATION_BASE_URL) {
     overrides["deviation-messages-api"] =
