@@ -165,9 +165,7 @@ export default function CarPoolingTripDataForm(
       msg = msg + errors.destinationFlexibleStop.message;
     }
 
-    console.log("result so far", msg);
     if (!error && msg.length > 0) {
-      console.log("hello", msg);
       setError({ message: msg, code: "VALIDATION_ERROR" });
     } else if (error?.code === "VALIDATION_ERROR" && msg === "") {
       setError(undefined);
