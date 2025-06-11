@@ -13,13 +13,15 @@ import {
   TextField,
 } from "@mui/material";
 import Typography from "@mui/material/Typography";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { useOrganizations } from "../../../shared/hooks/useOrganizations.tsx";
 import { useOperators } from "../hooks/useOperators.tsx";
 import type { Feature } from "geojson";
 import featureToPoslist from "../../../shared/util/featureToPoslist.tsx";
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
+import { ErrorMessage } from "../../../shared/error-message/ErrorMessage.tsx";
+import type { AppError } from "../../../shared/error-message/AppError.tsx";
 
 declare module "yup" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -83,6 +85,7 @@ export interface CarPoolingTripDataFormProps {
   mapDepartureFlexibleStop: Feature | null;
   mapDestinationFlexibleStop: Feature | null;
   drawingStopsAllowed: boolean;
+  error: AppError | undefined;
 }
 
 export default function CarPoolingTripDataForm(
@@ -129,6 +132,7 @@ export default function CarPoolingTripDataForm(
   const authority = watch("authority");
   const departureFlexibleStop = watch("departureFlexibleStop");
   const destinationFlexibleStop = watch("destinationFlexibleStop");
+  const [error, setError] = useState<AppError | undefined>(undefined);
 
   useEffect(() => {
     if (authorities.length && !authority) {
@@ -152,6 +156,22 @@ export default function CarPoolingTripDataForm(
     } else {
       setValue("destinationFlexibleStop", "");
     }
+
+    let msg = "";
+    if (errors?.departureFlexibleStop?.message) {
+      msg = msg + errors.departureFlexibleStop.message;
+    }
+    if (errors?.destinationFlexibleStop?.message) {
+      msg = msg + errors.destinationFlexibleStop.message;
+    }
+
+    console.log("result so far", msg);
+    if (!error && msg.length > 0) {
+      console.log("hello", msg);
+      setError({ message: msg, code: "VALIDATION_ERROR" });
+    } else if (error?.code === "VALIDATION_ERROR" && msg === "") {
+      setError(undefined);
+    }
   }, [
     authorities,
     authority,
@@ -159,6 +179,9 @@ export default function CarPoolingTripDataForm(
     mapDestinationFlexibleStop,
     setValue,
     drawingStopsAllowed,
+    error,
+    errors?.departureFlexibleStop?.message,
+    errors?.destinationFlexibleStop?.message,
   ]);
 
   return (
@@ -169,12 +192,9 @@ export default function CarPoolingTripDataForm(
       noValidate
       autoComplete="off"
     >
+      <ErrorMessage error={error} />
       <Typography variant="h5" component="h1">
         Trip data
-      </Typography>
-      <Typography variant="h5" component="h1">
-        {errors?.departureFlexibleStop?.message}
-        {errors?.destinationFlexibleStop?.message}
       </Typography>
       <FormControl fullWidth error={!!errors.authority} margin="normal">
         <Controller

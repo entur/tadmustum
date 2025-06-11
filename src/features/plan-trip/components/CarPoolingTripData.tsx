@@ -6,7 +6,6 @@ import { useCreateOrUpdateExtrajourney } from "../hooks/useCreateOrUpdateExtrajo
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
 import type { MapModes } from "../../../shared/components/EditableMap.tsx";
 import type { AppError } from "../../../shared/error-message/AppError.tsx";
-import { ErrorMessage } from "../../../shared/error-message/ErrorMessage.tsx";
 
 export interface CarPoolingTripDataProps {
   onAddFlexibleStop: () => void;
@@ -92,7 +91,6 @@ const CarPoolingTripData = forwardRef<
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
-      <ErrorMessage error={error} />
       <CarPoolingTripDataForm
         onAddDeparturestopClick={startAddDepartureStop}
         onRemoveDepartureStopClick={removeDepartureStop}
@@ -103,6 +101,7 @@ const CarPoolingTripData = forwardRef<
         drawingStopsAllowed={drawingStopsAllowed}
         mapDepartureFlexibleStop={departureStop}
         mapDestinationFlexibleStop={arrivalStop}
+        error={error}
       />
     </Box>
   );
