@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react'; // Added React
 import {
   TableContainer,
   Table,
@@ -8,7 +9,6 @@ import {
   CircularProgress,
   Alert,
   useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import DataTableHeader from '../components/data/DataTableHeader.tsx';
 import DataTableRow from '../components/data/DataTableRow.tsx';
@@ -19,10 +19,12 @@ import { Sidebar } from '../components/Sidebar.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
 import { useResizableSidebar } from '../hooks/useResizableSidebar.ts';
 
-export default function DataOverviewResponsiveTable() {
+const COMPACT_VIEW_THRESHOLD = 700; // Adjusted for more typical testing, you can set it back to 1500
+
+export default function DataOverview() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const {
     data,
     totalCount,
@@ -43,6 +45,65 @@ export default function DataOverviewResponsiveTable() {
     setIsResizing: setIsSidebarResizing,
     toggle: toggleSidebar,
   } = useResizableSidebar(250);
+
+  const tableContentContainerRef = useRef<HTMLDivElement | null>(null);
+  const [tableContainerWidth, setTableContainerWidth] = useState(0);
+
+  useEffect(() => {
+    // If still loading, the ref target element might not exist yet.
+    // The effect will re-run when loading becomes false.
+    if (loading) {
+      // Optional: Clear width if it should be 0 during loading
+      // if (tableContainerWidth !== 0) setTableContainerWidth(0);
+      return;
+    }
+
+    const contentElement = tableContentContainerRef.current;
+    if (!contentElement) {
+      // This case should ideally not be hit if loading is false and the JSX is structured correctly.
+      console.warn(
+        '[DataOverview] tableContentContainerRef.current is null even after loading is false. Ensure the ref is attached to a rendered element.'
+      );
+      return;
+    }
+
+    // Log that we are about to set up the observer and the element's initial state
+    console.log('[DataOverview] Attempting to observe contentElement:', contentElement);
+    console.log('[DataOverview] Initial contentElement.offsetWidth:', contentElement.offsetWidth);
+    console.log('[DataOverview] Initial contentElement.offsetHeight:', contentElement.offsetHeight);
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        // This is the log we expect to see when the observer fires
+        console.log('[DataOverview] ResizeObserver Fired! Width:', entry.contentRect.width);
+        setTableContainerWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(contentElement);
+
+    // The ResizeObserver should fire shortly after observe() if the element is rendered
+    // and has non-zero dimensions. It will provide the initial width.
+    // If you find tableContainerWidth remains 0, it implies the element might have 0 width
+    // when first observed, or there's another layout issue.
+
+    return () => {
+      console.log('[DataOverview] Cleaning up: Unobserving contentElement:', contentElement);
+      // The contentElement in the closure of the cleanup function
+      // will be the same one that was observed.
+      resizeObserver.unobserve(contentElement);
+      resizeObserver.disconnect(); // Important to prevent memory leaks
+    };
+  }, [loading]); // Key Change: Added `loading` to the dependency array.
+  // This ensures the effect re-runs when `loading` changes.
+
+  const shouldUseCompactView =
+    tableContainerWidth < COMPACT_VIEW_THRESHOLD && tableContainerWidth > 0;
+
+  // Log current state on each render for easier debugging
+  console.log(
+    `[DataOverview] Render State: tableContainerWidth=${tableContainerWidth}, COMPACT_VIEW_THRESHOLD=${COMPACT_VIEW_THRESHOLD}, shouldUseCompactView=${shouldUseCompactView}, loading=${loading}`
+  );
 
   if (loading)
     return (
@@ -78,28 +139,29 @@ export default function DataOverviewResponsiveTable() {
       }}
     >
       <Box p={2}>
-        {' '}
         <Typography variant="h4" component="h2" align="center">
           {t('data.title', 'Stop Place Overview')}
         </Typography>
       </Box>
       <Box px={2} pb={1}>
-        {' '}
         <Typography>{t('data.totalEntries', { count: totalCount })}</Typography>
       </Box>
 
       <TableContainer sx={{ flexGrow: 1, overflow: 'auto' }}>
-        {' '}
         <Table stickyHeader>
           <DataTableHeader
-            isMobile={isMobile}
+            useCompactView={shouldUseCompactView}
             order={order}
             orderBy={orderBy}
             onRequestSort={handleRequestSort}
           />
           <TableBody>
             {data.map(sp => (
-              <DataTableRow key={`${sp.id}-${sp.version}`} sp={sp} isMobile={isMobile} />
+              <DataTableRow
+                key={`${sp.id}-${sp.version}`}
+                sp={sp}
+                useCompactView={shouldUseCompactView}
+              />
             ))}
           </TableBody>
         </Table>
@@ -107,9 +169,9 @@ export default function DataOverviewResponsiveTable() {
 
       <TablePagination
         sx={{
-          p: 0, // Keep padding and margin as you like, or remove if not needed
+          p: 0,
           m: 0,
-          flexShrink: 0, // Crucial: Prevents the pagination from shrinking
+          flexShrink: 0,
         }}
         component="div"
         count={totalCount}
@@ -135,7 +197,7 @@ export default function DataOverviewResponsiveTable() {
     <Box
       sx={{
         display: 'flex',
-        height: 'calc(100vh - 64px)', // Assuming 64px is your AppBar height
+        height: 'calc(100vh - 64px)',
         position: 'relative',
       }}
     >
@@ -153,16 +215,16 @@ export default function DataOverviewResponsiveTable() {
         onClick={toggleSidebar}
       />
       <Box
+        ref={tableContentContainerRef} // Assign the ref here
         className="data-overview-content"
         sx={{
           flexGrow: 1,
           height: '100%',
-          marginLeft: sidebarCollapsed ? '0px' : `${sidebarWidth + 4}px`, // +4 for resizer
+          marginLeft: sidebarCollapsed ? '0px' : `${sidebarWidth + 4}px`,
           transition: 'margin-left 0.2s ease',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          // borderWidth: 0, // Your previous style, can be removed if not needed
         }}
       >
         {tableContent}

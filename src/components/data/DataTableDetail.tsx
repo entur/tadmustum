@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 interface Props {
   open: boolean;
-  lng: number;
-  lat: number;
+  lng: number | string; // CHANGED: Allow string
+  lat: number | string; // CHANGED: Allow string
   iconUrl: string;
   stopPlaceType: string;
 }
@@ -15,6 +15,8 @@ export default function DataTableDetail({ open, lng, lat, iconUrl }: Props) {
   return (
     <TableRow>
       <TableCell colSpan={5} sx={{ p: 0 }}>
+        {' '}
+        {/* Assuming 5 columns in expanded mobile view, adjust if needed */}
         <Collapse in={open} timeout="auto" unmountOnExit>
           <Box m={1}>
             <Typography variant="subtitle2">

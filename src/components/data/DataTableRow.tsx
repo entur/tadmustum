@@ -8,10 +8,12 @@ import { useTranslation } from 'react-i18next';
 
 interface Props {
   sp: StopPlace;
-  isMobile: boolean;
+  // isMobile: boolean; // OLD
+  useCompactView: boolean; // NEW
 }
 
-export default function DataTableRow({ sp, isMobile }: Props) {
+export default function DataTableRow({ sp, useCompactView }: Props) {
+  // CHANGED prop name
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [lng, lat] = sp.geometry.legacyCoordinates?.[0] ?? ['', ''];
@@ -31,21 +33,23 @@ export default function DataTableRow({ sp, isMobile }: Props) {
     <>
       <TableRow
         hover
-        onClick={isMobile ? () => setOpen(o => !o) : undefined}
-        sx={{ cursor: isMobile ? 'pointer' : 'inherit' }}
+        onClick={useCompactView ? () => setOpen(o => !o) : undefined} // CHANGED condition
+        sx={{ cursor: useCompactView ? 'pointer' : 'inherit' }} // CHANGED condition
       >
-        {isMobile && (
+        {useCompactView && ( // CHANGED condition
           <TableCell padding="none">
-            <IconButton size="small">
+            <IconButton size="small" onClick={() => setOpen(o => !o)}>
+              {' '}
+              {/* Added explicit onClick for clarity/direct interaction */}
               {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
             </IconButton>
           </TableCell>
         )}
         <TableCell>{sp.name.value}</TableCell>
         <TableCell>{sp.id}</TableCell>
-        {!isMobile && <TableCell>{lng || '—'}</TableCell>}
-        {!isMobile && <TableCell>{lat || '—'}</TableCell>}
-        {!isMobile && (
+        {!useCompactView && <TableCell>{lng || '—'}</TableCell>} {/* CHANGED condition */}
+        {!useCompactView && <TableCell>{lat || '—'}</TableCell>} {/* CHANGED condition */}
+        {!useCompactView && ( // CHANGED condition
           <TableCell>
             <Box
               component="img"
@@ -56,11 +60,11 @@ export default function DataTableRow({ sp, isMobile }: Props) {
           </TableCell>
         )}
       </TableRow>
-      {isMobile && (
+      {useCompactView && ( // CHANGED condition
         <DataTableDetail
           open={open}
-          lng={lng as number}
-          lat={lat as number}
+          lng={lng} // Removed 'as number'
+          lat={lat} // Removed 'as number'
           iconUrl={iconUrl}
           stopPlaceType={sp.stopPlaceType}
         />
