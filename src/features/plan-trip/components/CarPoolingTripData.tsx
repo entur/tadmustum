@@ -101,7 +101,7 @@ const CarPoolingTripData = forwardRef<
         drawingStopsAllowed={drawingStopsAllowed}
         mapDepartureFlexibleStop={departureStop}
         mapDestinationFlexibleStop={arrivalStop}
-        error={error}
+        appError={error}
       />
     </Box>
   );
