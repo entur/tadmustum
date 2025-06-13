@@ -18,7 +18,7 @@ import SideMenu from './SideMenu';
 import SettingsDialog from './dialogs/SettingsDialog.tsx';
 import UserDialog from './dialogs/UserDialog.tsx';
 import { useAuth } from '../auth';
-import { getIconUrl } from '../utils/iconLoader.ts';
+import { getIconUrl } from '../utils/iconLoaderUtils.ts';
 import { useTranslation } from 'react-i18next';
 
 export default function Header() {

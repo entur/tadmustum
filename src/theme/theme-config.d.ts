@@ -10,7 +10,6 @@ export interface ThemeConfig extends ThemeOptions {
 
 declare module '@mui/material/styles' {
   interface Theme {
-    /** URL from your config.json */
     applicationName: string;
     companyName: string;
     logoUrl: string;
@@ -18,7 +17,6 @@ declare module '@mui/material/styles' {
     // add more custom fields here
   }
   interface ThemeOptions {
-    /** Optional at creation time */
     applicationName?: string;
     companyName?: string;
     logoUrl?: string;

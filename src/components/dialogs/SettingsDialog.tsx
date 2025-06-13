@@ -13,7 +13,7 @@ import {
   Stack,
   type SelectChangeEvent,
 } from '@mui/material';
-import { useCustomization } from '../../utils/CustomizationContext.tsx';
+import { useCustomization } from '../../contexts/CustomizationContext.tsx';
 import { useTranslation } from 'react-i18next';
 
 interface SettingsDialogProps {

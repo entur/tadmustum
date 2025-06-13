@@ -3,7 +3,7 @@ import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import type { StopPlace } from '../../data/StopPlaceContext.tsx';
 import DataTableDetail from './DataTableDetail.tsx';
 import { useState } from 'react';
-import { getIconUrl } from '../../utils/iconLoader.ts';
+import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
 import { useTranslation } from 'react-i18next';
 
 interface Props {

@@ -1,4 +1,3 @@
-// src/context/CustomizationContext.tsx
 import { createContext, useState, useContext, useEffect, type ReactNode, useCallback } from 'react';
 
 const LOCAL_STORAGE_KEY = 'useCustomFeatures';
@@ -15,9 +14,9 @@ export const CustomizationProvider = ({ children }: { children: ReactNode }) => 
   const [useCustomFeatures, setUseCustomFeaturesState] = useState<boolean>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const storedValue = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return storedValue ? JSON.parse(storedValue) : true; // Default to true (custom features on)
+      return storedValue ? JSON.parse(storedValue) : true;
     }
-    return true; // Default for environments without localStorage
+    return true;
   });
 
   useEffect(() => {

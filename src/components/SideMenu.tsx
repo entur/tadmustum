@@ -16,7 +16,7 @@ import {
   styled,
 } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { getIconUrl } from '../utils/iconLoader.ts';
+import { getIconUrl } from '../utils/iconLoaderUtils.ts';
 import { useTranslation } from 'react-i18next';
 
 const DESKTOP_WIDTH = 280;

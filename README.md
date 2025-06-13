@@ -144,7 +144,7 @@ The application’s icon loader resolves custom and default icons based on the *
 
 ## How it works
 
-* **`src/data/iconLoader.ts`** – `getIconUrl(name: string)` checks:
+* **`src/data/iconLoaderUtils.ts`** – `getIconUrl(name: string)` checks:
 
     1. If custom features enabled:
 

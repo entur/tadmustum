@@ -1,4 +1,4 @@
-import type { Config } from './ConfigContext.tsx';
+import type { Config } from '../contexts/ConfigContext.tsx';
 
 let fetchedConfig: Config | undefined = undefined;
 
@@ -17,8 +17,4 @@ export const fetchConfig = async (): Promise<Config> => {
   fetchedConfig = await response.json();
 
   return Object.assign({}, fetchedConfig, overrides);
-};
-
-export const getFetchedConfig = () => {
-  return fetchedConfig;
 };

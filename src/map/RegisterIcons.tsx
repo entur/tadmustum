@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useMap } from 'react-map-gl/maplibre';
-import { getIconUrl } from '../utils/iconLoader.ts';
+import { getIconUrl } from '../utils/iconLoaderUtils.ts';
 
 const images = [
   { name: 'railStation' },

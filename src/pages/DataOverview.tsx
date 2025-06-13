@@ -1,15 +1,15 @@
 import { useRef } from 'react';
-import { Box, Typography, CircularProgress, Alert, useTheme } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import { useStopPlaces } from '../data/useStopPlaces';
-import { useTranslation } from 'react-i18next';
 
 import { Sidebar } from '../components/Sidebar.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
 import { useResizableSidebar } from '../hooks/useResizableSidebar.ts';
 import DataPageContent from '../components/data/DataPageContent.tsx';
+import LoadingPage from '../components/common/LoadingPage.tsx';
+import ErrorPage from '../components/common/ErrorPage.tsx';
 
 export default function DataOverview() {
-  const { t } = useTranslation();
   const theme = useTheme();
 
   const { loading, error } = useStopPlaces();
@@ -23,28 +23,8 @@ export default function DataOverview() {
 
   const tableContentContainerRef = useRef<HTMLDivElement | null>(null);
 
-  if (loading)
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        flexDirection="column"
-        mt={4}
-        sx={{ p: 2 }}
-      >
-        <CircularProgress />
-        <Typography sx={{ mt: 1 }}>{t('data.loading', 'Loading data...')}</Typography>
-      </Box>
-    );
-  if (error)
-    return (
-      <Box sx={{ p: 2 }}>
-        <Alert severity="error">
-          {t('data.errorPrefix', 'Error')}: {error}
-        </Alert>
-      </Box>
-    );
+  if (loading) return <LoadingPage />;
+  if (error) return <ErrorPage />;
 
   return (
     <Box

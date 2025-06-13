@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from './index';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useConfig } from '../utils/ConfigContext.tsx';
+import { useConfig } from '../contexts/ConfigContext.tsx';
 
 const LoginRedirect = () => {
   const { oidcConfig } = useConfig();
