@@ -39,11 +39,45 @@ export default function CarPoolingTrips() {
   const columns = [
     { field: "id", headerName: "ID" },
     {
-      field: "nameValue",
-      headerName: "Name",
+      field: "lineNameValue",
+      headerName: "Line name",
       valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls.estimatedCall[0]
+        row.estimatedVehicleJourney.publishedLineName,
+    },
+    {
+      field: "destinationDisplayValue",
+      headerName: "Destination display",
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0]
           .destinationDisplay,
+    },
+    {
+      field: "departureStopName",
+      headerName: "Departure stop name",
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0]
+          .stopPointName,
+    },
+    {
+      field: "departureTimeName",
+      headerName: "Departure time",
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0]
+          .aimedDepartureTime,
+    },
+    {
+      field: "arrivalStopName",
+      headerName: "Arrival stop name",
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney?.estimatedCalls?.estimatedCall[1]
+          .stopPointName,
+    },
+    {
+      field: "arrivalTimeName",
+      headerName: "Arrival time",
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls.estimatedCall[1]
+          .aimedArrivalTime,
     },
   ];
 
