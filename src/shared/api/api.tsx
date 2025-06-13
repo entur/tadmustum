@@ -5,6 +5,7 @@ import prepareCarpoolingFormData from "./prepareCarpoolingFormData.tsx";
 import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
 import type { AppError } from "../error-message/AppError.tsx";
 import type { Extrajourney } from "../model/Extrajourney.tsx";
+import type { EstimatedCall } from "../model/EstimatedCall.tsx";
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
@@ -250,8 +251,18 @@ const queryExtraJourney =
         return { error };
       }
 
-      console.log("data", result.data);
-      return { data: result.data?.extrajourneys };
+      const filtered = result.data?.extrajourneys.filter(
+        (extJourney: {
+          estimatedVehicleJourney: {
+            estimatedCalls: { estimatedCall: EstimatedCall[] };
+          };
+        }) =>
+          extJourney.estimatedVehicleJourney?.estimatedCalls?.estimatedCall?.some(
+            (call) => call.departureStopAssignment !== undefined,
+          ),
+      );
+
+      return { data: filtered };
     } catch (err) {
       const error = err as ApolloError;
       const appError: AppError = {
