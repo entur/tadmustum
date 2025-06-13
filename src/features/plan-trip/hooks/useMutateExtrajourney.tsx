@@ -4,7 +4,7 @@ import { useAuth } from "react-oidc-context";
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
 import type { AppError } from "../../../shared/error-message/AppError.tsx";
 
-export const useCreateOrUpdateExtrajourney = () => {
+export const useMutateExtrajourney = () => {
   const config = useConfig();
   const auth = useAuth();
 
@@ -20,8 +20,6 @@ export const useCreateOrUpdateExtrajourney = () => {
         },
       };
 
-    return await api(config, auth)
-      .createOrUpdateExtrajourney(formData)
-      .apply(this);
+    return await api(config, auth).mutateExtrajourney(formData).apply(this);
   };
 };

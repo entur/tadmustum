@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useImperativeHandle, useState } from "react";
 import { Box } from "@mui/material";
 import type { Feature } from "geojson";
 import CarPoolingTripDataForm from "./CarPoolingTripDataForm.tsx";
-import { useCreateOrUpdateExtrajourney } from "../hooks/useCreateOrUpdateExtrajourney.tsx";
+import { useMutateExtrajourney } from "../hooks/useMutateExtrajourney.tsx";
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
 import type { MapModes } from "../../../shared/components/EditableMap.tsx";
 import type { AppError } from "../../../shared/error-message/AppError.tsx";
@@ -34,9 +34,9 @@ const CarPoolingTripData = forwardRef<
   >(null);
   const [error, setError] = useState<AppError | undefined>(undefined);
 
-  const createOrUpdateExtrajourney = useCreateOrUpdateExtrajourney();
+  const mutateExtrajourney = useMutateExtrajourney();
   const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
-    const result = await createOrUpdateExtrajourney(formData);
+    const result = await mutateExtrajourney(formData);
     if (result.error) {
       setError(result.error);
     }

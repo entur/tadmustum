@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
-import { fetchStopPlaces } from "../../shared/data/fetchStopPlaces.tsx";
-import type {
-  Name,
-  StopPlace,
-  StopPlaceContext,
-} from "../../shared/data/StopPlaceContext.tsx";
 import { DataGrid } from "@mui/x-data-grid";
+import type { Extrajourney } from "../../shared/model/Extrajourney.tsx";
+import { useQueryExtraJourney } from "./hooks/useQueryExtraJourney.tsx";
 
 export default function CarPoolingTrips() {
-  const [stopPlaces, setStopPlaces] = useState<StopPlaceContext | null>(null);
+  const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(
+    undefined,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const queryExtraJourneys = useQueryExtraJourney();
+
   useEffect(() => {
-    fetchStopPlaces()
-      .then((data) => {
-        setStopPlaces(data);
+    queryExtraJourneys("ENT", "ENT:Authority:ENT", true)
+      .then((response) => {
+        setPlannedTrips(response.data);
         setLoading(false);
       })
-      .catch(() => {
-        setError("Failed to fetch data");
+      .catch((error) => {
+        setError(error);
         setLoading(false);
       });
-  }, []);
+  }, [queryExtraJourneys]);
 
   if (loading) {
     return <div className="alert alert-info">Loading...</div>;
@@ -32,16 +32,18 @@ export default function CarPoolingTrips() {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  console.log("data", stopPlaces);
+  console.log("data", plannedTrips);
 
-  const rows = stopPlaces?.data.stopPlace;
+  const rows = plannedTrips;
 
   const columns = [
     { field: "id", headerName: "ID" },
     {
       field: "nameValue",
       headerName: "Name",
-      valueGetter: (_value: Name, row: StopPlace) => row.name.value,
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls.estimatedCall[0]
+          .destinationDisplay,
     },
   ];
 

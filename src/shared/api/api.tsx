@@ -4,6 +4,7 @@ import type { AuthState } from "react-oidc-context";
 import prepareCarpoolingFormData from "./prepareCarpoolingFormData.tsx";
 import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
 import type { AppError } from "../error-message/AppError.tsx";
+import type { Extrajourney } from "../model/Extrajourney.tsx";
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
@@ -23,64 +24,6 @@ const createClient = (uri: string, auth?: AuthState) => {
     }),
   });
 };
-
-const createOrUpdateExtrajourney =
-  (uri: string, auth: AuthState, formData: CarPoolingTripDataFormData) =>
-  async (): Promise<{ data?: string; error?: AppError }> => {
-    if (!auth.user?.access_token) {
-      throw new Error("Access token is missing");
-    }
-    const client = createClient(uri, auth);
-
-    const mutation = gql`
-      mutation CreateOrUpdateExtrajourney(
-        $codespace: String!
-        $authority: String!
-        $input: ExtrajourneyInput!
-      ) {
-        createOrUpdateExtrajourney(
-          codespace: $codespace
-          authority: $authority
-          input: $input
-        )
-      }
-    `;
-
-    const variables = prepareCarpoolingFormData(formData);
-
-    try {
-      const result = await client.mutate({
-        mutation,
-        variables,
-        errorPolicy: "all",
-      });
-
-      if (result.errors?.length) {
-        const error: AppError = {
-          message: result.errors[0].message,
-          code:
-            (result.errors[0].extensions?.code as string) || "GRAPHQL_ERROR",
-          details: result.errors[0].path,
-        };
-        return { error };
-      }
-
-      return { data: result.data?.createOrUpdateExtrajourney };
-    } catch (err) {
-      const error = err as ApolloError;
-      const appError: AppError = {
-        message: error.message,
-        code:
-          (error.graphQLErrors?.[0]?.extensions?.code as string) ||
-          "NETWORK_ERROR",
-        details: {
-          networkError: error.networkError,
-          graphQLErrors: error.graphQLErrors,
-        },
-      };
-      return { error: appError };
-    }
-  };
 
 const getAuthorities = (uri: string) => async () => {
   const client = createClient(uri);
@@ -142,19 +85,216 @@ const getUserContext = (uri: string, auth: AuthState) => async () => {
     .then((response) => response);
 };
 
-const api = (config: Config, auth?: AuthState) => ({
-  createOrUpdateExtrajourney: (formData: CarPoolingTripDataFormData) =>
-    createOrUpdateExtrajourney(
+const mutateExtrajourney =
+  (uri: string, auth: AuthState, formData: CarPoolingTripDataFormData) =>
+  async (): Promise<{ data?: string; error?: AppError }> => {
+    if (!auth.user?.access_token) {
+      throw new Error("Access token is missing");
+    }
+    const client = createClient(uri, auth);
+
+    const mutation = gql`
+      mutation CreateOrUpdateExtrajourney(
+        $codespace: String!
+        $authority: String!
+        $input: ExtrajourneyInput!
+      ) {
+        createOrUpdateExtrajourney(
+          codespace: $codespace
+          authority: $authority
+          input: $input
+        )
+      }
+    `;
+
+    const variables = prepareCarpoolingFormData(formData);
+
+    try {
+      const result = await client.mutate({
+        mutation,
+        variables,
+        errorPolicy: "all",
+      });
+
+      if (result.errors?.length) {
+        const error: AppError = {
+          message: result.errors[0].message,
+          code:
+            (result.errors[0].extensions?.code as string) || "GRAPHQL_ERROR",
+          details: result.errors[0].path,
+        };
+        return { error };
+      }
+
+      return { data: result.data?.createOrUpdateExtrajourney };
+    } catch (err) {
+      const error = err as ApolloError;
+      const appError: AppError = {
+        message: error.message,
+        code:
+          (error.graphQLErrors?.[0]?.extensions?.code as string) ||
+          "NETWORK_ERROR",
+        details: {
+          networkError: error.networkError,
+          graphQLErrors: error.graphQLErrors,
+        },
+      };
+      return { error: appError };
+    }
+  };
+
+const queryExtraJourney =
+  (
+    uri: string,
+    auth: AuthState,
+    codespace: string,
+    authority: string,
+    showCompletedTrips: boolean,
+  ) =>
+  async (): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
+    if (!auth.user?.access_token) {
+      return {
+        error: {
+          message: "Access token missing",
+          code: "ACCESS_TOKEN_MISSING",
+          details: "no auth.user.access_token",
+        },
+      };
+    }
+    const client = createClient(uri, auth);
+
+    const query = gql`
+      query ExtraJourneysQuery(
+        $codespace: String!
+        $authority: String!
+        $showCompletedTrips: Boolean!
+      ) {
+        extrajourneys(
+          codespace: $codespace
+          authority: $authority
+          showCompletedTrips: $showCompletedTrips
+        ) {
+          id
+          estimatedVehicleJourney {
+            cancellation
+            lineRef
+            directionRef
+            dataSource
+            estimatedVehicleJourneyCode
+            expiresAtEpochMs
+            extraJourney
+            groupOfLinesRef
+            isCompleteStopSequence
+            monitored
+            operatorRef
+            publishedLineName
+            recordedAtTime
+            routeRef
+            vehicleMode
+            estimatedCalls {
+              estimatedCall {
+                aimedArrivalTime
+                aimedDepartureTime
+                arrivalBoardingActivity
+                arrivalStatus
+                cancellation
+                departureBoardingActivity
+                departureStatus
+                destinationDisplay
+                expectedArrivalTime
+                expectedDepartureTime
+                order
+                requestStop
+                stopPointName
+                stopPointRef
+                departureStopAssignment {
+                  expectedFlexibleArea {
+                    polygon {
+                      exterior {
+                        posList
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            framedVehicleJourneyRef {
+              dataFrameRef
+              datedVehicleJourneyRef
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      codespace,
+      authority,
+      showCompletedTrips,
+    };
+
+    try {
+      const result = await client.query({
+        query,
+        variables,
+        errorPolicy: "all",
+      });
+
+      if (result.errors?.length) {
+        const error: AppError = {
+          message: result.errors[0].message,
+          code:
+            (result.errors[0].extensions?.code as string) || "GRAPHQL_ERROR",
+          details: result.errors[0].path,
+        };
+        return { error };
+      }
+
+      console.log("data", result.data);
+      return { data: result.data?.extrajourneys };
+    } catch (err) {
+      const error = err as ApolloError;
+      const appError: AppError = {
+        message: error.message,
+        code:
+          (error.graphQLErrors?.[0]?.extensions?.code as string) ||
+          "NETWORK_ERROR",
+        details: {
+          networkError: error.networkError,
+          graphQLErrors: error.graphQLErrors,
+        },
+      };
+      return { error: appError };
+    }
+  };
+
+const api = (config: Config, auth?: AuthState) => {
+  return {
+    getAuthorities: getAuthorities(config["journey-planner-api"] as string),
+    getOperators: getOperators(config["journey-planner-api"] as string),
+    getUserContext: getUserContext(
       config["deviation-messages-api"] as string,
       auth as AuthState,
-      formData,
     ),
-  getAuthorities: getAuthorities(config["journey-planner-api"] as string),
-  getOperators: getOperators(config["journey-planner-api"] as string),
-  getUserContext: getUserContext(
-    config["deviation-messages-api"] as string,
-    auth as AuthState,
-  ),
-});
+    mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
+      mutateExtrajourney(
+        config["deviation-messages-api"] as string,
+        auth as AuthState,
+        formData,
+      ),
+    queryExtraJourney: (
+      codespace: string,
+      authority: string,
+      showCompletedTrips: boolean,
+    ) =>
+      queryExtraJourney(
+        config["deviation-messages-api"] as string,
+        auth as AuthState,
+        codespace,
+        authority,
+        showCompletedTrips,
+      ),
+  };
+};
 
 export default api;
