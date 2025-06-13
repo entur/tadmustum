@@ -8,12 +8,10 @@ import { useTranslation } from 'react-i18next';
 
 interface Props {
   sp: StopPlace;
-  // isMobile: boolean; // OLD
-  useCompactView: boolean; // NEW
+  useCompactView: boolean;
 }
 
 export default function DataTableRow({ sp, useCompactView }: Props) {
-  // CHANGED prop name
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [lng, lat] = sp.geometry.legacyCoordinates?.[0] ?? ['', ''];
@@ -33,23 +31,21 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
     <>
       <TableRow
         hover
-        onClick={useCompactView ? () => setOpen(o => !o) : undefined} // CHANGED condition
-        sx={{ cursor: useCompactView ? 'pointer' : 'inherit' }} // CHANGED condition
+        onClick={useCompactView ? () => setOpen(o => !o) : undefined}
+        sx={{ cursor: useCompactView ? 'pointer' : 'inherit' }}
       >
-        {useCompactView && ( // CHANGED condition
+        {useCompactView && (
           <TableCell padding="none">
             <IconButton size="small" onClick={() => setOpen(o => !o)}>
-              {' '}
-              {/* Added explicit onClick for clarity/direct interaction */}
               {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
             </IconButton>
           </TableCell>
         )}
         <TableCell>{sp.name.value}</TableCell>
         <TableCell>{sp.id}</TableCell>
-        {!useCompactView && <TableCell>{lng || '—'}</TableCell>} {/* CHANGED condition */}
-        {!useCompactView && <TableCell>{lat || '—'}</TableCell>} {/* CHANGED condition */}
-        {!useCompactView && ( // CHANGED condition
+        {!useCompactView && <TableCell>{lng || '—'}</TableCell>}
+        {!useCompactView && <TableCell>{lat || '—'}</TableCell>}
+        {!useCompactView && (
           <TableCell>
             <Box
               component="img"
@@ -60,11 +56,11 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
           </TableCell>
         )}
       </TableRow>
-      {useCompactView && ( // CHANGED condition
+      {useCompactView && (
         <DataTableDetail
           open={open}
-          lng={lng} // Removed 'as number'
-          lat={lat} // Removed 'as number'
+          lng={lng}
+          lat={lat}
           iconUrl={iconUrl}
           stopPlaceType={sp.stopPlaceType}
         />
