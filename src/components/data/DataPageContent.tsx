@@ -29,6 +29,7 @@ export default function DataPageContent() {
 
   return (
     <Box
+      ref={containerRef}
       sx={{
         flexGrow: 1,
         display: 'flex',

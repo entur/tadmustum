@@ -1,7 +1,7 @@
 import { Map } from 'react-map-gl/maplibre';
 import { type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { RegisterIcons } from '../map/RegisterIcons';
+import { RegisterIcons } from '../../map/RegisterIcons.tsx';
 import type { MapLibreEvent, StyleSpecification } from 'maplibre-gl';
 
 interface MapContainerProps {

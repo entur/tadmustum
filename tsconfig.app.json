@@ -7,24 +7,21 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
-    /* Bundler mode */
     "moduleResolution": "bundler",
-    "resolveJsonModule": true, // <--- Add this
-    "esModuleInterop": true, // <--- Add this (good practice with resolveJsonModule)
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "emitDeclarationOnly": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "jsx": "react-jsx",
 
-    /* Required for project references */
     "composite": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist/app",
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

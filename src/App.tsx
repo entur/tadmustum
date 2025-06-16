@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
+import Header from './components/header/Header.tsx';
 import Home from './pages/Home';
 import DataOverview from './pages/DataOverview';
 import MapView from './pages/MapView';
@@ -15,7 +15,7 @@ export default function App() {
   const { theme } = useAppTheme(useCustomFeatures);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_relativeSplatPath: true }}>
       <SearchProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />

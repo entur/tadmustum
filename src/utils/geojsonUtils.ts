@@ -39,7 +39,7 @@ export function convertStopPlacesToGeoJSON(stopPlaces: StopPlace[]): GeoJSONFeat
           id: sp.id,
           name: sp.name.value,
           icon: iconName,
-          originalData: sp, // Optional: include original data for popups
+          originalData: sp,
         },
       };
     })

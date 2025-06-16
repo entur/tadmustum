@@ -2,9 +2,6 @@ import { useCallback } from 'react';
 import { useAuth as useOidcAuth } from 'react-oidc-context';
 import { useConfig } from '../contexts/ConfigContext.tsx';
 
-/**
- * Auth state facade
- */
 export interface Auth {
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -17,10 +14,6 @@ export interface Auth {
   login: (redirectUri?: string) => Promise<void>;
 }
 
-/**
- * Wraps the useAuth hook from react-oidc-context and returns a facade for
- * the auth state.
- */
 export const useAuth = (): Auth => {
   const { isLoading, isAuthenticated, user, signoutRedirect, signinRedirect } = useOidcAuth();
 

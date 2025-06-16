@@ -1,11 +1,7 @@
-// src/hooks/useStopsSource.ts
 import { useEffect } from 'react';
 import type { GeoJSONSource, Map as MaplibreMap } from 'maplibre-gl';
 import type { GeoJSONFeatureCollection } from '../utils/geojsonUtils';
 
-/**
- * Pushes geojson into the "stops" source on the raw maplibre instance.
- */
 export function useStopsSource(
   rawMapRef: React.RefObject<MaplibreMap | null>,
   geojson: GeoJSONFeatureCollection,

@@ -1,4 +1,3 @@
-// src/hooks/useStopsGeoJSON.ts
 import { useMemo } from 'react';
 import { useStopPlaces } from '../data/useStopPlaces';
 import { convertStopPlacesToGeoJSON, type GeoJSONFeatureCollection } from '../utils/geojsonUtils';

@@ -25,7 +25,6 @@ export function RegisterIcons() {
         if (!map.hasImage(name)) {
           const response = await map.loadImage(getIconUrl(name, true));
           if (response.data) {
-            console.log('loading image for: ' + name);
             map.addImage(name, response.data);
           }
         }

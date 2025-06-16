@@ -9,10 +9,10 @@ import { useStopsSource } from '../hooks/useStopsSource';
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
 
 import { createMapStyle } from '../map/mapStyle';
-import { Sidebar } from '../components/Sidebar';
-import { ToggleButton } from '../components/ToggleButton';
-import { MapContainer } from '../components/MapContainer';
-import { MapControls } from '../components/MapControls';
+import { Sidebar } from '../components/sidebar/Sidebar.tsx';
+import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
+import { MapContainer } from '../components/map/MapContainer.tsx';
+import { MapControls } from '../components/map/MapControls.tsx';
 
 export default function MapView() {
   const theme = useTheme();
@@ -43,7 +43,7 @@ export default function MapView() {
   }, []);
 
   return (
-    <Box sx={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <Box sx={{ position: 'relative', width: '100vw', height: '92.4vh' }}>
       <Sidebar
         width={width}
         collapsed={collapsed}

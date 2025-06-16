@@ -2,8 +2,8 @@ import { useRef } from 'react';
 import { Box, useTheme } from '@mui/material';
 import { useStopPlaces } from '../data/useStopPlaces';
 
-import { Sidebar } from '../components/Sidebar.tsx';
-import { ToggleButton } from '../components/ToggleButton.tsx';
+import { Sidebar } from '../components/sidebar/Sidebar.tsx';
+import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
 import { useResizableSidebar } from '../hooks/useResizableSidebar.ts';
 import DataPageContent from '../components/data/DataPageContent.tsx';
 import LoadingPage from '../components/common/LoadingPage.tsx';

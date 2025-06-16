@@ -1,10 +1,6 @@
 import { AuthProvider as OidcAuthProvider } from 'react-oidc-context';
 import { useConfig } from '../contexts/ConfigContext.tsx';
 
-/**
- * Wraps AuthProvider from react-oidc-context to add the signing callback
- * and redirect uri props.
- */
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { oidcConfig } = useConfig();
 
