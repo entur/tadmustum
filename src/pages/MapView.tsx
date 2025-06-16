@@ -51,7 +51,7 @@ export default function MapView() {
         theme={theme}
         toggleCollapse={toggle}
       />
-      <ToggleButton collapsed={collapsed} sidebarWidth={width} theme={theme} onClick={toggle} />
+      <ToggleButton collapsed={collapsed} sidebarWidth={width} onClick={toggle} />
       <Box
         className="map-box"
         sx={{
