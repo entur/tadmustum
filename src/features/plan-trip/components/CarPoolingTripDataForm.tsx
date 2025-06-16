@@ -76,6 +76,7 @@ const schema = Yup.object({
 });
 
 export interface CarPoolingTripDataFormProps {
+  initialState?: CarPoolingTripDataFormData;
   onAddDeparturestopClick: () => void;
   onRemoveDepartureStopClick: () => void;
   onAddDestinationtopClick: () => void;
@@ -92,6 +93,7 @@ export default function CarPoolingTripDataForm(
   props: CarPoolingTripDataFormProps,
 ) {
   const {
+    initialState,
     onAddDeparturestopClick,
     onRemoveDepartureStopClick,
     onAddDestinationtopClick,
@@ -172,11 +174,16 @@ export default function CarPoolingTripDataForm(
       if (!error && msg.length > 0) {
         setError({ message: msg, code: "VALIDATION_ERROR" });
       } else if (error?.code === "VALIDATION_ERROR" && msg === "") {
-        console.log("Clearing error");
         setError(undefined);
       }
     }
+
+    if (initialState) {
+      reset(initialState);
+    }
   }, [
+    initialState,
+    reset,
     authorities,
     authority,
     mapDepartureFlexibleStop,

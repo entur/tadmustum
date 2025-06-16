@@ -1,76 +1,24 @@
 import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
-
-interface EstimatedVehicleJourneyInput {
-  recordedAtTime: string;
-  lineRef: string;
-  directionRef: string;
-  estimatedVehicleJourneyCode: string;
-  extraJourney: boolean;
-  vehicleMode: string;
-  routeRef: string;
-  publishedLineName: string;
-  groupOfLinesRef: string;
-  externalLineRef: string;
-  operatorRef: string;
-  monitored: boolean;
-  dataSource: string;
-  estimatedCalls: EstimatedCallsInput;
-}
-
-interface EstimatedCallsInput {
-  estimatedCall: EstimatedCallInput[];
-}
-
-interface EstimatedCallInput {
-  stopPointRef?: string;
-  order: number;
-  stopPointName: string;
-  cancellation?: boolean;
-  requestStop?: boolean;
-  destinationDisplay: string;
-  aimedArrivalTime?: string;
-  expectedArrivalTime?: string;
-  aimedDepartureTime?: string;
-  expectedDepartureTime?: string;
-  arrivalStatus?: string;
-  arrivalBoardingActivity?: string;
-  departureStatus?: string;
-  departureBoardingActivity?: string;
-  departureStopAssignment?: DepartureStopAssignmentInput;
-}
-
-interface DepartureStopAssignmentInput {
-  expectedFlexibleArea: ExpectedFlexibleAreaInput;
-}
-
-interface ExpectedFlexibleAreaInput {
-  polygon: PolygonInput;
-}
-
-interface PolygonInput {
-  exterior: LinearRingInput;
-}
-
-interface LinearRingInput {
-  posList: string;
-}
+import type { Extrajourney } from "../model/Extrajourney.tsx";
+import dayjs from "dayjs";
+import { v4 as uuidv4 } from "uuid";
 
 function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
   codespace: string;
   authority: string;
-  input: { estimatedVehicleJourney: EstimatedVehicleJourneyInput };
+  input: Extrajourney;
 } {
-  return {
+  const variables = {
     codespace: formData.codespace,
     authority: formData.authority,
     input: {
       estimatedVehicleJourney: {
-        recordedAtTime: "", //TODO: Generate iso time stamp
-        lineRef: "", // TODO: Generate CodeSpaced "ENT:Line:<uuid>" UUID reference
+        recordedAtTime: dayjs().toISOString(), //TODO: Generate iso time stamp
+        lineRef: `ENT:CarPooling:${uuidv4()}`, // TODO: Generate CodeSpaced "ENT:Line:<uuid>" UUID reference
         directionRef: "0",
         estimatedVehicleJourneyCode: "", // TODO: Generate "<codespace>:ServiceJourney:<uuid>".
         extraJourney: true,
-        vehicleMode: "car",
+        vehicleMode: "taxi", // TODO: Needs to add car as vehicle mode
         routeRef: "", // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
         publishedLineName: formData.lineName,
         groupOfLinesRef: "", // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
@@ -78,10 +26,13 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         operatorRef: formData.operator,
         monitored: true,
         dataSource: "ENT", // TODO: Remove hard coding
+        cancellation: false,
+        isCompleteStopSequence: true,
         estimatedCalls: {
           estimatedCall: [
             {
               order: 1,
+              stopPointRef: "Mandatory for now", // TODO: Discuss to make optional in a Profile
               stopPointName: formData.departureStopName,
               destinationDisplay: formData.destinationDisplay,
               aimedDepartureTime: formData.departureDatetime.toISOString(),
@@ -99,6 +50,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
             },
             {
               order: 2,
+              stopPointRef: "Mandatory for now", // TODO: Discuss to make optional in a Profile
               stopPointName: formData.destinationStopName,
               destinationDisplay: formData.destinationDisplay,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
@@ -116,9 +68,23 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
             },
           ],
         },
+        expiresAtEpochMs: formData.destinationDatetime.add(1, "hour").valueOf(),
       },
     },
   };
+
+  if (formData.id) {
+    return {
+      codespace: variables.codespace,
+      authority: variables.authority,
+      input: {
+        id: formData.id,
+        ...variables.input,
+      },
+    };
+  } else {
+    return variables;
+  }
 }
 
 export default prepareCarpoolingFormData;

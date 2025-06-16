@@ -4,6 +4,7 @@ export type CarPoolingTripDataFormData = {
   codespace: string;
   authority: string;
   operator: string;
+  id?: string;
   lineName: string;
   destinationDisplay: string;
   departureStopName: string;

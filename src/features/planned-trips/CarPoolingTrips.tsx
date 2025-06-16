@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import type { Extrajourney } from "../../shared/model/Extrajourney.tsx";
 import { useQueryExtraJourney } from "./hooks/useQueryExtraJourney.tsx";
+import Button from "@mui/material/Button";
+import { useNavigate } from "react-router-dom";
+import { Box } from "@mui/material";
 
 export default function CarPoolingTrips() {
+  const navigate = useNavigate();
   const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(
     undefined,
   );
@@ -32,12 +36,25 @@ export default function CarPoolingTrips() {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  console.log("data", plannedTrips);
-
   const rows = plannedTrips;
 
-  const columns = [
-    { field: "id", headerName: "ID" },
+  const columns: GridColDef[] = [
+    {
+      field: "id",
+      headerName: "ID",
+      renderCell: (params) => (
+        <Box>
+          {params.row.id}{" "}
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => navigate(`/plan-trip/${params.row.id}`)}
+          >
+            Edit
+          </Button>
+        </Box>
+      ),
+    },
     {
       field: "lineNameValue",
       headerName: "Line name",

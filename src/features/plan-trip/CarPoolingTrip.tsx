@@ -7,9 +7,11 @@ import CarPoolingTripData, {
 } from "./components/CarPoolingTripData.tsx";
 import { type EditableMapHandle } from "../../shared/components/EditableMap.tsx";
 import EditableMap from "../../shared/components/EditableMap.tsx";
+import { useParams } from "react-router-dom";
 
 export default function CarPoolingTrip() {
   const theme = useTheme();
+  const { id } = useParams();
 
   const editableMapRef = useRef<EditableMapHandle>(null);
   const dataHandle = useRef<CarPoolingTripDataHandle>(null);
@@ -52,6 +54,7 @@ export default function CarPoolingTrip() {
         }}
       >
         <CarPoolingTripData
+          tripId={id}
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}
           onRemoveFlexibleStop={(id) =>
