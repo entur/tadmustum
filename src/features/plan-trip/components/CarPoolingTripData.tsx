@@ -15,12 +15,14 @@ import type { AppError } from "../../../shared/error-message/AppError.tsx";
 import { useQueryExtraJourney } from "../hooks/useQueryOneExtraJourney.tsx";
 import type { Extrajourney } from "../../../shared/model/Extrajourney.tsx";
 import dayjs from "dayjs";
+import loadFeatureUtil from "../util/loadFeatureUtil.tsx";
 
 export interface CarPoolingTripDataProps {
   tripId?: string;
   onAddFlexibleStop: () => void;
   onRemoveFlexibleStop: (id: string) => void;
   onStopCreatedCallback: () => Feature | null | undefined;
+  loadedFlexibleStop: (stops: Feature[]) => void;
 }
 
 export type CarPoolingTripDataHandle = {
@@ -40,6 +42,7 @@ const CarPoolingTripData = forwardRef<
     onRemoveFlexibleStop,
     onStopCreatedCallback,
     tripId,
+    loadedFlexibleStop,
   } = stops;
   const [departureStop, setDepartureStop] = useState<Feature | null>(null);
   const [arrivalStop, setArrivalStop] = useState<Feature | null>(null);
@@ -154,6 +157,16 @@ const CarPoolingTripData = forwardRef<
               result.data.extraJourney as Extrajourney,
             );
             setInitialState(state);
+            const departure = loadFeatureUtil({
+              posList: state.departureFlexibleStop,
+            });
+            setDepartureStop(departure);
+            const destination = loadFeatureUtil({
+              posList: state.destinationFlexibleStop,
+            });
+            setArrivalStop(destination);
+
+            loadedFlexibleStop([departure, destination]);
           }
         })
         .catch((error) => {

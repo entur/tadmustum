@@ -8,6 +8,7 @@ import CarPoolingTripData, {
 import { type EditableMapHandle } from "../../shared/components/EditableMap.tsx";
 import EditableMap from "../../shared/components/EditableMap.tsx";
 import { useParams } from "react-router-dom";
+import type { Feature } from "geojson";
 
 export default function CarPoolingTrip() {
   const theme = useTheme();
@@ -20,6 +21,7 @@ export default function CarPoolingTrip() {
 
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(false);
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing || collapsed) return;
@@ -61,6 +63,9 @@ export default function CarPoolingTrip() {
             editableMapRef.current?.removeFeature(id)
           }
           onStopCreatedCallback={() => editableMapRef.current?.currentFeature()}
+          loadedFlexibleStop={(stops: Feature[]) => {
+            editableMapRef.current?.addFeatures(stops);
+          }}
         />
       </Box>
 

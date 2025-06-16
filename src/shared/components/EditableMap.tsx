@@ -42,6 +42,7 @@ export type MapModes = MapMode[keyof MapMode];
 export type EditableMapHandle = {
   drawFeature: () => void;
   currentFeature: () => Feature | null;
+  addFeatures: (features: Feature[]) => void;
   removeFeature: (id: string) => void;
 };
 
@@ -166,6 +167,31 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       [drawTool, features],
     );
 
+    const featuresArrayToRecord = (
+      features: Feature[],
+    ): Record<string, Feature> => {
+      return features.reduce(
+        (acc, feature) => {
+          if (feature.id !== undefined && feature.id !== null) {
+            acc[String(feature.id)] = feature;
+          }
+          return acc;
+        },
+        {} as Record<string, Feature>,
+      );
+    };
+
+    const addFeatures = (features: Feature[]) => {
+      console.log(features);
+      setFeatures(featuresArrayToRecord(features));
+      const mapBoxDraw = new MapboxDraw(MAPBOXDRAW_DEFAULT_CONSTRUCTOR);
+      mapBoxDrawDefaultOnAdd(mapRef.current);
+      mapRef.current?.addControl(mapBoxDraw as unknown as IControl, "top-left");
+      mapBoxDraw.add(features[0]);
+      mapBoxDraw.add(features[1]);
+      setDrawTool(mapBoxDraw);
+    };
+
     useEffect(() => {
       emitChangeMapModeEvent(prevMode, mapMode);
     }, [emitChangeMapModeEvent, mapMode, prevMode]);
@@ -173,6 +199,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
     useImperativeHandle(ref, () => ({
       drawFeature,
       currentFeature: () => currentFeature,
+      addFeatures,
       removeFeature,
     }));
 
