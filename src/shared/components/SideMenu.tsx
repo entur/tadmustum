@@ -20,9 +20,17 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
   return (
     <Drawer
       variant="temporary"
+      anchor="right"
       open={open}
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
+      slotProps={{
+        paper: {
+          sx: {
+            width: 200,
+          },
+        },
+      }}
     >
       <List>
         {menuItems.map(({ text, path }) => (
