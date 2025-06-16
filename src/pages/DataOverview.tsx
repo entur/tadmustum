@@ -44,7 +44,6 @@ export default function DataOverview() {
       <ToggleButton
         collapsed={sidebarCollapsed}
         sidebarWidth={sidebarWidth}
-        theme={theme}
         onClick={toggleSidebar}
       />
       <Box

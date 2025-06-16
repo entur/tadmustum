@@ -43,7 +43,7 @@ interface SideMenuProps {
   onClose: () => void;
 }
 
-export default function SideMenu({ open, onClose }: SideMenuProps) {
+export default function Menu({ open, onClose }: SideMenuProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));

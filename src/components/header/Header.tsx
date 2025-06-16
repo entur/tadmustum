@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AppBar, Toolbar, useTheme, useMediaQuery } from '@mui/material';
-import SideMenu from '../SideMenu.tsx';
+import Menu from '../Menu.tsx';
 import SettingsDialog from '../dialogs/SettingsDialog.tsx';
 import UserDialog from '../dialogs/UserDialog.tsx';
 import { useAuth } from '../../auth';
@@ -81,7 +81,7 @@ export default function Header() {
         </Toolbar>
       </AppBar>
 
-      <SideMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <Menu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <UserDialog
         open={userOpen}
