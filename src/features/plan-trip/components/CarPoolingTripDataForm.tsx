@@ -350,7 +350,7 @@ export default function CarPoolingTripDataForm(
           return (
             <TextField
               {...field}
-              label="Departure stop name"
+              label="Destination stop name"
               error={!!errors.destinationStopName}
               helperText={errors.destinationStopName?.message}
               required
