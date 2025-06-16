@@ -258,7 +258,9 @@ const queryExtraJourney =
           };
         }) =>
           extJourney.estimatedVehicleJourney?.estimatedCalls?.estimatedCall?.some(
-            (call) => call.departureStopAssignment !== undefined,
+            (call) =>
+              call.departureStopAssignment != null &&
+              call.departureStopAssignment.expectedFlexibleArea != null,
           ),
       );
 
