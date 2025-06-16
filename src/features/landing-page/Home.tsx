@@ -3,18 +3,20 @@ import { Container, Box, Typography } from "@mui/material";
 export default function Home() {
   return (
     <Container maxWidth="md">
-      <Box sx={{ my: 8, textAlign: "center" }}>
+      <Box sx={{ my: 8, textAlign: "left" }}>
         <Typography variant="h3" component="h1" gutterBottom>
-          Welcome to Tadmuštum
+          Welcome to EnTur Car Pooling PoC
         </Typography>
         <Typography variant="subtitle1">
-          Tadmuštum Enturs PoC frontend app for testing creation of Car Pooling
-          messages for making such trips available in a journey planner. This
-          app uses a GraphQL api to create trips in a backend app called Enlil,
-          Enlil will then relay these to the journey planner in SIRI format.
+          Enturs Car Pooling PoC frontend app for testing creation of Car
+          Pooling messages for making such trips available in a journey planner.
+          This app uses a GraphQL api to create trips in a backend app, this
+          backend app will then relay these to the journey planner in SIRI
+          format.
         </Typography>
+        <br />
         <Typography variant="body1">
-          Tadmuštum cannot at the moment describe:
+          EnTur Car Pooling PoC cannot at the moment describe:
         </Typography>
         <Box
           component="ul"
