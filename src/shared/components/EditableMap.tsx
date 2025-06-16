@@ -182,14 +182,18 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
     };
 
     const addFeatures = (features: Feature[]) => {
-      console.log(features);
       setFeatures(featuresArrayToRecord(features));
-      const mapBoxDraw = new MapboxDraw(MAPBOXDRAW_DEFAULT_CONSTRUCTOR);
-      mapBoxDrawDefaultOnAdd(mapRef.current);
-      mapRef.current?.addControl(mapBoxDraw as unknown as IControl, "top-left");
-      mapBoxDraw.add(features[0]);
-      mapBoxDraw.add(features[1]);
-      setDrawTool(mapBoxDraw);
+      if (drawTool == null) {
+        const mapBoxDraw = new MapboxDraw(MAPBOXDRAW_DEFAULT_CONSTRUCTOR);
+        mapBoxDrawDefaultOnAdd(mapRef.current);
+        mapRef.current?.addControl(
+          mapBoxDraw as unknown as IControl,
+          "top-left",
+        );
+        mapBoxDraw.add(features[0]);
+        mapBoxDraw.add(features[1]);
+        setDrawTool(mapBoxDraw);
+      }
     };
 
     useEffect(() => {

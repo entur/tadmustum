@@ -173,8 +173,9 @@ const CarPoolingTripData = forwardRef<
           setError(error);
         });
     };
+    setCurrentTripId(tripId);
     loadInitialState(tripId);
-  }, [queryOneExtraJourney, tripId]);
+  }, [loadedFlexibleStop, queryOneExtraJourney, tripId]);
 
   useImperativeHandle(ref, () => ({
     handleEditableMapModeChange,
