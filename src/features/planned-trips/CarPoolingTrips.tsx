@@ -42,28 +42,33 @@ export default function CarPoolingTrips() {
     {
       field: "id",
       headerName: "ID",
+      minWidth: 220,
+      flex: 1,
       renderCell: (params) => (
         <Box>
-          {params.row.id}{" "}
           <Button
             variant="contained"
             size="small"
             onClick={() => navigate(`/plan-trip/${params.row.id}`)}
+            style={{ marginLeft: 8 }}
           >
             Edit
-          </Button>
+          </Button>{" "}
+          {params.row.id}
         </Box>
       ),
     },
     {
       field: "lineNameValue",
       headerName: "Line name",
+      flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.publishedLineName,
     },
     {
       field: "destinationDisplayValue",
       headerName: "Destination display",
+      flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0]
           .destinationDisplay,
@@ -71,6 +76,7 @@ export default function CarPoolingTrips() {
     {
       field: "departureStopName",
       headerName: "Departure stop name",
+      flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0]
           .stopPointName,
@@ -78,6 +84,7 @@ export default function CarPoolingTrips() {
     {
       field: "departureTimeName",
       headerName: "Departure time",
+      flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0]
           .aimedDepartureTime,
@@ -85,6 +92,7 @@ export default function CarPoolingTrips() {
     {
       field: "arrivalStopName",
       headerName: "Arrival stop name",
+      flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney?.estimatedCalls?.estimatedCall[1]
           .stopPointName,
@@ -92,6 +100,7 @@ export default function CarPoolingTrips() {
     {
       field: "arrivalTimeName",
       headerName: "Arrival time",
+      flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls.estimatedCall[1]
           .aimedArrivalTime,
