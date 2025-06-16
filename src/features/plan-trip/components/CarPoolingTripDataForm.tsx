@@ -136,6 +136,7 @@ export default function CarPoolingTripDataForm(
   const departureFlexibleStop = watch("departureFlexibleStop");
   const destinationFlexibleStop = watch("destinationFlexibleStop");
   const [error, setError] = useState<AppError | undefined>(undefined);
+  const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
 
   useEffect(() => {
     if (authorities.length && !authority) {
@@ -178,10 +179,13 @@ export default function CarPoolingTripDataForm(
       }
     }
 
-    if (initialState) {
+    if (initialState && !initialStateSet) {
+      setInitialStateSet(true);
       reset(initialState);
     }
   }, [
+    initialStateSet,
+    setInitialStateSet,
     initialState,
     reset,
     authorities,
