@@ -312,6 +312,7 @@ export default function CarPoolingTripDataForm(
           return (
             <DateTimePicker
               {...field}
+              ampm={false}
               label="Select departure date"
               value={field.value || null}
               onChange={(value) => field.onChange(value)}
@@ -366,6 +367,7 @@ export default function CarPoolingTripDataForm(
           return (
             <DateTimePicker
               {...field}
+              ampm={false}
               label="Select arrival date"
               value={field.value || null}
               onChange={(value) => field.onChange(value)}
