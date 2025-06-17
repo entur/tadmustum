@@ -57,6 +57,14 @@
   "home.features.localization.headline": "Støtte for flere språk",
   "home.features.localization.description": "Opplev applikasjonen på ditt foretrukne språk med lokaliseringsfunksjonen. Også støtte for RTL-språk.",
 
+  "map.layers.title": "Kartlag",
+  "map.layers.circles": "Sirkler",
+  "map.layers.icons": "Ikoner",
+  "map.layers.text": "Tekstetiketter",
+  "map.layers.toggleOpen": "Åpne lagkontroller",
+  "map.layers.toggleClose": "Lukk lagkontroller",
+  "map.layers.basemap": "OSM kart",
+
   "workArea.title": "Arbeidsområde",
   "workArea.nameLabel": "Navn",
   "workArea.typeLabel": "Type",

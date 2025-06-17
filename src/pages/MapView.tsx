@@ -13,10 +13,11 @@ import { Sidebar } from '../components/sidebar/Sidebar.tsx';
 import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
 import { MapContainer } from '../components/map/MapContainer.tsx';
 import { MapControls } from '../components/map/MapControls.tsx';
+import { LayerControl } from '../components/map/LayerControl'; // Import LayerControl
 
 export default function MapView() {
   const theme = useTheme();
-  const mapStyle = createMapStyle(theme);
+  const mapStyle = createMapStyle(theme); // mapStyle is recreated with the current theme
 
   const { geojson: stopsGeoJSON, loading, error } = useStopsGeoJSON();
 
@@ -27,10 +28,12 @@ export default function MapView() {
 
   const [mapLoadedByComponent, setMapLoadedByComponent] = useState(false);
 
+  // useStopsSource depends on rawMapRef and geojson, and should run whenever they are ready
   useStopsSource(rawMapRef, stopsGeoJSON, loading, error);
 
   const handleMapLoad = (evt: MapLibreEvent) => {
     rawMapRef.current = evt.target as MaplibreMap;
+    console.log('[MapView] MapContainer onLoad fired. Setting mapLoadedByComponent to true.');
     setMapLoadedByComponent(true);
   };
 
@@ -65,6 +68,7 @@ export default function MapView() {
       >
         <MapContainer mapStyle={mapStyle} onLoad={handleMapLoad} mapRef={reactMapRef}>
           {mapLoadedByComponent && <MapControls />}
+          {mapLoadedByComponent && <LayerControl />}
         </MapContainer>
       </Box>
     </Box>

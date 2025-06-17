@@ -57,6 +57,14 @@
   "home.features.localization.headline": "Multi-Language Support",
   "home.features.localization.description": "Experience the application in your preferred language with the localization feature",
 
+  "map.layers.title": "Map Layers",
+  "map.layers.circles": "Circles",
+  "map.layers.icons": "Icons",
+  "map.layers.text": "Text Labels",
+  "map.layers.toggleOpen": "Open layer controls",
+  "map.layers.toggleClose": "Close layer controls",
+  "map.layers.basemap": "OSM Basemap",
+
   "workArea.title": "Work area",
   "workArea.nameLabel": "Name",
   "workArea.typeLabel": "Type",

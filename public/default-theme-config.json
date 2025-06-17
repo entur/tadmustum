@@ -5,7 +5,8 @@
     "primary": { "main": "#75ccdd" },
     "secondary": { "main": "#ed3e42" },
     "info": { "main": "#ed3e42" },
-    "background": { "default": "#ffffff" }
+    "background": { "default": "#ffffff" },
+    "action": { "hover": "#ec83ad", "active": "#ec83ad" }
   },
   "typography": {
     "fontFamily": "\"Patrick Hand\", \"Helvetica\", \"Arial\", sans-serif",

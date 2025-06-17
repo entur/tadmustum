@@ -19,7 +19,6 @@ export function ToggleButton({ collapsed, sidebarWidth, onClick }: ToggleButtonP
         left: collapsed ? theme.spacing(0) : `calc(${sidebarWidth}px + ${theme.spacing(0)})`,
         zIndex: theme.zIndex.fab,
         backgroundColor: theme.palette.background.paper,
-
         boxShadow: theme.shadows[3],
         transition: theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
           duration: theme.transitions.duration.short,

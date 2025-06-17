@@ -5,7 +5,8 @@
     "primary": { "main": "#181C56" },
     "secondary": { "main": "#ff5959" },
     "background": { "default": "#ffffff" },
-    "info": { "main": "#ff5959" }
+    "info": { "main": "#ff5959" },
+    "action": { "hover": "#aeb7e2", "active": "#aeb7e2" }
   },
   "typography": {
     "fontFamily": " \"Nationale\", Arial, \"Gotham Rounded\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Oxygen-Sans, Ubuntu, Cantarell, \"Helvetica Neue\", sans-serif;",

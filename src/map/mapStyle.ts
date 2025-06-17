@@ -4,21 +4,28 @@ import type { StyleSpecification } from 'maplibre-gl';
 import type { Theme } from '@mui/material/styles';
 import type { LayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 
+// Define constants for layer IDs - good practice!
+export const LAYER_ID_OSM_RASTER = 'osm-raster-tiles';
+export const LAYER_ID_STOPS_CIRCLE = 'stops-circle';
+export const LAYER_ID_STOPS_ICON = 'stops-icon';
+export const LAYER_ID_STOPS_TEXT = 'stops-text';
+
 export function createMapStyle(theme: Theme): StyleSpecification {
   // 1) Any existing base layers (e.g., OSM raster)
   const existingLayers: LayerSpecification[] = [
     {
-      id: 'osm-raster-tiles',
+      id: LAYER_ID_OSM_RASTER, // Use constant
       type: 'raster' as const,
       source: 'osm',
     },
   ];
 
   // 2) Stop‐place layers (dynamic, zoom‐dependent)
+  // Split into three distinct layers
   const stopPlaceLayers: LayerSpecification[] = [
     // 2a. Circle layer (always visible, but radius interpolates with zoom)
     {
-      id: 'stops-circle-fallback',
+      id: LAYER_ID_STOPS_CIRCLE, // Use constant, renamed
       type: 'circle' as const,
       source: 'stops', // this must match your GeoJSON source ID
       paint: {
@@ -33,32 +40,52 @@ export function createMapStyle(theme: Theme): StyleSpecification {
             : theme.palette.secondary.main,
         'circle-opacity': 0.6,
       },
+      // Initial visibility is 'visible' by default, but can be set here if needed
+      // layout: { visibility: 'visible' },
     },
-    // 2b. Symbol (icon + optional text) — only at zoom ≥ 8
+    // 2b. Symbol (icon) — only at zoom ≥ 10 (as per original)
     {
-      id: 'stops-symbol',
+      id: LAYER_ID_STOPS_ICON, // New layer for icons
       type: 'symbol' as const,
       source: 'stops', // same GeoJSON source
-      minzoom: 10, // do not render icons below zoom 8
+      minzoom: 10, // do not render icons below zoom 10
       layout: {
         // Use the feature’s “icon” property (registered by your RegisterIcons)
         'icon-image': ['get', 'icon'],
 
-        // Interpolate icon size: at zoom 8 → 0.2, zoom 12 → 0.5, zoom 16 → 1.0
+        // Interpolate icon size: at zoom 8 → 0.15, zoom 12 → 0.2, zoom 16 → 0.4 (as per original)
         'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 0.15, 12, 0.2, 16, 0.4],
 
         'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
+        'icon-ignore-placement': true, // Allows icons to be placed even if they overlap
 
-        // (Optional) text label beneath each icon:
+        // Ensure text-field and text-related layout properties are NOT here
+        // Initial visibility is 'visible' by default
+      },
+      paint: {
+        // Icon paint properties would go here if any (e.g., icon-color for SDF icons)
+        // Initial opacity is 1 by default
+      },
+    },
+    // 2c. Symbol (text) — only at zoom ≥ 10 (as per original)
+    {
+      id: LAYER_ID_STOPS_TEXT, // New layer for text labels
+      type: 'symbol' as const,
+      source: 'stops', // same GeoJSON source
+      minzoom: 10, // do not render text below zoom 10
+      layout: {
+        // Ensure icon-image and icon-related layout properties are NOT here
+
+        // Text label beneath each icon:
         'text-field': ['get', 'name'],
-        'text-font': ['Open Sans Regular'],
-        'text-offset': [0, 2.8],
+        'text-font': ['Open Sans Regular'], // Ensure this font is available via glyphs
+        'text-offset': [0, 2.8], // Position below the icon
         'text-anchor': 'top',
         'text-size': 10,
-        'text-allow-overlap': true,
-        // You could also hide text until zoom > 12 by adding `text-opacity` in layout,
-        // but here we’ll keep paint‐based opacity interpolation below.
+        'text-allow-overlap': true, // Allows text to be placed even if they overlap
+        'text-ignore-placement': true, // Allows text to be placed even if they overlap
+        // Note: text-allow-overlap and text-ignore-placement can sometimes lead to cluttered maps.
+        // Consider removing text-ignore-placement if performance or clutter is an issue.
       },
       paint: {
         'text-color':
@@ -103,7 +130,7 @@ export function createMapStyle(theme: Theme): StyleSpecification {
 
     layers: [
       ...existingLayers,
-      // Insert the stops‐circle layer first, then symbol on top
+      // Insert the stops layers in the desired order (circle below icon, icon below text)
       ...stopPlaceLayers,
     ],
   };
