@@ -63,6 +63,9 @@ export default function CarPoolingTrip() {
             editableMapRef.current?.removeFeature(id)
           }
           onStopCreatedCallback={() => editableMapRef.current?.currentFeature()}
+          onZoomToFeature={(id: string) =>
+            editableMapRef.current?.zoomToFeature(id)
+          }
           loadedFlexibleStop={(stops: Feature[]) => {
             editableMapRef.current?.addFeatures(stops);
           }}

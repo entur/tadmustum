@@ -14,10 +14,11 @@ import {
   useState,
 } from "react";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import type { Feature } from "geojson";
+import type { Feature, Polygon } from "geojson";
 import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from "../util/MAPBOXDRAW_DEFAULT_CONSTRUCTOR.tsx";
 import type { IControl } from "maplibre-gl";
 import usePrevious from "../util/usePrevious.tsx";
+import maplibregl from "maplibre-gl";
 
 type EditableMapEventType = "editableMap.mapModeChange";
 
@@ -40,10 +41,11 @@ export type EditableMapProps = EditableMapCallbacks & {};
 export type MapModes = MapMode[keyof MapMode];
 
 export type EditableMapHandle = {
-  drawFeature: () => void;
-  currentFeature: () => Feature | null;
   addFeatures: (features: Feature[]) => void;
+  currentFeature: () => Feature | null;
+  drawFeature: () => void;
   removeFeature: (id: string) => void;
+  zoomToFeature: (id: string) => void;
 };
 
 export interface MapMode {
@@ -201,10 +203,27 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
     }, [emitChangeMapModeEvent, mapMode, prevMode]);
 
     useImperativeHandle(ref, () => ({
-      drawFeature,
-      currentFeature: () => currentFeature,
       addFeatures,
+      currentFeature: () => currentFeature,
+      drawFeature,
       removeFeature,
+      zoomToFeature: (id: string) => {
+        const feature = features[id] as Feature<Polygon>;
+
+        if (!feature || feature.geometry.type !== "Polygon") return;
+
+        const coords = feature.geometry.coordinates.flat(1) as [
+          number,
+          number,
+        ][];
+        const firstCoord = coords[0];
+        const bounds = new maplibregl.LngLatBounds(firstCoord, firstCoord);
+
+        // Extend bounds
+        coords.forEach((coord) => bounds.extend(coord));
+
+        mapRef.current?.fitBounds(bounds, { padding: 60 });
+      },
     }));
 
     return (

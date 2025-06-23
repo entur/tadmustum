@@ -35,6 +35,7 @@ interface SnackbarState {
 export interface CarPoolingTripDataProps {
   tripId?: string;
   onAddFlexibleStop: () => void;
+  onZoomToFeature: (id: string) => void;
   onRemoveFlexibleStop: (id: string) => void;
   onStopCreatedCallback: () => Feature | null | undefined;
   loadedFlexibleStop: (stops: Feature[]) => void;
@@ -56,6 +57,7 @@ const CarPoolingTripData = forwardRef<
     onAddFlexibleStop,
     onRemoveFlexibleStop,
     onStopCreatedCallback,
+    onZoomToFeature,
     tripId,
     loadedFlexibleStop,
   } = stops;
@@ -99,6 +101,9 @@ const CarPoolingTripData = forwardRef<
       showSnackbar("Turen ble lagret!", "success");
       setCurrentTripId(result.data);
     }
+  };
+  const handleZoomToFeature = (featureId: string) => {
+    onZoomToFeature(featureId);
   };
 
   const handleResetCallback = () => {
@@ -227,6 +232,7 @@ const CarPoolingTripData = forwardRef<
         onRemoveDestinationStopClick={removeArrivalStop}
         onResetCallback={handleResetCallback}
         onSubmitCallback={handleSubmitCallback}
+        onZoomToFeature={handleZoomToFeature}
         drawingStopsAllowed={drawingStopsAllowed}
         mapDepartureFlexibleStop={departureStop}
         mapDestinationFlexibleStop={arrivalStop}

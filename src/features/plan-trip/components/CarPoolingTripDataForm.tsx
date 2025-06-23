@@ -8,10 +8,12 @@ import {
   Button,
   FormControl,
   FormHelperText,
+  IconButton,
   MenuItem,
   Select,
   TextField,
 } from "@mui/material";
+import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -83,6 +85,7 @@ export interface CarPoolingTripDataFormProps {
   onRemoveDestinationStopClick: () => void;
   onResetCallback: () => void;
   onSubmitCallback: (formData: CarPoolingTripDataFormData) => void;
+  onZoomToFeature: (id: string) => void;
   mapDepartureFlexibleStop: Feature | null;
   mapDestinationFlexibleStop: Feature | null;
   drawingStopsAllowed: boolean;
@@ -99,6 +102,7 @@ export default function CarPoolingTripDataForm(
     onRemoveDestinationStopClick,
     onResetCallback,
     onSubmitCallback,
+    onZoomToFeature,
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     drawingStopsAllowed,
@@ -327,13 +331,26 @@ export default function CarPoolingTripDataForm(
       >
         Add stop
       </Button>
-      <Button
-        variant="contained"
-        disabled={!departureFlexibleStop}
-        onClick={() => onRemoveDepartureStopClick()}
-      >
-        Remove stop
-      </Button>
+      <Box display="flex" gap={1}>
+        <Button
+          variant="contained"
+          onClick={onRemoveDepartureStopClick}
+          disabled={!departureFlexibleStop}
+        >
+          Remove stop
+        </Button>
+        {mapDepartureFlexibleStop?.id && (
+          <IconButton
+            disabled={!departureFlexibleStop}
+            aria-label="Zoom to destination stop"
+            onClick={() =>
+              onZoomToFeature(mapDepartureFlexibleStop.id as string)
+            }
+          >
+            <GpsFixedIcon />
+          </IconButton>
+        )}
+      </Box>
       <Typography variant="h6" component="h2">
         Destination
       </Typography>
@@ -382,13 +399,26 @@ export default function CarPoolingTripDataForm(
       >
         Add stop
       </Button>
-      <Button
-        variant="contained"
-        disabled={!destinationFlexibleStop}
-        onClick={() => onRemoveDestinationStopClick()}
-      >
-        Remove stop
-      </Button>
+      <Box display="flex" gap={1}>
+        <Button
+          variant="contained"
+          onClick={onRemoveDestinationStopClick}
+          disabled={!destinationFlexibleStop}
+        >
+          Remove stop
+        </Button>
+        {mapDestinationFlexibleStop?.id && (
+          <IconButton
+            disabled={!destinationFlexibleStop}
+            aria-label="Zoom to destination stop"
+            onClick={() =>
+              onZoomToFeature(mapDestinationFlexibleStop.id as string)
+            }
+          >
+            <GpsFixedIcon />
+          </IconButton>
+        )}
+      </Box>
 
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
         <Button type="submit" variant="contained" color="primary">
