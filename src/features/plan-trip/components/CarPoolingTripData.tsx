@@ -1,11 +1,12 @@
-import {
+import React, {
   forwardRef,
+  type SyntheticEvent,
   useCallback,
   useEffect,
   useImperativeHandle,
   useState,
 } from "react";
-import { Box } from "@mui/material";
+import { type AlertProps, Box, type SnackbarCloseReason } from "@mui/material";
 import type { Feature } from "geojson";
 import CarPoolingTripDataForm from "./CarPoolingTripDataForm.tsx";
 import { useMutateExtrajourney } from "../hooks/useMutateExtrajourney.tsx";
@@ -16,7 +17,22 @@ import { useQueryExtraJourney } from "../hooks/useQueryOneExtraJourney.tsx";
 import type { Extrajourney } from "../../../shared/model/Extrajourney.tsx";
 import dayjs from "dayjs";
 import loadFeatureUtil from "../util/loadFeatureUtil.tsx";
+import Snackbar from "@mui/material/Snackbar";
+import MuiAlert from "@mui/material/Alert";
 
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
+  function Alert(props, ref) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+  },
+);
+
+type SnackbarSeverity = "success" | "error" | "info" | "warning";
+
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: SnackbarSeverity;
+}
 export interface CarPoolingTripDataProps {
   tripId?: string;
   onAddFlexibleStop: () => void;
@@ -44,6 +60,21 @@ const CarPoolingTripData = forwardRef<
     tripId,
     loadedFlexibleStop,
   } = stops;
+  const [snackbar, setSnackbar] = useState<SnackbarState>({
+    open: false,
+    message: "",
+    severity: "success", // "success" | "error" | "info" | "warning"
+  });
+  const showSnackbar = (message: string, severity: SnackbarSeverity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+  const handleSnackbarClose = (
+    _event: Event | SyntheticEvent<Element, Event>,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
   const [departureStop, setDepartureStop] = useState<Feature | null>(null);
   const [arrivalStop, setArrivalStop] = useState<Feature | null>(null);
   const [currentStop, setCurrentStop] = useState<
@@ -62,8 +93,13 @@ const CarPoolingTripData = forwardRef<
     formData.id = currentTripId;
     const result = await mutateExtrajourney(formData);
     if (result.error) {
+      showSnackbar(
+        result.error.message || "Noe gikk galt under lagring.",
+        "error",
+      );
       setError(result.error);
     } else {
+      showSnackbar("Turen ble lagret!", "success");
       setCurrentTripId(result.data);
     }
   };
@@ -196,6 +232,20 @@ const CarPoolingTripData = forwardRef<
         mapDestinationFlexibleStop={arrivalStop}
         appError={error}
       />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }} // Slide in from top
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 });
