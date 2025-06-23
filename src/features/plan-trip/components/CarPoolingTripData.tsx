@@ -199,6 +199,7 @@ const CarPoolingTripData = forwardRef<
               posList: state.departureFlexibleStop,
             });
             setDepartureStop(departure);
+            handleZoomToFeature(departure?.id as string);
             const destination = loadFeatureUtil({
               posList: state.destinationFlexibleStop,
             });
