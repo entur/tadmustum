@@ -86,7 +86,6 @@ export interface CarPoolingTripDataFormProps {
   mapDepartureFlexibleStop: Feature | null;
   mapDestinationFlexibleStop: Feature | null;
   drawingStopsAllowed: boolean;
-  appError: AppError | undefined;
 }
 
 export default function CarPoolingTripDataForm(
@@ -103,7 +102,6 @@ export default function CarPoolingTripDataForm(
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     drawingStopsAllowed,
-    appError,
   } = props;
   const { authorities } = useOrganizations();
   const operators = useOperators();
@@ -169,14 +167,10 @@ export default function CarPoolingTripDataForm(
       msg = msg + errors.destinationFlexibleStop.message;
     }
 
-    if (appError) {
-      setError(appError);
-    } else {
-      if (!error && msg.length > 0) {
-        setError({ message: msg, code: "VALIDATION_ERROR" });
-      } else if (error?.code === "VALIDATION_ERROR" && msg === "") {
-        setError(undefined);
-      }
+    if (!error && msg.length > 0) {
+      setError({ message: msg, code: "VALIDATION_ERROR" });
+    } else if (error?.code === "VALIDATION_ERROR" && msg === "") {
+      setError(undefined);
     }
 
     if (initialState && !initialStateSet) {
@@ -194,7 +188,6 @@ export default function CarPoolingTripDataForm(
     mapDestinationFlexibleStop,
     setValue,
     drawingStopsAllowed,
-    appError,
     error,
     errors?.departureFlexibleStop?.message,
     errors?.destinationFlexibleStop?.message,

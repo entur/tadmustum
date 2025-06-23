@@ -12,7 +12,6 @@ import CarPoolingTripDataForm from "./CarPoolingTripDataForm.tsx";
 import { useMutateExtrajourney } from "../hooks/useMutateExtrajourney.tsx";
 import type { CarPoolingTripDataFormData } from "../model/CarPoolingTripDataFormData.tsx";
 import type { MapModes } from "../../../shared/components/EditableMap.tsx";
-import type { AppError } from "../../../shared/error-message/AppError.tsx";
 import { useQueryExtraJourney } from "../hooks/useQueryOneExtraJourney.tsx";
 import type { Extrajourney } from "../../../shared/model/Extrajourney.tsx";
 import dayjs from "dayjs";
@@ -80,7 +79,6 @@ const CarPoolingTripData = forwardRef<
   const [currentStop, setCurrentStop] = useState<
     null | "departure" | "arrival"
   >(null);
-  const [error, setError] = useState<AppError | undefined>(undefined);
   const [currentTripId, setCurrentTripId] = useState<string | undefined>(
     undefined,
   );
@@ -97,7 +95,6 @@ const CarPoolingTripData = forwardRef<
         result.error.message || "Noe gikk galt under lagring.",
         "error",
       );
-      setError(result.error);
     } else {
       showSnackbar("Turen ble lagret!", "success");
       setCurrentTripId(result.data);
@@ -206,7 +203,10 @@ const CarPoolingTripData = forwardRef<
           }
         })
         .catch((error) => {
-          setError(error);
+          showSnackbar(
+            error.message || "Noe gikk galt under lagring.",
+            "error",
+          );
         });
     };
     setCurrentTripId(tripId);
@@ -230,7 +230,6 @@ const CarPoolingTripData = forwardRef<
         drawingStopsAllowed={drawingStopsAllowed}
         mapDepartureFlexibleStop={departureStop}
         mapDestinationFlexibleStop={arrivalStop}
-        appError={error}
       />
       <Snackbar
         open={snackbar.open}
