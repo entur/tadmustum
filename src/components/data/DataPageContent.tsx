@@ -1,28 +1,50 @@
 import { useRef } from 'react';
-import { useStopPlaces } from '../../data/useStopPlaces';
-
 import { useContainerResponsiveView } from '../../hooks/useContainerResponsiveView';
-import { Box, Table, TableBody, TableContainer, TablePagination, Typography } from '@mui/material';
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import DataTableHeader from './DataTableHeader.tsx';
 import DataTableRow from './DataTableRow.tsx';
 import { useTranslation } from 'react-i18next';
+import type { Order, OrderBy } from '../../data/useStopPlaces';
 
+import type { StopPlace } from '../../data/StopPlaceContext.tsx';
 const COMPACT_VIEW_THRESHOLD = 700;
 
-export default function DataPageContent() {
+interface DataPageContentProps {
+  data: StopPlace[];
+  loading: boolean;
+  error: string | null;
+  totalCount: number;
+  order: Order;
+  orderBy: OrderBy;
+  handleRequestSort: (property: OrderBy) => void;
+  page: number;
+  rowsPerPage: number;
+  setPage: (page: number) => void;
+  setRowsPerPage: (rowsPerPage: number) => void;
+}
+
+export default function DataPageContent({
+  data,
+  loading,
+  totalCount,
+  order,
+  orderBy,
+  handleRequestSort,
+  page,
+  rowsPerPage,
+  setPage,
+  setRowsPerPage,
+}: DataPageContentProps) {
   const { t } = useTranslation();
-  const {
-    data,
-    totalCount,
-    loading,
-    order,
-    orderBy,
-    handleRequestSort,
-    page,
-    rowsPerPage,
-    setPage,
-    setRowsPerPage,
-  } = useStopPlaces();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const compact = useContainerResponsiveView(containerRef, COMPACT_VIEW_THRESHOLD, loading);
@@ -58,6 +80,14 @@ export default function DataPageContent() {
             {data.map(sp => (
               <DataTableRow key={`${sp.id}-${sp.version}`} sp={sp} useCompactView={compact} />
             ))}
+
+            {data.length === 0 && !loading && (
+              <TableRow>
+                <TableCell colSpan={compact ? 3 : 5} align="center">
+                  {t('data.noResults', 'No data to display.')}
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -78,7 +108,7 @@ export default function DataPageContent() {
           setPage(0);
         }}
         rowsPerPageOptions={[10, 25, 50, 100]}
-        labelRowsPerPage={t('data.pagination.rowsPerPage', 'Rows per page:')}
+        labelRowsPerPage={t('data.pagination.rowsPerPage')}
         labelDisplayedRows={({ from, to, count }) => {
           const key =
             count === -1 ? 'data.pagination.displayedRowsOfMore' : 'data.pagination.displayedRows';

@@ -36,7 +36,13 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
       >
         {useCompactView && (
           <TableCell padding="none">
-            <IconButton size="small" onClick={() => setOpen(o => !o)}>
+            <IconButton
+              size="small"
+              onClick={event => {
+                event.stopPropagation();
+                setOpen(o => !o);
+              }}
+            >
               {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
             </IconButton>
           </TableCell>

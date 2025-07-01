@@ -16,6 +16,7 @@
   "data.title": "Stop Place Overview",
   "data.loading": "Loading data...",
   "data.errorPrefix": "Error",
+  "data.noResults": "No data to display.",
   "data.totalEntries": "Total entries: {{count}}",
   "data.pagination.rowsPerPage": "Rows per page:",
   "data.pagination.displayedRows": "{{from}}–{{to}} of {{count}}",
@@ -73,5 +74,9 @@
   "workArea.types.ferry": "Ferry",
   "workArea.types.tram": "Tram",
   "workArea.includeLabel": "Include",
-  "workArea.moreInfoTooltip": "More info"
+  "workArea.moreInfoTooltip": "More info",
+
+  "session.expired.title": "Session Expired",
+  "session.expired.message": "Your session has expired. To protect your information, you have been logged out. Please log in again to continue.",
+  "session.expired.reloginButton": "Log In Again"
 }

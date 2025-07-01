@@ -23,6 +23,8 @@ export default function UserDialog({ open, onClose, onLogout }: UserDialogProps)
       <DialogContent dividers>
         <Typography variant="caption">{t('user.name')}: </Typography>
         <Typography variant="body1">{auth.user?.name}</Typography>
+        <Typography variant="caption">{t('user.role')}: </Typography>
+        <Typography variant="body1">{auth.roleAssignments?.join(', ')}</Typography>
       </DialogContent>
       <DialogActions>
         <Button onClick={onLogout} variant="contained">

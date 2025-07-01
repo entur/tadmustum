@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export function useResizableSidebar(initialWidth = 300) {
+export function useResizableSidebar(initialWidth = 300, initialCollapsed = false) {
   const [width, setWidth] = useState<number>(initialWidth);
   const [isResizing, setIsResizing] = useState<boolean>(false);
-  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(initialCollapsed);
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {

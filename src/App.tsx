@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/header/Header.tsx';
 import Home from './pages/Home';
-import DataOverview from './pages/DataOverview';
+import DataView from './pages/DataView.tsx';
 import MapView from './pages/MapView';
 import { SearchProvider } from './components/search';
 import { CssBaseline, Toolbar, Box, ThemeProvider } from '@mui/material';
 import { useCustomization } from './contexts/CustomizationContext.tsx';
 import { useAppTheme } from './hooks/useAppTheme';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import SessionExpiredDialog from './components/dialogs/SessionExpiredDialog.tsx';
 
 export default function App() {
   const { useCustomFeatures } = useCustomization();
@@ -25,11 +26,12 @@ export default function App() {
             <Box className="app-content">
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/data" element={<ProtectedRoute element={<DataOverview />} />} />
+                <Route path="/data" element={<ProtectedRoute element={<DataView />} />} />
                 <Route path="/map" element={<MapView />} />
               </Routes>
             </Box>
           </Box>
+          <SessionExpiredDialog />
         </ThemeProvider>
       </SearchProvider>
     </BrowserRouter>

@@ -1,28 +1,26 @@
-import { Box, IconButton, Avatar, Typography, useTheme } from '@mui/material';
+import { Box, IconButton, Badge, Button } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
 
 interface HeaderActionsProps {
   isMobile: boolean;
+  isHomePage: boolean;
   onSearchIconClick: () => void;
   onUserIconClick: () => void;
   onSettingsIconClick: () => void;
   onMenuIconClick: () => void;
   isAuthenticated: boolean;
-  userInitials: string;
 }
 
 export default function HeaderActions({
   isMobile,
+  isHomePage,
   onSearchIconClick,
   onUserIconClick,
   onSettingsIconClick,
   onMenuIconClick,
   isAuthenticated,
-  userInitials,
 }: HeaderActionsProps) {
-  const theme = useTheme();
-
   const renderHeaderIcon = (key: string, size = 28) => (
     <Box
       component="img"
@@ -34,33 +32,28 @@ export default function HeaderActions({
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto' }}>
-      {isMobile && (
+      {isMobile && !isHomePage && (
         <IconButton color="inherit" onClick={onSearchIconClick} aria-label="search">
           <SearchIcon />
         </IconButton>
       )}
 
-      <IconButton color="inherit" onClick={onUserIconClick} aria-label="user account">
-        {isAuthenticated && userInitials ? (
-          <Avatar
-            className="avatar"
-            sx={{
-              bgcolor: theme.palette.common.white,
-              color: theme.palette.secondary.main,
-              fontWeight: 'bold',
-              width: 28,
-              height: 28,
-            }}
-          >
-            <Typography className="initials" sx={{ fontSize: '0.8rem' }}>
-              {' '}
-              {userInitials}
-            </Typography>
-          </Avatar>
-        ) : (
-          renderHeaderIcon('user')
-        )}
-      </IconButton>
+      {isAuthenticated ? (
+        <IconButton color="inherit" onClick={onUserIconClick} aria-label="user account">
+          <Badge color="success" overlap="circular" variant="dot">
+            {renderHeaderIcon('user')}
+          </Badge>
+        </IconButton>
+      ) : (
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={renderHeaderIcon('user')}
+          onClick={onUserIconClick}
+        >
+          Log in
+        </Button>
+      )}
 
       <IconButton color="inherit" onClick={onSettingsIconClick} aria-label="settings">
         {renderHeaderIcon('settings')}

@@ -16,6 +16,7 @@
   "data.title": "Oversikt over stoppesteder",
   "data.loading": "Laster data...",
   "data.errorPrefix": "Feil",
+  "data.noResults": "Ingen data å vise.",
   "data.totalEntries": "Totalt antall oppføringer: {{count}}",
   "data.pagination.rowsPerPage": "Rader per side:",
   "data.pagination.displayedRows": "{{from}}–{{to}} av {{count}}",
@@ -73,5 +74,9 @@
   "workArea.types.ferry": "Ferge",
   "workArea.types.tram": "Trikk",
   "workArea.includeLabel": "Inkluder",
-  "workArea.moreInfoTooltip": "Mer info"
+  "workArea.moreInfoTooltip": "Mer info",
+
+  "session.expired.title": "Økten er utløpt",
+  "session.expired.message": "Økten din har utløpt. For å beskytte informasjonen din, har du blitt logget ut. Vennligst logg inn igjen for å fortsette.",
+  "session.expired.reloginButton": "Logg inn igjen"
 }
