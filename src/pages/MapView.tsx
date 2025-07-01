@@ -52,12 +52,16 @@ export default function MapView() {
   } = useSearch();
 
   const searchMapFeatures = useCallback(
-    async (query: string): Promise<SearchResultItem[]> => {
+    async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
       if (geoJsonLoading || !stopsGeoJSON?.features) return [];
       const lowerQuery = query.toLowerCase();
 
       const results = stopsGeoJSON.features
-        .filter(feature => feature.properties.name?.toLowerCase().includes(lowerQuery))
+        .filter(feature => {
+          const nameMatch = feature.properties.name?.toLowerCase().includes(lowerQuery);
+          const typeMatch = filters.length === 0 || filters.includes(feature.properties.icon);
+          return !!nameMatch && typeMatch;
+        })
         .map(feature => ({
           id: feature.properties.id,
           name: feature.properties.name,
@@ -85,11 +89,6 @@ export default function MapView() {
       );
 
       if (firstMapResult?.coordinates) {
-        console.log(
-          '[MapView] Flying to map result (from searchResults):',
-          firstMapResult.name,
-          firstMapResult.coordinates
-        );
         reactMapRef.current.flyTo({ center: firstMapResult.coordinates, zoom: 18, duration: 2000 });
       }
     }
@@ -97,11 +96,6 @@ export default function MapView() {
 
   useEffect(() => {
     if (selectedItem?.coordinates && reactMapRef.current) {
-      console.log(
-        '[MapView] Flying to SELECTED item:',
-        selectedItem.name,
-        selectedItem.coordinates
-      );
       reactMapRef.current.flyTo({
         center: selectedItem.coordinates,
         zoom: 18,

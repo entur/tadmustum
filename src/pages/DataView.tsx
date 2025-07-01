@@ -48,23 +48,29 @@ export default function DataView() {
   } = useSearch();
 
   const searchStopPlaceData = useCallback(
-    async (query: string): Promise<SearchResultItem[]> => {
+    // 1. Accept the filters array
+    async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
       if (stopPlacesLoading || !allFetchedStopPlaces) return [];
-      console.log(`[DataOverview] Searching stop place data for: "${query}"`);
       const lowerQuery = query.toLowerCase();
       const results = allFetchedStopPlaces
-        .filter(
-          sp =>
+        .filter(sp => {
+          const textMatch =
             sp.name.value.toLowerCase().includes(lowerQuery) ||
-            sp.id.toLowerCase().includes(lowerQuery)
-        )
+            sp.id.toLowerCase().includes(lowerQuery);
+
+          // 2. Determine the type key and apply the filter logic
+          const typeKey =
+            sp.__typename === 'ParentStopPlace' ? 'parentStopPlace' : sp.stopPlaceType;
+          const typeMatch = filters.length === 0 || filters.includes(typeKey);
+
+          return textMatch && typeMatch;
+        })
         .map(sp => ({
           id: sp.id,
           name: sp.name.value,
           type: 'data' as const,
           originalData: sp,
         }));
-      console.log(`[DataOverview] Found ${results.length} results.`);
       return results;
     },
     [stopPlacesLoading, allFetchedStopPlaces]

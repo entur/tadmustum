@@ -1,4 +1,5 @@
 export type SearchContextViewType = 'map' | 'data' | null;
+export type StopPlaceTypeFilter = string;
 
 export interface SearchResultItem {
   id: string;
@@ -8,7 +9,10 @@ export interface SearchResultItem {
   originalData?: unknown;
 }
 
-export type SearchFunction = (query: string) => Promise<SearchResultItem[]>;
+export type SearchFunction = (
+  query: string,
+  filters: StopPlaceTypeFilter[]
+) => Promise<SearchResultItem[]>;
 
 export interface SearchContextProps {
   searchQuery: string;
@@ -25,4 +29,7 @@ export interface SearchContextProps {
   setSelectedItem: (item: SearchResultItem | null) => void;
 
   registerSearchFunction: (contextType: SearchContextViewType, func: SearchFunction | null) => void;
+
+  activeFilters: StopPlaceTypeFilter[];
+  updateFilters: (filters: StopPlaceTypeFilter[]) => void;
 }

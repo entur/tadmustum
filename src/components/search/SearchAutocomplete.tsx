@@ -132,27 +132,33 @@ export default function SearchAutocomplete({
           size="small"
           placeholder={placeholder}
           variant="outlined"
-          InputProps={{
-            ...params.InputProps,
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <>
-                {isLoading ? <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} /> : null}
-                {isMobile ? (
-                  <IconButton size="small" onClick={handleClearAndClose} aria-label="close search">
-                    <CloseIcon />
-                  </IconButton>
-                ) : (
-                  params.InputProps.endAdornment
-                )}
-              </>
-            ),
-            sx: {
-              backgroundColor: theme.palette.background.default,
+          slotProps={{
+            input: {
+              ...params.InputProps,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <>
+                  {isLoading && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
+                  {isMobile ? (
+                    <IconButton
+                      size="small"
+                      onClick={handleClearAndClose}
+                      aria-label="close search"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  ) : (
+                    params.InputProps.endAdornment
+                  )}
+                </>
+              ),
+              sx: {
+                backgroundColor: theme.palette.background.default,
+              },
             },
           }}
         />

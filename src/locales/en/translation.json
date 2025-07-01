@@ -7,6 +7,8 @@
   "map": "Map view",
 
   "search.searchPlaceholder": "Search…",
+  "search.filter.title": "Filter by Type",
+  "search.filter.clear": "Clear All",
 
   "user.name": "Username",
   "user.userAccount": "User account",

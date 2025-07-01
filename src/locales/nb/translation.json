@@ -7,6 +7,8 @@
   "map": "Kartvisning",
 
   "search.searchPlaceholder": "Søk…",
+  "search.filter.title": "Filtrer på type",
+  "search.filter.clear": "Tøm alle",
 
   "user.name": "Brukernavn",
   "user.userAccount": "Brukerkonto",

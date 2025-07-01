@@ -1,6 +1,11 @@
 import React, { useState, useCallback, useRef, type ReactNode, useEffect } from 'react';
 import { SearchContext } from './SearchContextInstance.ts';
-import type { SearchContextViewType, SearchResultItem, SearchFunction } from './searchTypes.ts';
+import type {
+  SearchContextViewType,
+  SearchResultItem,
+  SearchFunction,
+  StopPlaceTypeFilter,
+} from './searchTypes.ts';
 
 function debounce<F extends (...args: string[]) => void>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -26,6 +31,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   const [suggestionResults, setSuggestionResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<SearchResultItem | null>(null);
+  const [activeFilters, setActiveFilters] = useState<StopPlaceTypeFilter[]>([]);
 
   const searchFunctionsRef = useRef<
     Partial<Record<NonNullable<SearchContextViewType>, SearchFunction>>
@@ -45,7 +51,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   );
 
   const executeSearch = useCallback(
-    async (query: string): Promise<SearchResultItem[]> => {
+    async (query: string, filters: StopPlaceTypeFilter[]): Promise<SearchResultItem[]> => {
       if (!query.trim() || !activeSearchContext) return [];
       const searchFunc = searchFunctionsRef.current[activeSearchContext];
       if (!searchFunc) {
@@ -54,7 +60,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
       }
       setIsLoading(true);
       try {
-        return await searchFunc(query);
+        return await searchFunc(query, filters);
       } catch (error) {
         console.error(`Search failed for context ${activeSearchContext}:`, error);
         return [];
@@ -72,11 +78,11 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         setSearchResults([]);
         return;
       }
-      const results = await executeSearch(query);
+      const results = await executeSearch(query, activeFilters);
       setSuggestionResults(results);
       setSearchResults(results);
     }, 300),
-    [executeSearch]
+    [executeSearch, activeFilters]
   );
 
   const performSuggestionOnlySearch = useCallback(
@@ -85,23 +91,24 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         setSuggestionResults([]);
         return;
       }
-      const results = await executeSearch(query);
+      const results = await executeSearch(query, activeFilters);
       setSuggestionResults(results);
     }, 300),
-    [executeSearch]
+    [executeSearch, activeFilters]
   );
 
   const performSearch = useCallback(async () => {
     setSuggestionResults([]);
-    const results = await executeSearch(searchQuery);
+    const results = await executeSearch(searchQuery, activeFilters);
     setSearchResults(results);
-  }, [searchQuery, executeSearch]);
+  }, [searchQuery, executeSearch, activeFilters]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
     setSuggestionResults([]);
     setSelectedItem(null);
+    setActiveFilters([]);
   }, []);
 
   const handleSetSearchQuery = useCallback(
@@ -120,6 +127,16 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     },
     [activeSearchContext, performLiveSearch, performSuggestionOnlySearch]
   );
+
+  const updateFilters = useCallback((newFilters: StopPlaceTypeFilter[]) => {
+    setActiveFilters(newFilters);
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      handleSetSearchQuery(searchQuery);
+    }
+  }, [activeFilters, handleSetSearchQuery]);
 
   useEffect(() => {
     clearSearch();
@@ -140,6 +157,8 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         selectedItem,
         setSelectedItem,
         registerSearchFunction,
+        activeFilters,
+        updateFilters,
       }}
     >
       {children}
