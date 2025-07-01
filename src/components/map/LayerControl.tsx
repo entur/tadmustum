@@ -1,4 +1,3 @@
-// src/components/map/LayerControl.tsx
 import { Box, Stack, useTheme } from '@mui/material';
 import { useMap } from 'react-map-gl/maplibre';
 import { useTranslation } from 'react-i18next';
@@ -6,9 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useLayerVisibility } from '../../hooks/useLayerVisibility.ts';
 import { LayerSwitch } from './LayerSwitch';
 import LayersIcon from '@mui/icons-material/Layers';
-import MapIcon from '@mui/icons-material/Map'; // Example icon
-
-// Updated imports
+import MapIcon from '@mui/icons-material/Map';
 import { MapControlUnit, RenderMapPanel, type PanelUIDefinition } from './MapControlUnit';
 
 import {
@@ -36,7 +33,6 @@ export function LayerControl() {
 
   const [activePanelControlId, setActivePanelControlId] = useState<string | null>(null);
 
-  // Define all your control panels here
   const controlPanelDefinitions = useMemo<PanelUIDefinition[]>(() => {
     const layerPanelContent = (
       <Stack spacing={1}>
@@ -54,7 +50,7 @@ export function LayerControl() {
 
     return [
       {
-        controlId: 'layers-panel-control', // Unique ID for this control unit
+        controlId: 'layers-panel-control',
         icon: <LayersIcon />,
         panelTitle: t('map.layers.title', 'Map Layers'),
         panelContent: layerPanelContent,
@@ -71,13 +67,11 @@ export function LayerControl() {
         ariaLabelCloseButton: 'Close another panel',
         panelMinWidth: 200,
       },
-      // Add more panel definitions as needed
     ];
-  }, [t, layerVisibility, toggleLayer]); // Ensure dependencies are correct
+  }, [t, layerVisibility, toggleLayer]);
 
-  // Effect for applying map layer visibility (specific to the layers panel)
   useEffect(() => {
-    if (!mapRef || activePanelControlId !== 'layers-panel-control') return; // Only apply if layers panel is active
+    if (!mapRef || activePanelControlId !== 'layers-panel-control') return;
     const map = mapRef.getMap();
     const apply = () => {
       mapLayerStyleDefinitions.forEach(({ id }) => {
@@ -97,7 +91,7 @@ export function LayerControl() {
     return () => {
       map.off('styledata', handleStyleData);
     };
-  }, [mapRef, layerVisibility, activePanelControlId]); // Re-run if active panel changes too
+  }, [mapRef, layerVisibility, activePanelControlId]);
 
   const handleRequestPanelToggle = (controlId: string) => {
     setActivePanelControlId(prevId => (prevId === controlId ? null : controlId));
@@ -108,28 +102,27 @@ export function LayerControl() {
   );
 
   return (
-    <Box // Main container for the entire control area (buttons + active panel)
+    <Box
       sx={{
         position: 'absolute',
         top: theme.spacing(1.5),
         right: theme.spacing(1.5),
-        zIndex: 10, // zIndex for the whole control area
-        display: 'flex', // Arrange button group and active panel horizontally
-        alignItems: 'flex-start', // Align to the top
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'flex-start',
       }}
     >
-      {/* Container for the vertical stack of buttons - this is what slides */}
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: theme.spacing(1), // Space between buttons
+          gap: theme.spacing(1),
           transition: theme.transitions.create(['transform'], {
             duration: theme.transitions.duration.short,
             easing: theme.transitions.easing.easeInOut,
           }),
           transform: theme.spacing(1),
-          zIndex: theme.zIndex.drawer + 1, // Ensure buttons are above the panel area
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
         {controlPanelDefinitions.map(definition => (
@@ -142,19 +135,16 @@ export function LayerControl() {
         ))}
       </Box>
 
-      {/* Area where the active panel's content will be rendered */}
       {currentActivePanelDef && (
         <Box
           sx={{
-            marginLeft: theme.spacing(1), // This is the gap
-            // Width is determined by the panel content itself
-            // zIndex: theme.zIndex.drawer, // Panel is below buttons
+            marginLeft: theme.spacing(1),
           }}
         >
           <RenderMapPanel
             definition={currentActivePanelDef}
-            isOpen={!!activePanelControlId} // True if any panel is active and matches this one
-            onCloseRequest={() => setActivePanelControlId(null)} // Panel's own close button action
+            isOpen={!!activePanelControlId}
+            onCloseRequest={() => setActivePanelControlId(null)}
           />
         </Box>
       )}

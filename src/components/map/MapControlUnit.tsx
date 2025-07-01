@@ -7,18 +7,17 @@ export interface PanelUIDefinition {
   icon: ReactNode;
   panelTitle?: string;
   panelContent: ReactNode;
-  ariaLabelOpen: string; // Aria-label for the button when panel is closed
-  ariaLabelCloseButton: string; // Aria-label for the panel's internal close button
+  ariaLabelOpen: string;
+  ariaLabelCloseButton: string;
   panelMinWidth?: number | string;
 }
 
 interface MapControlUnitProps {
   definition: PanelUIDefinition;
-  isActive: boolean; // Is this control's panel currently the active one?
-  onRequestToggle: (controlId: string) => void; // Callback when this button is clicked
+  isActive: boolean;
+  onRequestToggle: (controlId: string) => void;
 }
 
-// This component is just the button
 export function MapControlUnit({ definition, isActive, onRequestToggle }: MapControlUnitProps) {
   const theme = useTheme();
   const { controlId, icon, ariaLabelOpen, ariaLabelCloseButton } = definition;
@@ -30,11 +29,11 @@ export function MapControlUnit({ definition, isActive, onRequestToggle }: MapCon
   return (
     <IconButton
       onClick={handleButtonClick}
-      aria-label={isActive ? ariaLabelCloseButton : ariaLabelOpen} // If active, button acts as a closer for its panel
+      aria-label={isActive ? ariaLabelCloseButton : ariaLabelOpen}
       aria-expanded={isActive}
       sx={{
         color: theme.palette.primary.main,
-        backgroundColor: isActive ? theme.palette.action.active : theme.palette.background.paper, // Visual cue for active button
+        backgroundColor: isActive ? theme.palette.action.active : theme.palette.background.paper,
         boxShadow: theme.shadows[3],
         transition: theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
           duration: theme.transitions.duration.short,
@@ -44,9 +43,8 @@ export function MapControlUnit({ definition, isActive, onRequestToggle }: MapCon
         '&:hover': {
           transform: 'scale(1.1)',
           boxShadow: theme.shadows[6],
-          backgroundColor: isActive ? theme.palette.action.hover : theme.palette.background.paper, // Visual cue for active button
+          backgroundColor: isActive ? theme.palette.action.hover : theme.palette.background.paper,
         },
-        // The translation (sliding) will be applied to the parent container of these buttons
       }}
     >
       {icon}
@@ -54,11 +52,10 @@ export function MapControlUnit({ definition, isActive, onRequestToggle }: MapCon
   );
 }
 
-// Helper function to render the panel's content (will be used by LayerControl)
 export function RenderMapPanel({
   definition,
   isOpen,
-  onCloseRequest, // For the panel's internal close button
+  onCloseRequest,
 }: {
   definition: PanelUIDefinition;
   isOpen: boolean;
@@ -81,7 +78,7 @@ export function RenderMapPanel({
         sx={{
           p: 2,
           minWidth: panelMinWidth,
-          width: panelMinWidth, // Set a defined width for the panel
+          width: panelMinWidth,
           boxSizing: 'border-box',
         }}
         id={panelId}
