@@ -70,6 +70,10 @@
   "map.layers.toggleClose": "Lukk lagkontroller",
   "map.layers.basemap": "OSM kart",
 
+  "map.contextMenu.coordinates": "Koordinater",
+  "map.contextMenu.latitude": "Breddegrad",
+  "map.contextMenu.longitude": "Lengdegrad",
+
   "workArea.title": "Arbeidsområde",
   "workArea.nameLabel": "Navn",
   "workArea.typeLabel": "Type",
@@ -87,5 +91,14 @@
 
   "session.expired.title": "Økten er utløpt",
   "session.expired.message": "Økten din har utløpt. For å beskytte informasjonen din, har du blitt logget ut. Vennligst logg inn igjen for å fortsette.",
-  "session.expired.reloginButton": "Logg inn igjen"
+  "session.expired.reloginButton": "Logg inn igjen",
+
+  "header.actions.search": "søk",
+  "header.actions.userAccount": "brukerkonto",
+  "header.actions.login": "Logg inn",
+  "header.actions.settings": "innstillinger",
+  "header.actions.menu": "meny",
+  "header.actions.userIconAlt": "brukerikon",
+  "header.actions.settingsIconAlt": "innstillinger-ikon",
+  "header.actions.menuIconAlt": "menyikon"
 }

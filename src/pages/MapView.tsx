@@ -1,16 +1,14 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import type { MapRef as ReactMapRef } from 'react-map-gl/maplibre';
 import type { Map as MaplibreMap, MapLibreEvent } from 'maplibre-gl';
-import { useSearchParams } from 'react-router-dom';
-
 import { useStopsGeoJSON } from '../hooks/useStopsGeoJSON';
 import { useStopsSource } from '../hooks/useStopsSource';
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
-import { useSearch } from '../components/search';
-import type { SearchResultItem } from '../components/search/searchTypes';
-
+import { useMapInteraction } from '../hooks/useMapInteraction';
+import { useMapSearch } from '../hooks/useMapSearch';
+import { useMapFlyTo } from '../hooks/useMapFlyTo';
 import { createMapStyle } from '../map/mapStyle';
 import { Sidebar } from '../components/sidebar/Sidebar.tsx';
 import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
@@ -18,22 +16,28 @@ import { MapContainer } from '../components/map/MapContainer.tsx';
 import { MapControls } from '../components/map/MapControls.tsx';
 import { LayerControl } from '../components/map/LayerControl';
 import { RegisterIcons } from '../map/RegisterIcons';
+import MapContextMenu from '../components/map/MapContextMenu.tsx';
 
 export default function MapView() {
   const theme = useTheme();
   const mapStyle = useMemo(() => createMapStyle(theme), [theme]);
-  const { geojson: stopsGeoJSON, loading: geoJsonLoading, error: geoJsonError } = useStopsGeoJSON();
+
   const reactMapRef = useRef<ReactMapRef | null>(null);
   const rawMapRef = useRef<MaplibreMap | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  const { geojson: stopsGeoJSON, loading: geoJsonLoading, error: geoJsonError } = useStopsGeoJSON();
   const { width, collapsed, setIsResizing, toggle } = useResizableSidebar(300, true);
-  const [mapLoadedByComponent, setMapLoadedByComponent] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
+
+  const { contextMenu, handleContextMenu, handleCloseContextMenu } = useMapInteraction();
+  useMapSearch(stopsGeoJSON, geoJsonLoading);
+  useMapFlyTo(reactMapRef, mapLoaded, stopsGeoJSON);
 
   useStopsSource(rawMapRef, stopsGeoJSON, geoJsonLoading, geoJsonError);
 
   const handleMapLoad = (evt: MapLibreEvent) => {
     rawMapRef.current = evt.target as MaplibreMap;
-    setMapLoadedByComponent(true);
+    setMapLoaded(true);
   };
 
   useEffect(() => {
@@ -43,94 +47,6 @@ export default function MapView() {
       document.body.style.overflow = original;
     };
   }, []);
-
-  const {
-    setActiveSearchContext,
-    registerSearchFunction,
-    searchResults,
-    activeSearchContext,
-    selectedItem,
-    setSelectedItem,
-  } = useSearch();
-
-  const searchMapFeatures = useCallback(
-    async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
-      if (geoJsonLoading || !stopsGeoJSON?.features) return [];
-      const lowerQuery = query.toLowerCase();
-
-      const results = stopsGeoJSON.features
-        .filter(feature => {
-          const nameMatch = feature.properties.name?.toLowerCase().includes(lowerQuery);
-          const typeMatch = filters.length === 0 || filters.includes(feature.properties.icon);
-          return !!nameMatch && typeMatch;
-        })
-        .map(feature => ({
-          id: feature.properties.id,
-          name: feature.properties.name,
-          type: 'map' as const,
-          coordinates: feature.geometry.coordinates as [number, number],
-          originalData: feature.properties,
-        }));
-      return results;
-    },
-    [geoJsonLoading, stopsGeoJSON]
-  );
-
-  useEffect(() => {
-    setActiveSearchContext('map');
-    registerSearchFunction('map', searchMapFeatures);
-    return () => {
-      registerSearchFunction('map', null);
-    };
-  }, [setActiveSearchContext, registerSearchFunction, searchMapFeatures]);
-
-  useEffect(() => {
-    if (
-      activeSearchContext === 'map' &&
-      searchResults.length > 0 &&
-      reactMapRef.current &&
-      mapLoadedByComponent
-    ) {
-      const firstMapResult = searchResults.find(
-        result => result.type === 'map' && result.coordinates
-      );
-
-      if (firstMapResult?.coordinates) {
-        reactMapRef.current.flyTo({ center: firstMapResult.coordinates, zoom: 18, duration: 1000 });
-      }
-    }
-  }, [searchResults, activeSearchContext, mapLoadedByComponent]);
-
-  useEffect(() => {
-    if (selectedItem?.coordinates && reactMapRef.current && mapLoadedByComponent) {
-      reactMapRef.current.flyTo({
-        center: selectedItem.coordinates,
-        zoom: 18,
-        duration: 1000,
-      });
-
-      setSelectedItem(null);
-    }
-  }, [selectedItem, setSelectedItem, mapLoadedByComponent]);
-
-  useEffect(() => {
-    const stopPlaceId = searchParams.get('stopPlaceId');
-
-    if (stopPlaceId && stopsGeoJSON?.features && reactMapRef.current && mapLoadedByComponent) {
-      const featureToFlyTo = stopsGeoJSON.features.find(f => f.properties.id === stopPlaceId);
-
-      if (featureToFlyTo) {
-        reactMapRef.current.flyTo({
-          center: featureToFlyTo.geometry.coordinates as [number, number],
-          zoom: 18,
-          duration: 1000,
-        });
-
-        searchParams.delete('stopPlaceId');
-        setSearchParams(searchParams, { replace: true });
-      }
-    }
-  }, [searchParams, setSearchParams, stopsGeoJSON, mapLoadedByComponent]);
 
   return (
     <Box
@@ -159,12 +75,18 @@ export default function MapView() {
           zIndex: 1,
         }}
       >
-        <MapContainer mapStyle={mapStyle} onLoad={handleMapLoad} mapRef={reactMapRef}>
-          {mapLoadedByComponent && <RegisterIcons />}
-          {mapLoadedByComponent && <MapControls />}
-          {mapLoadedByComponent && <LayerControl />}
+        <MapContainer
+          mapStyle={mapStyle}
+          onLoad={handleMapLoad}
+          mapRef={reactMapRef}
+          onContextMenu={handleContextMenu}
+        >
+          {mapLoaded && <RegisterIcons />}
+          {mapLoaded && <MapControls />}
+          {mapLoaded && <LayerControl />}
         </MapContainer>
       </Box>
+      {contextMenu && <MapContextMenu contextMenu={contextMenu} onClose={handleCloseContextMenu} />}
     </Box>
   );
 }

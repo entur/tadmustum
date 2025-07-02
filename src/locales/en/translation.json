@@ -70,6 +70,10 @@
   "map.layers.toggleClose": "Close layer controls",
   "map.layers.basemap": "OSM Basemap",
 
+  "map.contextMenu.coordinates": "Coordinates",
+  "map.contextMenu.latitude": "Lat",
+  "map.contextMenu.longitude": "Lng",
+
   "workArea.title": "Work area",
   "workArea.nameLabel": "Name",
   "workArea.typeLabel": "Type",
@@ -87,5 +91,14 @@
 
   "session.expired.title": "Session Expired",
   "session.expired.message": "Your session has expired. To protect your information, you have been logged out. Please log in again to continue.",
-  "session.expired.reloginButton": "Log In Again"
+  "session.expired.reloginButton": "Log In Again",
+
+  "header.actions.search": "search",
+  "header.actions.userAccount": "user account",
+  "header.actions.login": "Log in",
+  "header.actions.settings": "settings",
+  "header.actions.menu": "menu",
+  "header.actions.userIconAlt": "user icon",
+  "header.actions.settingsIconAlt": "settings icon",
+  "header.actions.menuIconAlt": "menu icon"
 }

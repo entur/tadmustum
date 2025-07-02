@@ -1,26 +1,37 @@
-import { Map } from 'react-map-gl/maplibre';
-import { type MapRef } from 'react-map-gl/maplibre';
+import React, { type ReactNode, type RefObject } from 'react';
+import Map, { type MapRef, type MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import type { StyleSpecification, MapLibreEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { RegisterIcons } from '../../map/RegisterIcons.tsx';
-import type { MapLibreEvent, StyleSpecification } from 'maplibre-gl';
 
 interface MapContainerProps {
-  mapStyle: string | StyleSpecification;
-  onLoad: (e: MapLibreEvent) => void;
-  mapRef: React.Ref<MapRef>;
-  children?: React.ReactNode;
+  children?: ReactNode;
+  mapStyle: StyleSpecification;
+  onLoad: (evt: MapLibreEvent) => void;
+  mapRef: RefObject<MapRef | null>;
+  onContextMenu?: (event: MapLayerMouseEvent) => void;
 }
 
-export function MapContainer({ mapStyle, onLoad, mapRef, children }: MapContainerProps) {
+export const MapContainer: React.FC<MapContainerProps> = ({
+  children,
+  mapStyle,
+  onLoad,
+  mapRef,
+  onContextMenu,
+}) => {
   return (
     <Map
       ref={mapRef}
-      initialViewState={{ longitude: 10.0, latitude: 65.5, zoom: 4 }}
-      mapStyle={mapStyle}
       onLoad={onLoad}
+      onContextMenu={onContextMenu}
+      initialViewState={{
+        longitude: 10.75,
+        latitude: 59.91,
+        zoom: 12,
+      }}
+      style={{ width: '100%', height: '100%' }}
+      mapStyle={mapStyle}
     >
-      <RegisterIcons />
       {children}
     </Map>
   );
-}
+};
