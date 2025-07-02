@@ -1,15 +1,15 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import type { MapRef as ReactMapRef } from 'react-map-gl/maplibre';
-import type { Map as MaplibreMap, MapLibreEvent } from 'maplibre-gl';
 import { useStopsGeoJSON } from '../hooks/useStopsGeoJSON';
 import { useStopsSource } from '../hooks/useStopsSource';
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
 import { useMapInteraction } from '../hooks/useMapInteraction';
 import { useMapSearch } from '../hooks/useMapSearch';
 import { useMapFlyTo } from '../hooks/useMapFlyTo';
-import { createMapStyle } from '../map/mapStyle';
+import { useMapCore } from '../hooks/useMapCore';
+import { useBodyOverflowLock } from '../hooks/useBodyOverflowLock';
+import { createMapStyle, LAYER_ID_STOPS_ICON, LAYER_ID_STOPS_CIRCLE } from '../map/mapStyle';
 import { Sidebar } from '../components/sidebar/Sidebar.tsx';
 import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
 import { MapContainer } from '../components/map/MapContainer.tsx';
@@ -17,43 +17,37 @@ import { MapControls } from '../components/map/MapControls.tsx';
 import { LayerControl } from '../components/map/LayerControl';
 import { RegisterIcons } from '../map/RegisterIcons';
 import MapContextMenu from '../components/map/MapContextMenu.tsx';
+import StopPlaceDetailDialog from '../components/map/StopPlaceDetailDialog.tsx';
 
 export default function MapView() {
   const theme = useTheme();
   const mapStyle = useMemo(() => createMapStyle(theme), [theme]);
 
-  const reactMapRef = useRef<ReactMapRef | null>(null);
-  const rawMapRef = useRef<MaplibreMap | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const { reactMapRef, rawMapRef, mapLoaded, cursor, handleMapLoad, handleMouseMove } =
+    useMapCore();
 
   const { geojson: stopsGeoJSON, loading: geoJsonLoading, error: geoJsonError } = useStopsGeoJSON();
   const { width, collapsed, setIsResizing, toggle } = useResizableSidebar(300, true);
+  useBodyOverflowLock();
 
-  const { contextMenu, handleContextMenu, handleCloseContextMenu } = useMapInteraction();
+  const {
+    contextMenu,
+    handleContextMenu,
+    handleCloseContextMenu,
+    selectedFeature,
+    handleMapClick,
+    handleCloseDialog,
+  } = useMapInteraction();
   useMapSearch(stopsGeoJSON, geoJsonLoading);
   useMapFlyTo(reactMapRef, mapLoaded, stopsGeoJSON);
-
   useStopsSource(rawMapRef, stopsGeoJSON, geoJsonLoading, geoJsonError);
-
-  const handleMapLoad = (evt: MapLibreEvent) => {
-    rawMapRef.current = evt.target as MaplibreMap;
-    setMapLoaded(true);
-  };
-
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, []);
 
   return (
     <Box
       sx={{
         position: 'relative',
         width: '100vw',
-        height: 'calc(100vh - 64px)',
+        height: 'calc(100dvh - 64px)',
       }}
     >
       <Sidebar
@@ -80,13 +74,26 @@ export default function MapView() {
           onLoad={handleMapLoad}
           mapRef={reactMapRef}
           onContextMenu={handleContextMenu}
+          onClick={handleMapClick}
+          onMouseMove={handleMouseMove}
+          cursor={cursor}
+          interactiveLayerIds={[LAYER_ID_STOPS_ICON, LAYER_ID_STOPS_CIRCLE]}
         >
-          {mapLoaded && <RegisterIcons />}
-          {mapLoaded && <MapControls />}
-          {mapLoaded && <LayerControl />}
+          {mapLoaded && (
+            <>
+              <RegisterIcons />
+              <MapControls />
+              <LayerControl />
+            </>
+          )}
         </MapContainer>
       </Box>
       {contextMenu && <MapContextMenu contextMenu={contextMenu} onClose={handleCloseContextMenu} />}
+      <StopPlaceDetailDialog
+        open={Boolean(selectedFeature)}
+        onClose={handleCloseDialog}
+        featureProperties={selectedFeature}
+      />
     </Box>
   );
 }

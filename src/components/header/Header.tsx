@@ -37,6 +37,7 @@ export default function Header() {
             display: 'flex',
             alignItems: 'center',
             width: '100%',
+            minHeight: { xs: '64px' },
           }}
         >
           {isMobile && searchActive ? (

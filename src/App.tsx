@@ -21,7 +21,11 @@ export default function App() {
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <Header />
-          <Toolbar />
+          <Toolbar
+            sx={{
+              minHeight: { xs: '64px' },
+            }}
+          />
           <Box className="app-root">
             <Box className="app-content">
               <Routes>
