@@ -15,14 +15,14 @@ import { useSearch } from './searchUtils';
 import { useTranslation } from 'react-i18next';
 
 const stopPlaceTypes = [
-  { id: 'parentStopPlace', labelKey: 'workArea.types.parent', defaultLabel: 'Parent Stop Place' },
-  { id: 'railStation', labelKey: 'workArea.types.train', defaultLabel: 'Train' },
-  { id: 'metroStation', labelKey: 'workArea.types.metro', defaultLabel: 'Metro' },
-  { id: 'onstreetBus', labelKey: 'workArea.types.bus', defaultLabel: 'Bus' },
-  { id: 'onstreetTram', labelKey: 'workArea.types.tram', defaultLabel: 'Tram' },
-  { id: 'ferryStop', labelKey: 'workArea.types.ferry', defaultLabel: 'Ferry' },
-  { id: 'harbourPort', labelKey: 'workArea.types.harbour', defaultLabel: 'Harbour' },
-  { id: 'liftStation', labelKey: 'workArea.types.lift', defaultLabel: 'Lift' },
+  { id: 'parentStopPlace', labelKey: 'types.parent', defaultLabel: 'Parent Stop Place' },
+  { id: 'railStation', labelKey: 'types.train', defaultLabel: 'Train' },
+  { id: 'metroStation', labelKey: 'types.metro', defaultLabel: 'Metro' },
+  { id: 'onstreetBus', labelKey: 'types.bus', defaultLabel: 'Bus' },
+  { id: 'onstreetTram', labelKey: 'types.tram', defaultLabel: 'Tram' },
+  { id: 'ferryStop', labelKey: 'types.ferry', defaultLabel: 'Ferry' },
+  { id: 'harbourPort', labelKey: 'types.harbour', defaultLabel: 'Harbour' },
+  { id: 'liftStation', labelKey: 'types.lift', defaultLabel: 'Lift' },
 ];
 
 export default function SearchFilterControl() {

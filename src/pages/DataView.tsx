@@ -48,7 +48,6 @@ export default function DataView() {
   } = useSearch();
 
   const searchStopPlaceData = useCallback(
-    // 1. Accept the filters array
     async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
       if (stopPlacesLoading || !allFetchedStopPlaces) return [];
       const lowerQuery = query.toLowerCase();

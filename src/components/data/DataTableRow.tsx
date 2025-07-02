@@ -1,10 +1,11 @@
-import { TableRow, TableCell, IconButton, Box } from '@mui/material';
+import { TableRow, TableCell, IconButton, Box, Tooltip } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import type { StopPlace } from '../../data/StopPlaceContext.tsx';
 import DataTableDetail from './DataTableDetail.tsx';
 import { useState } from 'react';
 import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom'; // No other imports needed
 
 interface Props {
   sp: StopPlace;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function DataTableRow({ sp, useCompactView }: Props) {
   const { t } = useTranslation();
+  const navigate = useNavigate(); // We only need the navigate hook
   const [open, setOpen] = useState(false);
   const [lng, lat] = sp.geometry.legacyCoordinates?.[0] ?? ['', ''];
 
@@ -26,6 +28,12 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
   }
 
   const iconUrl = getIconUrl(iconKey);
+
+  // 1. Simplify the handler to just navigate with a URL parameter
+  const handleGoToMap = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    navigate(`/map?stopPlaceId=${sp.id}`);
+  };
 
   return (
     <>
@@ -61,6 +69,26 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
             />
           </TableCell>
         )}
+        {!useCompactView && (
+          <TableCell align="center">
+            <Tooltip title={t('data.table.row.goToMapTooltip', 'View on map')}>
+              <span>
+                <IconButton
+                  onClick={handleGoToMap}
+                  disabled={!lng || !lat}
+                  aria-label={t('data.table.row.goToMapTooltip', 'View on map')}
+                >
+                  <Box
+                    component="img"
+                    src={getIconUrl('map')}
+                    alt={`Map icon`}
+                    sx={{ width: 32 }}
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </TableCell>
+        )}
       </TableRow>
       {useCompactView && (
         <DataTableDetail
@@ -69,6 +97,7 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
           lat={lat}
           iconUrl={iconUrl}
           stopPlaceType={sp.stopPlaceType}
+          stopPlaceId={sp.id}
         />
       )}
     </>

@@ -1,5 +1,5 @@
 {
-  "applicationName": "AppName",
+  "applicationName": "App",
   "companyName": "Entur",
   "palette": {
     "primary": { "main": "#181C56" },
@@ -25,5 +25,5 @@
     }
   },
   "logoUrl": "/assets/entur-logo.png",
-  "logoHeight": 28
+  "logoHeight": 24
 }

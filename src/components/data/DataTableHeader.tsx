@@ -40,6 +40,9 @@ export default function DataTableHeader({ useCompactView, order, orderBy, onRequ
         {!useCompactView && <TableCell>{t('data.table.header.longitude', 'Longitude')}</TableCell>}
         {!useCompactView && <TableCell>{t('data.table.header.latitude', 'Latitude')}</TableCell>}
         {!useCompactView && <TableCell>{t('data.table.header.type', 'Type')}</TableCell>}
+        {!useCompactView && (
+          <TableCell align="center">{t('data.table.header.actions', 'Actions')}</TableCell>
+        )}
       </TableRow>
     </TableHead>
   );

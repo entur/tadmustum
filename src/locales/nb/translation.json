@@ -31,6 +31,8 @@
   "data.table.header.type": "Type",
 
   "data.table.row.typeIconAlt": "Stoppestedstypeikon",
+  "data.table.row.goToMapTooltip": "Vis på kart",
+  "data.table.header.actions": "Kart",
 
   "data.table.detail.coordinatesTitle": "Koordinater",
   "data.table.detail.longitudeLabel": "Lengdegrad:",
@@ -71,12 +73,17 @@
   "workArea.title": "Arbeidsområde",
   "workArea.nameLabel": "Navn",
   "workArea.typeLabel": "Type",
-  "workArea.types.train": "Tog",
-  "workArea.types.bus": "Buss",
-  "workArea.types.ferry": "Ferge",
-  "workArea.types.tram": "Trikk",
   "workArea.includeLabel": "Inkluder",
   "workArea.moreInfoTooltip": "Mer info",
+
+  "types.train": "Tog",
+  "types.bus": "Buss",
+  "types.ferry": "Ferge",
+  "types.tram": "Trikk",
+  "types.lift": "Heis",
+  "types.metro": "T-bane",
+  "types.parent": "Hovedstoppested",
+  "types.harbour": "Havn",
 
   "session.expired.title": "Økten er utløpt",
   "session.expired.message": "Økten din har utløpt. For å beskytte informasjonen din, har du blitt logget ut. Vennligst logg inn igjen for å fortsette.",

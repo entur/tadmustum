@@ -29,8 +29,10 @@
   "data.table.header.longitude": "Longitude",
   "data.table.header.latitude": "Latitude",
   "data.table.header.type": "Type",
+  "data.table.header.actions": "Map",
 
   "data.table.row.typeIconAlt": "Stop place type icon",
+  "data.table.row.goToMapTooltip": "View on map",
 
   "data.table.detail.coordinatesTitle": "Coordinates",
   "data.table.detail.longitudeLabel": "Longitude:",
@@ -71,12 +73,17 @@
   "workArea.title": "Work area",
   "workArea.nameLabel": "Name",
   "workArea.typeLabel": "Type",
-  "workArea.types.train": "Train",
-  "workArea.types.bus": "Bus",
-  "workArea.types.ferry": "Ferry",
-  "workArea.types.tram": "Tram",
   "workArea.includeLabel": "Include",
   "workArea.moreInfoTooltip": "More info",
+
+  "types.train": "Train",
+  "types.bus": "Bus",
+  "types.ferry": "Ferry",
+  "types.tram": "Tram",
+  "types.lift": "Lift",
+  "types.metro": "Metro",
+  "types.parent": "Parent Stop Place",
+  "types.harbour": "Harbour",
 
   "session.expired.title": "Session Expired",
   "session.expired.message": "Your session has expired. To protect your information, you have been logged out. Please log in again to continue.",

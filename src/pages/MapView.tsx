@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import type { MapRef as ReactMapRef } from 'react-map-gl/maplibre';
 import type { Map as MaplibreMap, MapLibreEvent } from 'maplibre-gl';
+import { useSearchParams } from 'react-router-dom';
 
 import { useStopsGeoJSON } from '../hooks/useStopsGeoJSON';
 import { useStopsSource } from '../hooks/useStopsSource';
@@ -26,6 +27,7 @@ export default function MapView() {
   const rawMapRef = useRef<MaplibreMap | null>(null);
   const { width, collapsed, setIsResizing, toggle } = useResizableSidebar(300, true);
   const [mapLoadedByComponent, setMapLoadedByComponent] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useStopsSource(rawMapRef, stopsGeoJSON, geoJsonLoading, geoJsonError);
 
@@ -83,27 +85,52 @@ export default function MapView() {
   }, [setActiveSearchContext, registerSearchFunction, searchMapFeatures]);
 
   useEffect(() => {
-    if (activeSearchContext === 'map' && searchResults.length > 0 && reactMapRef.current) {
+    if (
+      activeSearchContext === 'map' &&
+      searchResults.length > 0 &&
+      reactMapRef.current &&
+      mapLoadedByComponent
+    ) {
       const firstMapResult = searchResults.find(
         result => result.type === 'map' && result.coordinates
       );
 
       if (firstMapResult?.coordinates) {
-        reactMapRef.current.flyTo({ center: firstMapResult.coordinates, zoom: 18, duration: 2000 });
+        reactMapRef.current.flyTo({ center: firstMapResult.coordinates, zoom: 18, duration: 1000 });
       }
     }
-  }, [searchResults, activeSearchContext]);
+  }, [searchResults, activeSearchContext, mapLoadedByComponent]);
 
   useEffect(() => {
-    if (selectedItem?.coordinates && reactMapRef.current) {
+    if (selectedItem?.coordinates && reactMapRef.current && mapLoadedByComponent) {
       reactMapRef.current.flyTo({
         center: selectedItem.coordinates,
         zoom: 18,
-        duration: 2000,
+        duration: 1000,
       });
+
       setSelectedItem(null);
     }
-  }, [selectedItem, setSelectedItem]);
+  }, [selectedItem, setSelectedItem, mapLoadedByComponent]);
+
+  useEffect(() => {
+    const stopPlaceId = searchParams.get('stopPlaceId');
+
+    if (stopPlaceId && stopsGeoJSON?.features && reactMapRef.current && mapLoadedByComponent) {
+      const featureToFlyTo = stopsGeoJSON.features.find(f => f.properties.id === stopPlaceId);
+
+      if (featureToFlyTo) {
+        reactMapRef.current.flyTo({
+          center: featureToFlyTo.geometry.coordinates as [number, number],
+          zoom: 18,
+          duration: 1000,
+        });
+
+        searchParams.delete('stopPlaceId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, setSearchParams, stopsGeoJSON, mapLoadedByComponent]);
 
   return (
     <Box

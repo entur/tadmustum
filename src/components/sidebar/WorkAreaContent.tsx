@@ -50,10 +50,10 @@ const WorkAreaContent: React.FC<WorkAreaContentProps> = () => {
   };
 
   const typeOptions = [
-    { value: 'train', labelKey: 'workArea.types.train' },
-    { value: 'bus', labelKey: 'workArea.types.bus' },
-    { value: 'ferry', labelKey: 'workArea.types.ferry' },
-    { value: 'tram', labelKey: 'workArea.types.tram' },
+    { value: 'train', labelKey: 'types.train' },
+    { value: 'bus', labelKey: 'types.bus' },
+    { value: 'ferry', labelKey: 'types.ferry' },
+    { value: 'tram', labelKey: 'types.tram' },
   ];
 
   return (

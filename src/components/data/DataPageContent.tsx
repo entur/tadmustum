@@ -83,7 +83,7 @@ export default function DataPageContent({
 
             {data.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={compact ? 3 : 5} align="center">
+                <TableCell colSpan={compact ? 3 : 6} align="center">
                   {t('data.noResults', 'No data to display.')}
                 </TableCell>
               </TableRow>
