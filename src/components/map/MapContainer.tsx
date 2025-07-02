@@ -10,10 +10,8 @@ interface MapContainerProps {
   mapRef: RefObject<MapRef | null>;
   onContextMenu?: (event: MapLayerMouseEvent) => void;
   onClick?: (event: MapLayerMouseEvent) => void;
-  // 1. Replace enter/leave with a single mouse move handler
   onMouseMove?: (event: MapLayerMouseEvent) => void;
   interactiveLayerIds?: string[];
-  // 2. Add a prop to control the cursor declaratively
   cursor?: string;
 }
 
@@ -24,7 +22,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   mapRef,
   onContextMenu,
   onClick,
-  // 3. Destructure the new props
   onMouseMove,
   interactiveLayerIds,
   cursor,
@@ -35,7 +32,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       onLoad={onLoad}
       onContextMenu={onContextMenu}
       onClick={onClick}
-      // 4. Pass the new props to the Map component
       onMouseMove={onMouseMove}
       cursor={cursor}
       interactiveLayerIds={interactiveLayerIds}

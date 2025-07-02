@@ -30,7 +30,6 @@ export default function StopPlaceDetailDialog({
     return null;
   }
 
-  // The properties are coming from our GeoJSON features
   const { name, id, icon } = featureProperties;
   const iconUrl = getIconUrl(icon as string);
 

@@ -29,7 +29,6 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
 
   const iconUrl = getIconUrl(iconKey);
 
-  // 1. Simplify the handler to just navigate with a URL parameter
   const handleGoToMap = (event: React.MouseEvent) => {
     event.stopPropagation();
     navigate(`/map?stopPlaceId=${sp.id}`);

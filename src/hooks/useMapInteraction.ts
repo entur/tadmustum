@@ -11,9 +11,7 @@ export interface ContextMenuState {
 
 export function useMapInteraction() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  // 1. Add state for the selected feature dialog
   const [selectedFeature, setSelectedFeature] = useState<GeoJsonProperties | null>(null);
-
   const handleContextMenu = (event: MapLayerMouseEvent) => {
     event.originalEvent.preventDefault();
     setContextMenu({
@@ -28,9 +26,7 @@ export function useMapInteraction() {
     setContextMenu(null);
   };
 
-  // 2. Add handlers for the map click and dialog close actions
   const handleMapClick = (event: MapLayerMouseEvent) => {
-    // If context menu is open, a click should just close it.
     if (contextMenu) {
       handleCloseContextMenu();
       return;
@@ -49,7 +45,6 @@ export function useMapInteraction() {
     contextMenu,
     handleContextMenu,
     handleCloseContextMenu,
-    // 3. Export the new state and handlers
     selectedFeature,
     handleMapClick,
     handleCloseDialog,

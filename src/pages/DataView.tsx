@@ -57,7 +57,6 @@ export default function DataView() {
             sp.name.value.toLowerCase().includes(lowerQuery) ||
             sp.id.toLowerCase().includes(lowerQuery);
 
-          // 2. Determine the type key and apply the filter logic
           const typeKey =
             sp.__typename === 'ParentStopPlace' ? 'parentStopPlace' : sp.stopPlaceType;
           const typeMatch = filters.length === 0 || filters.includes(typeKey);
