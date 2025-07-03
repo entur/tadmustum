@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, type ComponentType } from 'react';
 import { useContainerResponsiveView } from '../../hooks/useContainerResponsiveView';
 import {
   Box,
@@ -13,26 +13,31 @@ import {
 import DataTableHeader from './DataTableHeader.tsx';
 import DataTableRow from './DataTableRow.tsx';
 import { useTranslation } from 'react-i18next';
-import type { Order, OrderBy } from '../../data/useStopPlaces';
+import type { Order } from '../../data/useStopPlaces';
+import type { ColumnDefinition } from './dataTableTypes.ts';
+import MobileDetailRow from './MobileDetailRow.tsx';
 
-import type { StopPlace } from '../../data/StopPlaceContext.tsx';
 const COMPACT_VIEW_THRESHOLD = 700;
 
-interface DataPageContentProps {
-  data: StopPlace[];
+interface DataPageContentProps<T, K extends string> {
+  data: T[];
   loading: boolean;
   error: string | null;
   totalCount: number;
   order: Order;
-  orderBy: OrderBy;
-  handleRequestSort: (property: OrderBy) => void;
+  orderBy: K;
+  handleRequestSort: (property: K) => void;
   page: number;
   rowsPerPage: number;
   setPage: (page: number) => void;
   setRowsPerPage: (rowsPerPage: number) => void;
+  columns: ColumnDefinition<T, K>[];
 }
 
-export default function DataPageContent({
+export default function DataPageContent<
+  T extends { id: string; version?: number },
+  K extends string,
+>({
   data,
   loading,
   totalCount,
@@ -43,21 +48,27 @@ export default function DataPageContent({
   rowsPerPage,
   setPage,
   setRowsPerPage,
-}: DataPageContentProps) {
+  columns,
+}: DataPageContentProps<T, K>) {
   const { t } = useTranslation();
-
   const containerRef = useRef<HTMLDivElement>(null);
   const compact = useContainerResponsiveView(containerRef, COMPACT_VIEW_THRESHOLD, loading);
+
+  const visibleColumns = columns.filter(col => col.display !== 'desktop-only' || !compact);
+  const detailColumns = columns.filter(col => col.display === 'desktop-only');
+  const colSpan = visibleColumns.length + (compact ? 1 : 0);
+
+  const detailComponent = MobileDetailRow as ComponentType<{
+    open: boolean;
+    item: T;
+    colSpan: number;
+    columns: ColumnDefinition<T, K>[];
+  }>;
 
   return (
     <Box
       ref={containerRef}
-      sx={{
-        flexGrow: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
+      sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     >
       <Box p={2}>
         <Typography variant="h4" component="h2" align="center">
@@ -75,15 +86,23 @@ export default function DataPageContent({
             order={order}
             orderBy={orderBy}
             onRequestSort={handleRequestSort}
+            columns={visibleColumns}
           />
           <TableBody>
-            {data.map(sp => (
-              <DataTableRow key={`${sp.id}-${sp.version}`} sp={sp} useCompactView={compact} />
+            {data.map(item => (
+              <DataTableRow
+                key={`${item.id}-${item.version ?? ''}`}
+                item={item}
+                useCompactView={compact}
+                columns={visibleColumns}
+                DetailRowComponent={detailComponent}
+                detailColumns={detailColumns}
+                colSpan={colSpan}
+              />
             ))}
-
             {data.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={compact ? 3 : 6} align="center">
+                <TableCell colSpan={colSpan} align="center">
                   {t('data.noResults', 'No data to display.')}
                 </TableCell>
               </TableRow>
@@ -93,26 +112,15 @@ export default function DataPageContent({
       </TableContainer>
 
       <TablePagination
-        sx={{
-          p: 0,
-          m: 0,
-          flexShrink: 0,
-        }}
+        rowsPerPageOptions={[10, 25, 100]}
         component="div"
         count={totalCount}
-        page={page}
         rowsPerPage={rowsPerPage}
-        onPageChange={(_, p) => setPage(p)}
-        onRowsPerPageChange={e => {
-          setRowsPerPage(+e.target.value);
+        page={page}
+        onPageChange={(_, newPage) => setPage(newPage)}
+        onRowsPerPageChange={event => {
+          setRowsPerPage(parseInt(event.target.value, 10));
           setPage(0);
-        }}
-        rowsPerPageOptions={[10, 25, 50, 100]}
-        labelRowsPerPage={t('data.pagination.rowsPerPage')}
-        labelDisplayedRows={({ from, to, count }) => {
-          const key =
-            count === -1 ? 'data.pagination.displayedRowsOfMore' : 'data.pagination.displayedRows';
-          return t(key, { from, to, count });
         }}
       />
     </Box>

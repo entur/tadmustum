@@ -8,10 +8,12 @@ import {
   Box,
   IconButton,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import type { GeoJsonProperties } from 'geojson';
 import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
+import { useEditing } from '../../contexts/EditingContext.tsx';
 
 interface StopPlaceDetailDialogProps {
   open: boolean;
@@ -25,6 +27,7 @@ export default function StopPlaceDetailDialog({
   featureProperties,
 }: StopPlaceDetailDialogProps) {
   const { t } = useTranslation();
+  const { setEditingStopPlaceId } = useEditing();
 
   if (!featureProperties) {
     return null;
@@ -32,6 +35,13 @@ export default function StopPlaceDetailDialog({
 
   const { name, id, icon } = featureProperties;
   const iconUrl = getIconUrl(icon as string);
+
+  const handleEdit = () => {
+    if (id) {
+      setEditingStopPlaceId(String(id));
+      onClose();
+    }
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -74,6 +84,9 @@ export default function StopPlaceDetailDialog({
         </Box>
       </DialogContent>
       <DialogActions>
+        <Button onClick={handleEdit} startIcon={<EditIcon />}>
+          {t('edit', 'Edit')}
+        </Button>
         <Button onClick={onClose}>{t('close', 'Close')}</Button>
       </DialogActions>
     </Dialog>

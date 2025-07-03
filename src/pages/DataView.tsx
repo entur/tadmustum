@@ -1,16 +1,15 @@
-import { useRef, useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, useTheme } from '@mui/material';
-import { useStopPlaces } from '../data/useStopPlaces';
-import type { StopPlace } from '../data/StopPlaceContext';
 import { useSearch } from '../components/search';
-import type { SearchResultItem, SearchContextViewType } from '../components/search/searchTypes';
-
+import { useResizableSidebar } from '../hooks/useResizableSidebar.ts';
+import { useEditing } from '../contexts/EditingContext.tsx';
 import { Sidebar } from '../components/sidebar/Sidebar.tsx';
 import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
-import { useResizableSidebar } from '../hooks/useResizableSidebar.ts';
-import DataPageContent from '../components/data/DataPageContent.tsx';
 import LoadingPage from '../components/common/LoadingPage.tsx';
 import ErrorPage from '../components/common/ErrorPage.tsx';
+import { stopPlaceViewConfig } from '../views/stop-places/stopPlaceViewConfig.tsx';
+const { useData, useSearchRegistration, useTableLogic, PageContentComponent, columns } =
+  stopPlaceViewConfig;
 
 export default function DataView() {
   const theme = useTheme();
@@ -22,13 +21,15 @@ export default function DataView() {
     toggle: toggleSidebar,
   } = useResizableSidebar(250, true);
 
-  const tableContentContainerRef = useRef<HTMLDivElement | null>(null);
+  const { editingStopPlaceId } = useEditing();
+  const { searchResults, searchQuery, activeSearchContext, selectedItem, activeFilters } =
+    useSearch();
 
   const {
-    allData: allFetchedStopPlaces,
+    allData,
     totalCount: originalTotalCount,
-    loading: stopPlacesLoading,
-    error: stopPlacesError,
+    loading: dataLoading,
+    error: dataError,
     order,
     orderBy,
     handleRequestSort,
@@ -36,107 +37,40 @@ export default function DataView() {
     rowsPerPage,
     setPage,
     setRowsPerPage,
-  } = useStopPlaces();
+  } = useData();
 
-  const {
-    setActiveSearchContext,
-    registerSearchFunction,
-    searchResults,
-    searchQuery,
-    activeSearchContext,
-    selectedItem,
-  } = useSearch();
+  useSearchRegistration(allData, dataLoading);
 
-  const searchStopPlaceData = useCallback(
-    async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
-      if (stopPlacesLoading || !allFetchedStopPlaces) return [];
-      const lowerQuery = query.toLowerCase();
-      const results = allFetchedStopPlaces
-        .filter(sp => {
-          const textMatch =
-            sp.name.value.toLowerCase().includes(lowerQuery) ||
-            sp.id.toLowerCase().includes(lowerQuery);
-
-          const typeKey =
-            sp.__typename === 'ParentStopPlace' ? 'parentStopPlace' : sp.stopPlaceType;
-          const typeMatch = filters.length === 0 || filters.includes(typeKey);
-
-          return textMatch && typeMatch;
-        })
-        .map(sp => ({
-          id: sp.id,
-          name: sp.name.value,
-          type: 'data' as const,
-          originalData: sp,
-        }));
-      return results;
-    },
-    [stopPlacesLoading, allFetchedStopPlaces]
-  );
-
-  useEffect(() => {
-    setActiveSearchContext('data' as SearchContextViewType);
-
-    registerSearchFunction('data' as SearchContextViewType, searchStopPlaceData);
-
-    return () => {
-      registerSearchFunction('data' as SearchContextViewType, null);
-    };
-  }, [setActiveSearchContext, registerSearchFunction, searchStopPlaceData]);
-
-  const { dataForTable, currentTotalForTable } = useMemo(() => {
-    let baseData: StopPlace[];
-    let currentTotal: number;
-    const isDataSearchActive = activeSearchContext === 'data';
-
-    if (isDataSearchActive && selectedItem) {
-      baseData = [selectedItem.originalData as StopPlace];
-      currentTotal = 1;
-    } else if (isDataSearchActive && searchQuery.trim()) {
-      baseData = searchResults
-        .filter(result => result.type === 'data' && result.originalData)
-        .map(result => result.originalData as StopPlace);
-      currentTotal = baseData.length;
-    } else {
-      baseData = allFetchedStopPlaces;
-      currentTotal = originalTotalCount;
-    }
-
-    let sortedData = baseData;
-    if (isDataSearchActive && (searchQuery.trim() || selectedItem)) {
-      sortedData = [...baseData].sort((a, b) => {
-        const valA = orderBy === 'name' ? a.name.value.toLowerCase() : a.id.toLowerCase();
-        const valB = orderBy === 'name' ? b.name.value.toLowerCase() : b.id.toLowerCase();
-        if (valA < valB) return order === 'asc' ? -1 : 1;
-        if (valA > valB) return order === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    const paginated = sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-    return { dataForTable: paginated, currentTotalForTable: currentTotal };
-  }, [
-    activeSearchContext,
-    searchQuery,
-    searchResults,
-    selectedItem,
-    allFetchedStopPlaces,
+  const { dataForTable, currentTotalForTable } = useTableLogic({
+    allFetchedStopPlaces: allData,
     originalTotalCount,
+    searchResults,
+    searchQuery,
+    selectedItem,
+    activeSearchContext,
     order,
     orderBy,
     page,
     rowsPerPage,
-  ]);
+    activeFilters,
+  });
+
+  const prevEditingIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (editingStopPlaceId && !prevEditingIdRef.current) {
+      if (sidebarCollapsed) {
+        toggleSidebar();
+      }
+    }
+    prevEditingIdRef.current = editingStopPlaceId;
+  }, [editingStopPlaceId, sidebarCollapsed, toggleSidebar]);
 
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, activeSearchContext, selectedItem, setPage]);
+  }, [searchQuery, activeSearchContext, selectedItem, setPage, activeFilters]);
 
-  const isLoadingDisplay =
-    stopPlacesLoading && !(activeSearchContext === 'data' && searchQuery.trim());
-
-  const isErrorDisplay = stopPlacesError && !(activeSearchContext === 'data' && searchQuery.trim());
+  const isLoadingDisplay = dataLoading && !(activeSearchContext === 'data' && searchQuery.trim());
+  const isErrorDisplay = dataError && !(activeSearchContext === 'data' && searchQuery.trim());
 
   if (isLoadingDisplay && dataForTable.length === 0) return <LoadingPage />;
   if (isErrorDisplay && dataForTable.length === 0) return <ErrorPage />;
@@ -145,7 +79,7 @@ export default function DataView() {
     <Box
       sx={{
         display: 'flex',
-        height: 'calc(100vh - 64px)',
+        height: 'calc(100dvh - 64px)',
         position: 'relative',
       }}
     >
@@ -162,7 +96,6 @@ export default function DataView() {
         onClick={toggleSidebar}
       />
       <Box
-        ref={tableContentContainerRef}
         className="data-overview-content"
         sx={{
           flexGrow: 1,
@@ -174,10 +107,10 @@ export default function DataView() {
           flexDirection: 'column',
         }}
       >
-        <DataPageContent
+        <PageContentComponent
           data={dataForTable}
           loading={isLoadingDisplay}
-          error={isErrorDisplay ? stopPlacesError : null}
+          error={isErrorDisplay ? dataError : null}
           totalCount={currentTotalForTable}
           order={order}
           orderBy={orderBy}
@@ -186,6 +119,7 @@ export default function DataView() {
           rowsPerPage={rowsPerPage}
           setPage={setPage}
           setRowsPerPage={setRowsPerPage}
+          columns={columns}
         />
       </Box>
     </Box>

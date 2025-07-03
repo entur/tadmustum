@@ -1,38 +1,32 @@
-import { TableRow, TableCell, IconButton, Box, Tooltip } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
-import type { StopPlace } from '../../data/StopPlaceContext.tsx';
-import DataTableDetail from './DataTableDetail.tsx';
 import { useState } from 'react';
-import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom'; // No other imports needed
+import { TableRow, TableCell, IconButton } from '@mui/material';
+import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
+import type { ColumnDefinition } from './dataTableTypes.ts';
+import type { ComponentType } from 'react';
 
-interface Props {
-  sp: StopPlace;
+interface Props<T, K extends string> {
+  item: T;
+  columns: ColumnDefinition<T, K>[];
   useCompactView: boolean;
+  DetailRowComponent?: ComponentType<{
+    open: boolean;
+    item: T;
+    colSpan: number;
+    columns: ColumnDefinition<T, K>[];
+  }>;
+  detailColumns: ColumnDefinition<T, K>[];
+  colSpan: number;
 }
 
-export default function DataTableRow({ sp, useCompactView }: Props) {
-  const { t } = useTranslation();
-  const navigate = useNavigate(); // We only need the navigate hook
+export default function DataTableRow<T, K extends string>({
+  item,
+  columns,
+  useCompactView,
+  DetailRowComponent,
+  detailColumns,
+  colSpan,
+}: Props<T, K>) {
   const [open, setOpen] = useState(false);
-  const [lng, lat] = sp.geometry.legacyCoordinates?.[0] ?? ['', ''];
-
-  let iconKey: string;
-  if (sp.__typename === 'ParentStopPlace') {
-    iconKey = 'parentStopPlace';
-  } else if (sp.stopPlaceType) {
-    iconKey = sp.stopPlaceType;
-  } else {
-    iconKey = 'default';
-  }
-
-  const iconUrl = getIconUrl(iconKey);
-
-  const handleGoToMap = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    navigate(`/map?stopPlaceId=${sp.id}`);
-  };
 
   return (
     <>
@@ -43,61 +37,20 @@ export default function DataTableRow({ sp, useCompactView }: Props) {
       >
         {useCompactView && (
           <TableCell padding="none">
-            <IconButton
-              size="small"
-              onClick={event => {
-                event.stopPropagation();
-                setOpen(o => !o);
-              }}
-            >
+            <IconButton size="small" onClick={() => setOpen(o => !o)}>
               {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
             </IconButton>
           </TableCell>
         )}
-        <TableCell>{sp.name.value}</TableCell>
-        <TableCell>{sp.id}</TableCell>
-        {!useCompactView && <TableCell>{lng || '—'}</TableCell>}
-        {!useCompactView && <TableCell>{lat || '—'}</TableCell>}
-        {!useCompactView && (
-          <TableCell>
-            <Box
-              component="img"
-              src={iconUrl}
-              alt={t('data.table.row.typeIconAlt', 'Stop place type icon')}
-              sx={{ width: 32 }}
-            />
+        {columns.map(col => (
+          <TableCell key={col.id} align={col.align}>
+            {col.renderCell(item)}
           </TableCell>
-        )}
-        {!useCompactView && (
-          <TableCell align="center">
-            <Tooltip title={t('data.table.row.goToMapTooltip', 'View on map')}>
-              <span>
-                <IconButton
-                  onClick={handleGoToMap}
-                  disabled={!lng || !lat}
-                  aria-label={t('data.table.row.goToMapTooltip', 'View on map')}
-                >
-                  <Box
-                    component="img"
-                    src={getIconUrl('map')}
-                    alt={`Map icon`}
-                    sx={{ width: 32 }}
-                  />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </TableCell>
-        )}
+        ))}
       </TableRow>
-      {useCompactView && (
-        <DataTableDetail
-          open={open}
-          lng={lng}
-          lat={lat}
-          iconUrl={iconUrl}
-          stopPlaceType={sp.stopPlaceType}
-          stopPlaceId={sp.id}
-        />
+      {/* This now correctly passes the detail columns to the generic component */}
+      {useCompactView && DetailRowComponent && (
+        <DetailRowComponent open={open} item={item} colSpan={colSpan} columns={detailColumns} />
       )}
     </>
   );

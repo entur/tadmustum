@@ -1,48 +1,41 @@
-import { TableHead, TableRow, TableCell, TableSortLabel } from '@mui/material';
-import type { Order, OrderBy } from '../../data/useStopPlaces.ts';
-import { useTranslation } from 'react-i18next';
+import { TableCell, TableHead, TableRow, TableSortLabel } from '@mui/material';
+import type { Order } from '../../data/useStopPlaces.ts';
+import type { ColumnDefinition } from './dataTableTypes.ts';
 
-interface Props {
+interface Props<T, K extends string> {
   useCompactView: boolean;
   order: Order;
-  orderBy: OrderBy;
-  onRequestSort: (prop: OrderBy) => void;
+  orderBy: K;
+  onRequestSort: (prop: K) => void;
+  columns: ColumnDefinition<T, K>[];
 }
 
-export default function DataTableHeader({ useCompactView, order, orderBy, onRequestSort }: Props) {
-  const { t } = useTranslation();
-
-  const createLabel = (prop: OrderBy, labelKey: string, defaultLabel: string) => (
-    <TableSortLabel
-      active={orderBy === prop}
-      direction={orderBy === prop ? order : 'asc'}
-      hideSortIcon={false}
-      onClick={() => onRequestSort(prop)}
-    >
-      {t(labelKey, defaultLabel)}
-    </TableSortLabel>
-  );
-
+export default function DataTableHeader<T, K extends string>({
+  useCompactView,
+  order,
+  orderBy,
+  onRequestSort,
+  columns,
+}: Props<T, K>) {
   return (
     <TableHead>
       <TableRow>
         {useCompactView && <TableCell padding="none" />}
-        <TableCell>
-          <b>
-            <u>{createLabel('name', 'data.table.header.name', 'Name')}</u>
-          </b>
-        </TableCell>
-        <TableCell>
-          <b>
-            <u>{createLabel('id', 'data.table.header.id', 'ID')}</u>
-          </b>
-        </TableCell>
-        {!useCompactView && <TableCell>{t('data.table.header.longitude', 'Longitude')}</TableCell>}
-        {!useCompactView && <TableCell>{t('data.table.header.latitude', 'Latitude')}</TableCell>}
-        {!useCompactView && <TableCell>{t('data.table.header.type', 'Type')}</TableCell>}
-        {!useCompactView && (
-          <TableCell align="center">{t('data.table.header.actions', 'Actions')}</TableCell>
-        )}
+        {columns.map(col => (
+          <TableCell key={col.id} align={col.align}>
+            {col.isSortable ? (
+              <TableSortLabel
+                active={orderBy === col.id}
+                direction={orderBy === col.id ? order : 'asc'}
+                onClick={() => onRequestSort(col.id)}
+              >
+                <b>{col.headerLabel}</b>
+              </TableSortLabel>
+            ) : (
+              <b>{col.headerLabel}</b>
+            )}
+          </TableCell>
+        ))}
       </TableRow>
     </TableHead>
   );

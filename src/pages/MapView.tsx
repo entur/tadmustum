@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useStopsGeoJSON } from '../hooks/useStopsGeoJSON';
@@ -9,6 +9,7 @@ import { useMapSearch } from '../hooks/useMapSearch';
 import { useMapFlyTo } from '../hooks/useMapFlyTo';
 import { useMapCore } from '../hooks/useMapCore';
 import { useBodyOverflowLock } from '../hooks/useBodyOverflowLock';
+import { useEditing } from '../contexts/EditingContext.tsx';
 import { createMapStyle, LAYER_ID_STOPS_ICON, LAYER_ID_STOPS_CIRCLE } from '../map/mapStyle';
 import { Sidebar } from '../components/sidebar/Sidebar.tsx';
 import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
@@ -29,6 +30,18 @@ export default function MapView() {
   const { geojson: stopsGeoJSON, loading: geoJsonLoading, error: geoJsonError } = useStopsGeoJSON();
   const { width, collapsed, setIsResizing, toggle } = useResizableSidebar(300, true);
   useBodyOverflowLock();
+
+  const { editingStopPlaceId } = useEditing();
+  const prevEditingIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (editingStopPlaceId && !prevEditingIdRef.current) {
+      if (collapsed) {
+        toggle();
+      }
+    }
+    prevEditingIdRef.current = editingStopPlaceId;
+  }, [editingStopPlaceId, collapsed, toggle]);
 
   const {
     contextMenu,

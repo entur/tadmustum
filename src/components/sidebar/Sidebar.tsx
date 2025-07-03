@@ -1,5 +1,5 @@
 import { Box, Drawer, useMediaQuery, IconButton, Toolbar } from '@mui/material';
-import WorkAreaContent from './WorkAreaContent.tsx';
+import SidebarContent from './SidebarContent.tsx';
 import type { Theme } from '@mui/material/styles';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
@@ -51,7 +51,7 @@ export function Sidebar({
             <ChevronLeftIcon />
           </IconButton>
         </Toolbar>
-        <WorkAreaContent />
+        <SidebarContent />
       </Drawer>
     );
   }
@@ -73,7 +73,7 @@ export function Sidebar({
           overflow: 'hidden',
         }}
       >
-        {!collapsed && <WorkAreaContent />}
+        {!collapsed && <SidebarContent />}
       </Box>
 
       {!collapsed && (
