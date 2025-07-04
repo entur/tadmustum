@@ -324,44 +324,51 @@ export type ProductSortKey = 'name' | 'price' | 'stock';
 This hook is responsible for fetching, sorting, and paginating your data. It can get data from a live API or, for this example, from a mock data file.
 Create a file like /src/data/your-feature/useYourFeature.ts. This hook must return an object with a specific shape that the generic page understands.
 ### Example: `useProducts.ts`
-```typescript
+```typescript jsx
+import { useState, useMemo } from 'react';
+import type { ProductSortKey } from './productTypes.ts';
+import type { Order } from '../stop-places/useStopPlaces.ts';
+import { MOCK_PRODUCTS } from './data/mockProducts.ts';
+// ... (helper functions for sorting)
+
+export function useProducts() {
   // State for sorting and pagination
-const [order, setOrder] = useState<Order>('asc');
-const [orderBy, setOrderBy] = useState<ProductSortKey>('name');
-const [page, setPage] = useState(0);
-const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [order, setOrder] = useState<Order>('asc');
+  const [orderBy, setOrderBy] = useState<ProductSortKey>('name');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-// Logic to handle sort requests
-const handleRequestSort = (property: ProductSortKey) => {
-  // ...
-};
+  // Logic to handle sort requests
+  const handleRequestSort = (property: ProductSortKey) => {
+    // ...
+  };
 
-// Memoized sorting logic
-const sortedData = useMemo(() => {
-  // ...
-}, [order, orderBy]);
+  // Memoized sorting logic
+  const sortedData = useMemo(() => {
+    // ...
+  }, [order, orderBy]);
 
-// Return the data and state handlers
-return {
-  allData: sortedData,
-  totalCount: MOCK_PRODUCTS.length,
-  loading: false, // Set to true while fetching from an API
-  error: null,    // Set to an error message on failure
-  order,
-  orderBy,
-  handleRequestSort,
-  page,
-  rowsPerPage,
-  setPage,
-  setRowsPerPage,
- };
+  // Return the data and state handlers
+  return {
+    allData: sortedData,
+    totalCount: MOCK_PRODUCTS.length,
+    loading: false, // Set to true while fetching from an API
+    error: null,    // Set to an error message on failure
+    order,
+    orderBy,
+    handleRequestSort,
+    page,
+    rowsPerPage,
+    setPage,
+    setRowsPerPage,
+  };
 }
 ```
 ## Step 3: Create an Editor Component
 This is the component that will appear in the sidebar when a user clicks the "Edit" button on a table row. It must accept a prop named itemId.
 Create a file like /src/data/your-feature/YourFeatureEditor.tsx.
 ### Example: `ProductEditor.tsx`
-```typescript
+```typescript jsx
 import { Box, Typography, Button } from '@mui/material';
 import { useEditing } from '../../contexts/EditingContext.tsx';
 
@@ -387,7 +394,7 @@ For each column in your table, you need to define how it renders.
 * For simple text, you can do this inline in the main config file.
 * For complex rendering (like a formatted price or an "Edit" button), create a dedicated component.
 ### Example 1: `PriceCell.tsx` (for formatting)
-```typescript
+```typescript jsx
 interface PriceCellProps {
   price: number;
 }
@@ -403,7 +410,7 @@ export default function PriceCell({ price }: PriceCellProps) {
 ```
 ### Example 2: `EditActionCell.tsx` (for actions)
 This cell is crucial. It links the table row to the EditingContext and tells the sidebar which editor to open.
-```typescript
+```typescript jsx
 import { IconButton, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { useEditing } from '../../../contexts/EditingContext.tsx';
@@ -478,7 +485,7 @@ export function useProductSearch(allProducts: Product[] | null, productsLoading:
 This is the central file that brings everything together. It exports a single configuration object that the generic page component will use.
 Create a file like /src/data/your-feature/yourFeatureViewConfig.tsx.
 ### Example: `productViewConfig.tsx`
-```typescript
+```typescript jsx
 // Generic Imports
 import { useDataViewTableLogic } from '../../hooks/useDataViewTableLogic';
 import DataPageContent from '../../components/data/DataPageContent';
@@ -526,7 +533,7 @@ export const productViewConfig = {
 This is the easiest step. Create a new page component that imports your viewConfig and the GenericDataViewPage.
 Create a file like /src/data/your-feature/YourFeatureView.tsx.
 ### Example: `ProductView.tsx`
-```typescript
+```typescript jsx
 import { productViewConfig } from './productViewConfig.tsx';
 import GenericDataViewPage from '../../pages/GenericDataViewPage.tsx';
 import type { Product, ProductSortKey } from './productTypes.ts';
