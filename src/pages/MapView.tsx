@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useLocation } from 'react-router-dom'; // <-- Import useLocation
 import { useStopsGeoJSON } from '../hooks/useStopsGeoJSON';
 import { useStopsSource } from '../hooks/useStopsSource';
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
@@ -27,21 +28,26 @@ export default function MapView() {
   const { reactMapRef, rawMapRef, mapLoaded, cursor, handleMapLoad, handleMouseMove } =
     useMapCore();
 
+  // Get the stopPlaceId from the URL query string
+  const location = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const stopPlaceIdFromUrl = searchParams.get('stopPlaceId');
+
   const { geojson: stopsGeoJSON, loading: geoJsonLoading, error: geoJsonError } = useStopsGeoJSON();
   const { width, collapsed, setIsResizing, toggle } = useResizableSidebar(300, true);
   useBodyOverflowLock();
 
-  const { editingStopPlaceId } = useEditing();
+  const { editingItem } = useEditing();
   const prevEditingIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (editingStopPlaceId && !prevEditingIdRef.current) {
+    if (editingItem && editingItem.id !== prevEditingIdRef.current) {
       if (collapsed) {
         toggle();
       }
     }
-    prevEditingIdRef.current = editingStopPlaceId;
-  }, [editingStopPlaceId, collapsed, toggle]);
+    prevEditingIdRef.current = editingItem?.id ?? null;
+  }, [editingItem, collapsed, toggle]);
 
   const {
     contextMenu,
@@ -52,7 +58,8 @@ export default function MapView() {
     handleCloseDialog,
   } = useMapInteraction();
   useMapSearch(stopsGeoJSON, geoJsonLoading);
-  useMapFlyTo(reactMapRef, mapLoaded, stopsGeoJSON);
+  // Pass the ID from the URL to the hook
+  useMapFlyTo(reactMapRef, mapLoaded, stopsGeoJSON, stopPlaceIdFromUrl);
   useStopsSource(rawMapRef, stopsGeoJSON, geoJsonLoading, geoJsonError);
 
   return (

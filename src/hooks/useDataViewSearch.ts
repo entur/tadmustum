@@ -5,7 +5,7 @@ import type {
   SearchResultItem,
   StopPlaceTypeFilter,
 } from '../components/search/searchTypes';
-import type { StopPlace } from '../data/StopPlaceContext';
+import type { StopPlace } from '../data/stop-places/stopPlaceTypes.ts';
 
 export function useDataViewSearch(
   allFetchedStopPlaces: StopPlace[] | null,

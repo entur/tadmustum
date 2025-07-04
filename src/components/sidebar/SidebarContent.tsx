@@ -1,13 +1,11 @@
 import { useEditing } from '../../contexts/EditingContext.tsx';
-import StopPlaceEditor from './StopPlaceEditor.tsx';
 import WorkAreaContent from './WorkAreaContent.tsx';
 
 export default function SidebarContent() {
-  const { editingStopPlaceId } = useEditing();
-
-  if (editingStopPlaceId) {
-    return <StopPlaceEditor stopPlaceId={editingStopPlaceId} />;
+  const { editingItem } = useEditing();
+  if (editingItem) {
+    const { EditorComponent, id } = editingItem;
+    return <EditorComponent itemId={id} />;
   }
-
   return <WorkAreaContent />;
 }

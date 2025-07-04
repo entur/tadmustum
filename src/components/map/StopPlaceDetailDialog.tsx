@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import type { GeoJsonProperties } from 'geojson';
 import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
 import { useEditing } from '../../contexts/EditingContext.tsx';
+import StopPlaceEditor from '../../data/stop-places/StopPlaceEditor.tsx';
 
 interface StopPlaceDetailDialogProps {
   open: boolean;
@@ -27,7 +28,7 @@ export default function StopPlaceDetailDialog({
   featureProperties,
 }: StopPlaceDetailDialogProps) {
   const { t } = useTranslation();
-  const { setEditingStopPlaceId } = useEditing();
+  const { setEditingItem } = useEditing();
 
   if (!featureProperties) {
     return null;
@@ -38,7 +39,7 @@ export default function StopPlaceDetailDialog({
 
   const handleEdit = () => {
     if (id) {
-      setEditingStopPlaceId(String(id));
+      setEditingItem({ id: String(id), EditorComponent: StopPlaceEditor });
       onClose();
     }
   };

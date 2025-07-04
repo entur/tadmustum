@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { StopPlace, StopPlaceContext } from './StopPlaceContext';
-import { fetchStopPlaces } from './fetchStopPlaces';
+import type { StopPlace, StopPlaceContext } from './stopPlaceTypes.ts';
+import { fetchStopPlaces } from './fetchStopPlaces.tsx';
 
 export type Order = 'asc' | 'desc';
 export type OrderBy = 'name' | 'id';

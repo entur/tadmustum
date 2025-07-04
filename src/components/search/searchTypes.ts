@@ -27,9 +27,18 @@ export interface SearchContextProps {
   clearSearch: () => void;
   selectedItem: SearchResultItem | null;
   setSelectedItem: (item: SearchResultItem | null) => void;
-
   registerSearchFunction: (contextType: SearchContextViewType, func: SearchFunction | null) => void;
-
   activeFilters: StopPlaceTypeFilter[];
   updateFilters: (filters: StopPlaceTypeFilter[]) => void;
+  filterConfig: FilterDefinition[];
+  registerFilterConfig: (
+    contextType: SearchContextViewType,
+    config: FilterDefinition[] | null
+  ) => void;
+}
+
+export interface FilterDefinition {
+  id: string;
+  labelKey: string;
+  defaultLabel: string;
 }

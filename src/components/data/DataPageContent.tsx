@@ -13,7 +13,7 @@ import {
 import DataTableHeader from './DataTableHeader.tsx';
 import DataTableRow from './DataTableRow.tsx';
 import { useTranslation } from 'react-i18next';
-import type { Order } from '../../data/useStopPlaces';
+import type { Order } from '../../data/stop-places/useStopPlaces.ts';
 import type { ColumnDefinition } from './dataTableTypes.ts';
 import MobileDetailRow from './MobileDetailRow.tsx';
 
@@ -72,7 +72,7 @@ export default function DataPageContent<
     >
       <Box p={2}>
         <Typography variant="h4" component="h2" align="center">
-          {t('data.title', 'Stop Place Overview')}
+          {t('data.title')}
         </Typography>
       </Box>
       <Box px={2} pb={1}>

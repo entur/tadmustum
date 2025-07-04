@@ -11,23 +11,12 @@ import {
   Badge,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { useSearch } from './searchUtils';
+import { useSearch } from './searchUtils.ts';
 import { useTranslation } from 'react-i18next';
-
-const stopPlaceTypes = [
-  { id: 'parentStopPlace', labelKey: 'types.parent', defaultLabel: 'Parent Stop Place' },
-  { id: 'railStation', labelKey: 'types.train', defaultLabel: 'Train' },
-  { id: 'metroStation', labelKey: 'types.metro', defaultLabel: 'Metro' },
-  { id: 'onstreetBus', labelKey: 'types.bus', defaultLabel: 'Bus' },
-  { id: 'onstreetTram', labelKey: 'types.tram', defaultLabel: 'Tram' },
-  { id: 'ferryStop', labelKey: 'types.ferry', defaultLabel: 'Ferry' },
-  { id: 'harbourPort', labelKey: 'types.harbour', defaultLabel: 'Harbour' },
-  { id: 'liftStation', labelKey: 'types.lift', defaultLabel: 'Lift' },
-];
 
 export default function SearchFilterControl() {
   const { t } = useTranslation();
-  const { activeFilters, updateFilters } = useSearch();
+  const { activeFilters, updateFilters, filterConfig } = useSearch();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -48,6 +37,10 @@ export default function SearchFilterControl() {
   const handleClearFilters = () => {
     updateFilters([]);
   };
+
+  if (filterConfig.length === 0) {
+    return null;
+  }
 
   const open = Boolean(anchorEl);
   const id = open ? 'search-filter-popover' : undefined;
@@ -72,7 +65,7 @@ export default function SearchFilterControl() {
             {t('search.filter.title', 'Filter by Type')}
           </Typography>
           <FormGroup>
-            {stopPlaceTypes.map(type => (
+            {filterConfig.map(type => (
               <FormControlLabel
                 key={type.id}
                 control={

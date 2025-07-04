@@ -7,11 +7,26 @@ import { Sidebar } from '../components/sidebar/Sidebar.tsx';
 import { ToggleButton } from '../components/sidebar/ToggleButton.tsx';
 import LoadingPage from '../components/common/LoadingPage.tsx';
 import ErrorPage from '../components/common/ErrorPage.tsx';
-import { stopPlaceViewConfig } from '../views/stop-places/stopPlaceViewConfig.tsx';
-const { useData, useSearchRegistration, useTableLogic, PageContentComponent, columns } =
-  stopPlaceViewConfig;
+import type { ViewConfig } from '../types/viewConfigTypes.ts';
 
-export default function DataView() {
+interface GenericDataViewPageProps<T, K extends string> {
+  viewConfig: ViewConfig<T, K>;
+}
+
+export default function GenericDataViewPage<T, K extends string>({
+  viewConfig,
+}: GenericDataViewPageProps<T, K>) {
+  const {
+    useData,
+    useSearchRegistration,
+    useTableLogic,
+    PageContentComponent,
+    columns,
+    getFilterKey,
+    getSortValue,
+    filters,
+  } = viewConfig;
+
   const theme = useTheme();
 
   const {
@@ -21,9 +36,18 @@ export default function DataView() {
     toggle: toggleSidebar,
   } = useResizableSidebar(250, true);
 
-  const { editingStopPlaceId } = useEditing();
-  const { searchResults, searchQuery, activeSearchContext, selectedItem, activeFilters } =
-    useSearch();
+  // Change is here: use `editingItem` from the context
+  const { editingItem } = useEditing();
+  const prevEditingIdRef = useRef<string | null>(null);
+
+  const {
+    searchResults,
+    searchQuery,
+    activeSearchContext,
+    selectedItem,
+    activeFilters,
+    registerFilterConfig,
+  } = useSearch();
 
   const {
     allData,
@@ -41,8 +65,15 @@ export default function DataView() {
 
   useSearchRegistration(allData, dataLoading);
 
+  useEffect(() => {
+    registerFilterConfig('data', filters || []);
+    return () => {
+      registerFilterConfig('data', null);
+    };
+  }, [registerFilterConfig, filters]);
+
   const { dataForTable, currentTotalForTable } = useTableLogic({
-    allFetchedStopPlaces: allData,
+    allData: allData,
     originalTotalCount,
     searchResults,
     searchQuery,
@@ -53,17 +84,20 @@ export default function DataView() {
     page,
     rowsPerPage,
     activeFilters,
+    getFilterKey,
+    getSortValue,
   });
 
-  const prevEditingIdRef = useRef<string | null>(null);
+  // This logic now correctly checks if a new item is being edited
   useEffect(() => {
-    if (editingStopPlaceId && !prevEditingIdRef.current) {
+    if (editingItem && editingItem.id !== prevEditingIdRef.current) {
       if (sidebarCollapsed) {
         toggleSidebar();
       }
     }
-    prevEditingIdRef.current = editingStopPlaceId;
-  }, [editingStopPlaceId, sidebarCollapsed, toggleSidebar]);
+    // Update the ref with the current item's ID
+    prevEditingIdRef.current = editingItem?.id ?? null;
+  }, [editingItem, sidebarCollapsed, toggleSidebar]);
 
   useEffect(() => {
     setPage(0);

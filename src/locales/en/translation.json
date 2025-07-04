@@ -3,7 +3,6 @@
   "save": "Save",
   "cancel": "Cancel",
   "details": "Details",
-
   "map": "Map view",
 
   "search.searchPlaceholder": "Search…",
@@ -15,7 +14,7 @@
   "user.logout": "Log out",
 
   "data": "Data overview",
-  "data.title": "Stop Place Overview",
+  "data.title": "Data Overview",
   "data.loading": "Loading data...",
   "data.errorPrefix": "Error",
   "data.noResults": "No data to display.",
@@ -100,5 +99,10 @@
   "header.actions.menu": "menu",
   "header.actions.userIconAlt": "user icon",
   "header.actions.settingsIconAlt": "settings icon",
-  "header.actions.menuIconAlt": "menu icon"
+  "header.actions.menuIconAlt": "menu icon",
+
+  "product": "Product",
+  "product.electronics": "Electronics",
+  "product.books": "Books",
+  "product.clothing": "Clothing"
 }

@@ -1,6 +1,6 @@
 import { Alert, Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useStopPlaces } from '../../data/useStopPlaces.ts';
+import { useStopPlaces } from '../../data/stop-places/useStopPlaces.ts';
 
 export default function ErrorPage() {
   const { t } = useTranslation();

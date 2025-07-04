@@ -1,61 +1,43 @@
-import { useEffect, type RefObject } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useSearch } from '../components/search';
-import type { MapRef as ReactMapRef } from 'react-map-gl/maplibre';
+import { type RefObject, useEffect, useRef } from 'react';
 import type { FeatureCollection } from 'geojson';
+import { useSearch } from '../components/search';
+import type { MapRef } from 'react-map-gl/maplibre';
 
 export function useMapFlyTo(
-  reactMapRef: RefObject<ReactMapRef | null>,
+  mapRef: RefObject<MapRef | null>,
   mapLoaded: boolean,
-  stopsGeoJSON: FeatureCollection | null
+  geojson: FeatureCollection | null,
+  stopPlaceIdFromUrl: string | null
 ) {
-  const { searchResults, selectedItem, setSelectedItem, activeSearchContext } = useSearch();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedItem } = useSearch();
+  const flownToIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (
-      activeSearchContext === 'map' &&
-      searchResults.length > 0 &&
-      reactMapRef.current &&
-      mapLoaded
-    ) {
-      const firstMapResult = searchResults.find(
-        result => result.type === 'map' && result.coordinates
-      );
+    if (!mapRef?.current || !mapLoaded) {
+      return;
+    }
 
-      if (firstMapResult?.coordinates) {
-        reactMapRef.current.flyTo({ center: firstMapResult.coordinates, zoom: 18, duration: 1000 });
+    let targetCoords: [number, number] | undefined;
+    let targetId: string | null = null;
+
+    if (selectedItem && selectedItem.type === 'map' && selectedItem.id !== flownToIdRef.current) {
+      targetCoords = selectedItem.coordinates;
+      targetId = selectedItem.id;
+    } else if (stopPlaceIdFromUrl && stopPlaceIdFromUrl !== flownToIdRef.current && geojson) {
+      const feature = geojson.features.find(f => f.properties?.id === stopPlaceIdFromUrl);
+      if (feature?.geometry.type === 'Point') {
+        targetCoords = feature.geometry.coordinates as [number, number];
+        targetId = stopPlaceIdFromUrl;
       }
     }
-  }, [searchResults, activeSearchContext, mapLoaded, reactMapRef]);
 
-  useEffect(() => {
-    if (selectedItem?.coordinates && reactMapRef.current && mapLoaded) {
-      reactMapRef.current.flyTo({
-        center: selectedItem.coordinates,
-        zoom: 18,
-        duration: 1000,
+    if (targetCoords && targetId) {
+      mapRef.current.flyTo({
+        center: targetCoords,
+        zoom: 17,
+        essential: true,
       });
-      setSelectedItem(null);
+      flownToIdRef.current = targetId;
     }
-  }, [selectedItem, setSelectedItem, mapLoaded, reactMapRef]);
-
-  useEffect(() => {
-    const stopPlaceId = searchParams.get('stopPlaceId');
-
-    if (stopPlaceId && stopsGeoJSON?.features && reactMapRef.current && mapLoaded) {
-      const featureToFlyTo = stopsGeoJSON.features.find(f => f.properties?.id === stopPlaceId);
-
-      if (featureToFlyTo && featureToFlyTo.geometry.type === 'Point') {
-        reactMapRef.current.flyTo({
-          center: featureToFlyTo.geometry.coordinates as [number, number],
-          zoom: 18,
-          duration: 1000,
-        });
-
-        searchParams.delete('stopPlaceId');
-        setSearchParams(searchParams, { replace: true });
-      }
-    }
-  }, [searchParams, setSearchParams, stopsGeoJSON, mapLoaded, reactMapRef]);
+  }, [mapRef, mapLoaded, geojson, stopPlaceIdFromUrl, selectedItem]);
 }

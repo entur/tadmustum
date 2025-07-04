@@ -1,7 +1,7 @@
 import { Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import type { StopPlace } from '../../../data/StopPlaceContext.tsx';
+import type { StopPlace } from '../stopPlaceTypes.ts';
 
 interface GoToMapCellProps {
   item: StopPlace;
@@ -19,7 +19,7 @@ export default function GoToMapCell({ item }: GoToMapCellProps) {
   };
 
   return (
-    <Button variant="outlined" size="small" onClick={handleGoToMap} disabled={!lng || !lat}>
+    <Button variant="contained" size="small" onClick={handleGoToMap} disabled={!lng || !lat}>
       {t('data.table.row.goToMapTooltip', 'View on map')}
     </Button>
   );

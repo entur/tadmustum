@@ -3,10 +3,10 @@
   "companyName": "ROR",
   "palette": {
     "primary": { "main": "#75ccdd" },
-    "secondary": { "main": "#ed3e42" },
+    "secondary": { "main": "#FA94E0" },
     "info": { "main": "#ed3e42" },
     "background": { "default": "#ffffff" },
-    "action": { "hover": "#ec83ad", "active": "#ec83ad" }
+    "action": { "hover": "#FECDF2", "active": "#FECDF2" }
   },
   "typography": {
     "fontFamily": "\"Patrick Hand\", \"Helvetica\", \"Arial\", sans-serif",

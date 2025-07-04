@@ -14,7 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useSearch } from './searchUtils';
 import type { SearchResultItem } from './searchTypes';
 import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
-import type { StopPlace } from '../../data/StopPlaceContext.tsx';
+import type { StopPlace } from '../../data/stop-places/stopPlaceTypes.ts';
 
 const getIconKeyFromResult = (option: SearchResultItem): string => {
   if (option.originalData) {

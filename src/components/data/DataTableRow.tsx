@@ -37,7 +37,13 @@ export default function DataTableRow<T, K extends string>({
       >
         {useCompactView && (
           <TableCell padding="none">
-            <IconButton size="small" onClick={() => setOpen(o => !o)}>
+            <IconButton
+              size="small"
+              onClick={e => {
+                e.stopPropagation();
+                setOpen(o => !o);
+              }}
+            >
               {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
             </IconButton>
           </TableCell>
@@ -48,7 +54,6 @@ export default function DataTableRow<T, K extends string>({
           </TableCell>
         ))}
       </TableRow>
-      {/* This now correctly passes the detail columns to the generic component */}
       {useCompactView && DetailRowComponent && (
         <DetailRowComponent open={open} item={item} colSpan={colSpan} columns={detailColumns} />
       )}

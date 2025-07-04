@@ -36,6 +36,7 @@ const menuItems = [
   { textKey: 'home', path: '/', iconKey: 'home' },
   { textKey: 'data', path: '/data', iconKey: 'data' },
   { textKey: 'map', path: '/map', iconKey: 'map' },
+  { textKey: 'product', path: '/product', iconKey: 'product' },
 ];
 
 interface SideMenuProps {

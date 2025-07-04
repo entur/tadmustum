@@ -289,3 +289,255 @@ The `createThemeFromConfig` utility in `src/utils/createThemeFromConfig.ts` will
 ---
 
 By following these instructions, you can fully customize the Inanna application’s theme, icons, and extend its theming system in a type-safe manner.
+
+
+# User Guide: Adding a New Data Table Page
+
+This guide will walk you through the steps to create a new, fully-featured data table page, complete with sorting, filtering, searching, and editing capabilities.
+
+## Step 1: Define Your Data Types
+
+First, you need to define the shape of your data. Create a new file in your feature's folder (e.g., `/src/data/your-feature/yourFeatureTypes.ts`).
+
+You will need two types:
+
+1.  An interface for your main data object.
+2.  A type for the keys of the properties you want to be sortable.
+
+### Example: `productTypes.ts`
+
+```typescript
+// The main data structure
+export interface Product {
+  id: string;
+  version: number;
+  name: string;
+  price: number;
+  stock: number;
+  category: 'Electronics' | 'Books' | 'Clothing';
+}
+
+// The keys that the user can sort the table by
+export type ProductSortKey = 'name' | 'price' | 'stock';
+```
+## Step 2: Create a Data Fetching Hook
+This hook is responsible for fetching, sorting, and paginating your data. It can get data from a live API or, for this example, from a mock data file.
+Create a file like /src/data/your-feature/useYourFeature.ts. This hook must return an object with a specific shape that the generic page understands.
+### Example: `useProducts.ts`
+```typescript
+  // State for sorting and pagination
+const [order, setOrder] = useState<Order>('asc');
+const [orderBy, setOrderBy] = useState<ProductSortKey>('name');
+const [page, setPage] = useState(0);
+const [rowsPerPage, setRowsPerPage] = useState(10);
+
+// Logic to handle sort requests
+const handleRequestSort = (property: ProductSortKey) => {
+  // ...
+};
+
+// Memoized sorting logic
+const sortedData = useMemo(() => {
+  // ...
+}, [order, orderBy]);
+
+// Return the data and state handlers
+return {
+  allData: sortedData,
+  totalCount: MOCK_PRODUCTS.length,
+  loading: false, // Set to true while fetching from an API
+  error: null,    // Set to an error message on failure
+  order,
+  orderBy,
+  handleRequestSort,
+  page,
+  rowsPerPage,
+  setPage,
+  setRowsPerPage,
+ };
+}
+```
+## Step 3: Create an Editor Component
+This is the component that will appear in the sidebar when a user clicks the "Edit" button on a table row. It must accept a prop named itemId.
+Create a file like /src/data/your-feature/YourFeatureEditor.tsx.
+### Example: `ProductEditor.tsx`
+```typescript
+import { Box, Typography, Button } from '@mui/material';
+import { useEditing } from '../../contexts/EditingContext.tsx';
+
+interface ProductEditorProps {
+  itemId: string; // This prop is required
+}
+
+export default function ProductEditor({ itemId }: ProductEditorProps) {
+  const { setEditingItem } = useEditing();
+
+  return (
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h6">Edit Product</Typography>
+      <Typography>ID: {itemId}</Typography>
+      {/* Your form fields would go here */}
+      <Button onClick={() => setEditingItem(null)}>Close</Button>
+    </Box>
+  );
+}
+```
+## Step 4: Create Custom Cell Components
+For each column in your table, you need to define how it renders.
+* For simple text, you can do this inline in the main config file.
+* For complex rendering (like a formatted price or an "Edit" button), create a dedicated component.
+### Example 1: `PriceCell.tsx` (for formatting)
+```typescript
+interface PriceCellProps {
+  price: number;
+}
+
+export default function PriceCell({ price }: PriceCellProps) {
+  const formattedPrice = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(price);
+
+  return <span>{formattedPrice}</span>;
+}
+```
+### Example 2: `EditActionCell.tsx` (for actions)
+This cell is crucial. It links the table row to the EditingContext and tells the sidebar which editor to open.
+```typescript
+import { IconButton, Tooltip } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import { useEditing } from '../../../contexts/EditingContext.tsx';
+import type { Product } from '../productTypes.ts';
+import ProductEditor from '../ProductEditor.tsx'; // Import your editor
+
+interface EditActionCellProps {
+  item: Product;
+}
+
+export default function EditActionCell({ item }: EditActionCellProps) {
+  const { setEditingItem } = useEditing();
+
+  return (
+    <Tooltip title="Edit Product">
+      <IconButton
+        onClick={() =>
+          // Provide the item's ID and the Editor Component
+          setEditingItem({ id: item.id, EditorComponent: ProductEditor })
+        }
+        color="primary"
+      >
+        <EditIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+```
+## Step 5: Create a Search Integration Hook
+This hook connects your data to the application's global search bar. It registers a function that knows how to filter your specific data.
+Create a file like /src/data/your-feature/useYourFeatureSearch.ts.
+### Example: `useProductSearch.ts`
+```typescript
+import { useCallback, useEffect } from 'react';
+import { useSearch } from '../../components/search';
+import type { SearchResultItem } from '../../components/search/searchTypes';
+import type { Product } from './productTypes.ts';
+
+export function useProductSearch(allProducts: Product[] | null, productsLoading: boolean) {
+  const { setActiveSearchContext, registerSearchFunction } = useSearch();
+
+  // This function contains the logic to filter your data
+  const searchProductData = useCallback(
+    async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
+      if (productsLoading || !allProducts) return [];
+      // ... your filtering logic here
+      return allProducts
+        .filter(p => {
+          // ...
+        })
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          type: 'data' as const,
+          originalData: p,
+        }));
+    },
+    [productsLoading, allProducts]
+  );
+
+  // This effect registers the search function with the context
+  useEffect(() => {
+    setActiveSearchContext('data');
+    registerSearchFunction('data', searchProductData);
+    return () => {
+      registerSearchFunction('data', null); // Cleanup
+    };
+  }, [setActiveSearchContext, registerSearchFunction, searchProductData]);
+}
+```
+## Step 6: Assemble the View Configuration File
+This is the central file that brings everything together. It exports a single configuration object that the generic page component will use.
+Create a file like /src/data/your-feature/yourFeatureViewConfig.tsx.
+### Example: `productViewConfig.tsx`
+```typescript
+// Generic Imports
+import { useDataViewTableLogic } from '../../hooks/useDataViewTableLogic';
+import DataPageContent from '../../components/data/DataPageContent';
+import type { ColumnDefinition } from '../../components/data/dataTableTypes.ts';
+import type { FilterDefinition } from '../../components/search/searchTypes.ts';
+
+// Your Feature-Specific Imports
+import { useProducts } from './useProducts.ts';
+import { useProductSearch } from './useProductSearch.ts';
+import type { Product, ProductSortKey } from './productTypes.ts';
+import PriceCell from './cells/PriceCell.tsx';
+import EditActionCell from './cells/EditActionCell.tsx';
+
+// 1. Define your table columns
+const productColumns: ColumnDefinition<Product, ProductSortKey>[] = [
+  { id: 'name', headerLabel: 'Product Name', isSortable: true, renderCell: item => item.name, display: 'always' },
+  { id: 'price', headerLabel: 'Price', isSortable: true, renderCell: item => <PriceCell price={item.price} />, display: 'desktop-only' },
+  // ... more columns
+  { id: 'actions', headerLabel: 'Actions', align: 'center', renderCell: item => <EditActionCell item={item} />, display: 'always' },
+];
+
+// 2. Define your filter and sort helper functions
+const getProductFilterKey = (item: Product): string => item.category;
+const getProductSortValue = (item: Product, key: ProductSortKey): string | number => item[key];
+
+// 3. Define your filter UI options
+const productFilters: FilterDefinition[] = [
+  { id: 'Electronics', labelKey: 'product.electronics', defaultLabel: 'Electronics' },
+  // ... more filters
+];
+
+// 4. Export the final configuration object
+export const productViewConfig = {
+  useData: useProducts,
+  useSearchRegistration: useProductSearch,
+  useTableLogic: useDataViewTableLogic,
+  PageContentComponent: DataPageContent,
+  columns: productColumns,
+  getFilterKey: getProductFilterKey,
+  getSortValue: getProductSortValue,
+  filters: productFilters,
+};
+```
+## Step 7: Create the Page Component
+This is the easiest step. Create a new page component that imports your viewConfig and the GenericDataViewPage.
+Create a file like /src/data/your-feature/YourFeatureView.tsx.
+### Example: `ProductView.tsx`
+```typescript
+import { productViewConfig } from './productViewConfig.tsx';
+import GenericDataViewPage from '../../pages/GenericDataViewPage.tsx';
+import type { Product, ProductSortKey } from './productTypes.ts';
+
+export default function ProductView() {
+  // Pass the config and explicit types to the generic page
+  return <GenericDataViewPage<Product, ProductSortKey> viewConfig={productViewConfig} />;
+}
+```
+## Step 8: Add the Route and Menu Link
+Finally, add a route for your new page in your main router (e.g., App.tsx) and a link to it in the main menu (e.g., Menu.tsx).
+By following these steps, you can quickly and cleanly add new data views to the application, leveraging the reusable architecture to minimize boilerplate and ensure consistency.
+
+A fully functioning version of the Product example can be found in /src/data/products/ . Alongside another example under /src/data/stop-places. 

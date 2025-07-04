@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useStopPlaces } from '../data/useStopPlaces';
+import { useStopPlaces } from '../data/stop-places/useStopPlaces.ts';
 import { convertStopPlacesToGeoJSON, type GeoJSONFeatureCollection } from '../utils/geojsonUtils';
 
 export function useStopsGeoJSON(): {

@@ -1,4 +1,4 @@
-import type { StopPlace } from '../data/StopPlaceContext';
+import type { StopPlace } from '../data/stop-places/stopPlaceTypes.ts';
 
 export type GeoJSONFeature = {
   type: 'Feature';

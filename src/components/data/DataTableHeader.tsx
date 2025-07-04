@@ -1,5 +1,5 @@
 import { TableCell, TableHead, TableRow, TableSortLabel } from '@mui/material';
-import type { Order } from '../../data/useStopPlaces.ts';
+import type { Order } from '../../data/stop-places/useStopPlaces.ts';
 import type { ColumnDefinition } from './dataTableTypes.ts';
 
 interface Props<T, K extends string> {

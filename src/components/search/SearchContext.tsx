@@ -5,6 +5,7 @@ import type {
   SearchResultItem,
   SearchFunction,
   StopPlaceTypeFilter,
+  FilterDefinition,
 } from './searchTypes.ts';
 
 function debounce<F extends (...args: string[]) => void>(func: F, waitFor: number) {
@@ -32,9 +33,14 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<SearchResultItem | null>(null);
   const [activeFilters, setActiveFilters] = useState<StopPlaceTypeFilter[]>([]);
+  const [filterConfig, setFilterConfig] = useState<FilterDefinition[]>([]);
 
   const searchFunctionsRef = useRef<
     Partial<Record<NonNullable<SearchContextViewType>, SearchFunction>>
+  >({});
+
+  const filterConfigsRef = useRef<
+    Partial<Record<NonNullable<SearchContextViewType>, FilterDefinition[]>>
   >({});
 
   const registerSearchFunction = useCallback(
@@ -48,6 +54,23 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
       }
     },
     []
+  );
+
+  const registerFilterConfig = useCallback(
+    (contextType: SearchContextViewType, config: FilterDefinition[] | null) => {
+      if (contextType) {
+        if (config) {
+          filterConfigsRef.current[contextType] = config;
+        } else {
+          delete filterConfigsRef.current[contextType];
+        }
+
+        if (activeSearchContext === contextType) {
+          setFilterConfig(config || []);
+        }
+      }
+    },
+    [activeSearchContext]
   );
 
   const executeSearch = useCallback(
@@ -111,6 +134,11 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     setActiveFilters([]);
   }, []);
 
+  useEffect(() => {
+    clearSearch();
+    setFilterConfig(filterConfigsRef.current[activeSearchContext!] || []);
+  }, [activeSearchContext, clearSearch]);
+
   const handleSetSearchQuery = useCallback(
     (query: string) => {
       setSearchQuery(query);
@@ -159,6 +187,8 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         registerSearchFunction,
         activeFilters,
         updateFilters,
+        filterConfig,
+        registerFilterConfig,
       }}
     >
       {children}

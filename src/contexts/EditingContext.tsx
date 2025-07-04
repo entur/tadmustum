@@ -1,28 +1,40 @@
-import React, { createContext, useState, useContext, type ReactNode, useCallback } from 'react';
+import {
+  createContext,
+  useState,
+  useMemo,
+  useContext,
+  type ReactNode,
+  type ComponentType,
+} from 'react';
+
+export interface EditingItem {
+  id: string;
+  EditorComponent: ComponentType<{ itemId: string }>;
+}
 
 interface EditingContextType {
-  editingStopPlaceId: string | null;
-  setEditingStopPlaceId: (id: string | null) => void;
+  editingItem: EditingItem | null;
+  setEditingItem: (item: EditingItem | null) => void;
 }
 
 const EditingContext = createContext<EditingContextType | undefined>(undefined);
 
-export const EditingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [editingStopPlaceId, setEditingStopPlaceId] = useState<string | null>(null);
+interface EditingProviderProps {
+  children: ReactNode;
+}
 
-  const handleSetEditingStopPlaceId = useCallback((id: string | null) => {
-    setEditingStopPlaceId(id);
-  }, []);
+export function EditingProvider({ children }: EditingProviderProps) {
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
 
-  const value = { editingStopPlaceId, setEditingStopPlaceId: handleSetEditingStopPlaceId };
+  const value = useMemo(() => ({ editingItem, setEditingItem }), [editingItem]);
 
   return <EditingContext.Provider value={value}>{children}</EditingContext.Provider>;
-};
+}
 
-export const useEditing = (): EditingContextType => {
+export function useEditing() {
   const context = useContext(EditingContext);
   if (context === undefined) {
     throw new Error('useEditing must be used within an EditingProvider');
   }
   return context;
-};
+}

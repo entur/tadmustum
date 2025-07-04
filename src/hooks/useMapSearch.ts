@@ -1,10 +1,21 @@
 import { useCallback, useEffect } from 'react';
 import { useSearch } from '../components/search';
-import type { SearchResultItem } from '../components/search/searchTypes';
+import type { SearchResultItem, FilterDefinition } from '../components/search/searchTypes';
 import type { FeatureCollection, GeoJsonProperties } from 'geojson';
 
+const mapFilters: FilterDefinition[] = [
+  { id: 'parentStopPlace', labelKey: 'types.parent', defaultLabel: 'Parent Stop Place' },
+  { id: 'railStation', labelKey: 'types.train', defaultLabel: 'Train' },
+  { id: 'metroStation', labelKey: 'types.metro', defaultLabel: 'Metro' },
+  { id: 'onstreetBus', labelKey: 'types.bus', defaultLabel: 'Bus' },
+  { id: 'onstreetTram', labelKey: 'types.tram', defaultLabel: 'Tram' },
+  { id: 'ferryStop', labelKey: 'types.ferry', defaultLabel: 'Ferry' },
+  { id: 'harbourPort', labelKey: 'types.harbour', defaultLabel: 'Harbour' },
+  { id: 'liftStation', labelKey: 'types.lift', defaultLabel: 'Lift' },
+];
+
 export function useMapSearch(stopsGeoJSON: FeatureCollection | null, geoJsonLoading: boolean) {
-  const { setActiveSearchContext, registerSearchFunction } = useSearch();
+  const { setActiveSearchContext, registerSearchFunction, registerFilterConfig } = useSearch();
 
   const searchMapFeatures = useCallback(
     async (query: string, filters: string[]): Promise<SearchResultItem[]> => {
@@ -46,8 +57,10 @@ export function useMapSearch(stopsGeoJSON: FeatureCollection | null, geoJsonLoad
   useEffect(() => {
     setActiveSearchContext('map');
     registerSearchFunction('map', searchMapFeatures);
+    registerFilterConfig('map', mapFilters);
     return () => {
       registerSearchFunction('map', null);
+      registerFilterConfig('map', null);
     };
-  }, [setActiveSearchContext, registerSearchFunction, searchMapFeatures]);
+  }, [setActiveSearchContext, registerSearchFunction, searchMapFeatures, registerFilterConfig]);
 }
