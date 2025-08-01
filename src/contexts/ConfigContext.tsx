@@ -7,6 +7,7 @@ export interface Config {
   preferredNameNamespace?: string;
   claimsNamespace?: string;
   oidcConfig?: OidcClientSettings;
+  themeFilePath?: string;
 }
 
 export const ConfigContext = React.createContext<Config>({});

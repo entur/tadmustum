@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { createTheme, type Theme } from '@mui/material/styles';
 import { createThemeFromConfig } from '../theme/createThemeFromConfig';
 import type { ThemeConfig } from '../theme/theme-config';
+import { useConfig } from '../contexts/ConfigContext.tsx';
 
 export function useAppTheme(useCustomFeatures: boolean): {
   theme: Theme;
   themeError: string | null;
 } {
+  const { themeFilePath } = useConfig();
   const [cfg, setCfg] = useState<ThemeConfig | null>(null);
   const [themeError, setThemeError] = useState<string | null>(null);
 
@@ -17,7 +19,7 @@ export function useAppTheme(useCustomFeatures: boolean): {
 
       try {
         if (useCustomFeatures) {
-          const customRes = await fetch('/custom-theme-config.json');
+          const customRes = await fetch(themeFilePath!);
           if (customRes.ok) {
             configToSet = await customRes.json();
           } else {

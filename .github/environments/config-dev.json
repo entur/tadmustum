@@ -9,5 +9,6 @@
     "extraQueryParams": {
       "audience": "https://ror.api.dev.entur.io"
     }
-  }
+  },
+  "themeFilePath": "/theme-dev.json"
 }

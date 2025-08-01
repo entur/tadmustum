@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "run-p --race copy:config",
+    "predev": "run-p --race copy:theme copy:config",
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "copy:config": "ncp ./config-dev.json public/config.json",
+    "copy:theme": "ncp .github/environments/theme-dev.json public/theme-dev.json",
+    "copy:config": "ncp .github/environments/config-dev.json public/config.json",
     "lint": "eslint .",
     "check": "prettier . --check",
     "format": "prettier --write .",

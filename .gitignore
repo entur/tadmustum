@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 tsconfig.tsbuildinfo
+
+public/config-*.json
+public/theme-*.json
