@@ -18,7 +18,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         directionRef: "0",
         estimatedVehicleJourneyCode: "", // TODO: Generate "<codespace>:ServiceJourney:<uuid>".
         extraJourney: true,
-        vehicleMode: "taxi", // TODO: Needs to add car as vehicle mode
+        vehicleMode: "bus", // TODO: Needs to add car as vehicle mode
         routeRef: "", // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
         publishedLineName: formData.lineName,
         groupOfLinesRef: "", // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
