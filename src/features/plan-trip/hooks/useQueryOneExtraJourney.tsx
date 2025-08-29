@@ -1,10 +1,10 @@
 // Updated useQueryExtraJourney.tsx
-import { useCallback } from "react";
-import { useConfig } from "../../../shared/config/ConfigContext.tsx";
-import type { Extrajourney } from "../../../shared/model/Extrajourney.tsx";
-import type { AppError } from "../../../shared/error-message/AppError.tsx";
-import api from "../../../shared/api/api.tsx";
-import { useAuth } from "react-oidc-context"; // Add this import
+import { useCallback } from 'react';
+import { useConfig } from '../../../contexts/ConfigContext.tsx';
+import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
+import type { AppError } from '../../../shared/error-message/AppError.tsx';
+import api from '../../../shared/api/api.tsx';
+import { useAuth } from 'react-oidc-context'; // Add this import
 
 export const useQueryExtraJourney = () => {
   const config = useConfig();
@@ -15,7 +15,7 @@ export const useQueryExtraJourney = () => {
     async (
       codespace: string,
       authority: string,
-      id: string,
+      id: string
     ): Promise<{
       data?: {
         codespace: string;
@@ -27,9 +27,9 @@ export const useQueryExtraJourney = () => {
       if (!auth.user?.access_token) {
         return {
           error: {
-            message: "Access token missing",
-            code: "ACCESS_TOKEN_MISSING",
-            details: "no auth.user.access_token",
+            message: 'Access token missing',
+            code: 'ACCESS_TOKEN_MISSING',
+            details: 'no auth.user.access_token',
           },
         };
       }
@@ -39,7 +39,7 @@ export const useQueryExtraJourney = () => {
         .apply(this);
 
       if (!trips.error) {
-        const filtered = trips.data?.filter((journey) => journey.id === id);
+        const filtered = trips.data?.filter(journey => journey.id === id);
         return {
           data: {
             codespace,
@@ -55,6 +55,6 @@ export const useQueryExtraJourney = () => {
         };
       }
     },
-    [auth, config],
+    [auth, config]
   );
 };

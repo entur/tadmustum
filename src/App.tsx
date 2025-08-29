@@ -1,69 +1,61 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Header from "./shared/components/Header";
-import Home from "./features/landing-page/Home.tsx";
-import CarPoolingTrips from "./features/planned-trips/CarPoolingTrips.tsx";
-import CarPoolingTrip from "./features/plan-trip/CarPoolingTrip.tsx";
-import { SearchProvider } from "./shared/components/SearchContext";
-import { useAuth } from "./shared/auth/Auth";
-import LoginRedirect from "./shared/auth/LoginRedirect";
-import { Box, CssBaseline, Toolbar } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import Header from './shared/components/header/Header.tsx';
+import Home from './features/landing-page/Home.tsx';
+import { SearchProvider } from './shared/components/search';
+import { Box, CssBaseline, ThemeProvider, Toolbar } from '@mui/material';
+import { useCustomization } from './contexts/CustomizationContext.tsx';
+import { useAppTheme } from './hooks/useAppTheme';
+import { ProtectedRoute } from './shared/components/auth/ProtectedRoute';
+import { EditingProvider } from './contexts/EditingContext.tsx';
+import SessionExpiredDialog from './shared/components/dialogs/SessionExpiredDialog.tsx';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import CarPoolingTrip from './features/plan-trip/CarPoolingTrip.tsx';
+import CarPoolingTrips from './features/planned-trips/CarPoolingTrips.tsx';
 
 export default function App() {
-  const auth = useAuth();
+  const { useCustomFeatures } = useCustomization();
+
+  const { theme } = useAppTheme(useCustomFeatures);
 
   const client = new ApolloClient({
-    uri: "http://localhost:8080/graphql",
+    uri: 'http://localhost:8080/graphql',
     cache: new InMemoryCache(),
   });
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_relativeSplatPath: true }}>
       <ApolloProvider client={client}>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <SearchProvider>
-            <CssBaseline />
-            <Header />
-            <Toolbar />
-            <Box className="app-root">
-              <Box className="app-content">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route
-                    path="/trips"
-                    element={
-                      auth.isAuthenticated ? (
-                        <CarPoolingTrips />
-                      ) : (
-                        <LoginRedirect />
-                      )
-                    }
-                  />
-                  <Route
-                    path="/plan-trip/:id"
-                    element={
-                      auth.isAuthenticated ? (
-                        <CarPoolingTrip />
-                      ) : (
-                        <LoginRedirect />
-                      )
-                    }
-                  />
-                  <Route
-                    path="/plan-trip"
-                    element={
-                      auth.isAuthenticated ? (
-                        <CarPoolingTrip />
-                      ) : (
-                        <LoginRedirect />
-                      )
-                    }
-                  />
-                </Routes>
-              </Box>
-            </Box>
+            <ThemeProvider theme={theme}>
+              <EditingProvider>
+                <CssBaseline />
+                <Header />
+                <Toolbar
+                  sx={{
+                    minHeight: { xs: '64px' },
+                  }}
+                />
+                <Box className="app-root">
+                  <Box className="app-content">
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route
+                        path="/plan-trip"
+                        element={<ProtectedRoute element={<CarPoolingTrip />} />}
+                      />
+                      <Route
+                        path="/trips"
+                        element={<ProtectedRoute element={<CarPoolingTrips />} />}
+                      />
+                    </Routes>
+                  </Box>
+                </Box>
+                <SessionExpiredDialog />
+              </EditingProvider>
+            </ThemeProvider>
           </SearchProvider>
         </LocalizationProvider>
       </ApolloProvider>

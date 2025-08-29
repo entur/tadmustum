@@ -1,19 +1,27 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import "./index.css";
-import App from "./App.tsx";
-import { fetchConfig } from "./shared/config/fetchConfig.tsx";
-import { ConfigContext } from "./shared/config/ConfigContext.tsx";
-import { AuthProvider } from "./shared/auth/Auth.tsx";
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.tsx';
+import { fetchConfig } from './shared/config/fetchConfig.ts';
+import { ConfigContext } from './contexts/ConfigContext.tsx';
+import { AuthProvider } from './shared/auth';
+import { CustomizationProvider } from './contexts/CustomizationContext.tsx';
 
-fetchConfig().then((config) => {
-  createRoot(document.getElementById("root")!).render(
+import './i18n';
+import { SessionProvider } from './contexts/SessionContext.tsx';
+
+fetchConfig().then(config => {
+  createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <ConfigContext.Provider value={config}>
         <AuthProvider>
-          <App />
+          <SessionProvider>
+            <CustomizationProvider>
+              <App />
+            </CustomizationProvider>
+          </SessionProvider>
         </AuthProvider>
       </ConfigContext.Provider>
-    </StrictMode>,
+    </StrictMode>
   );
 });

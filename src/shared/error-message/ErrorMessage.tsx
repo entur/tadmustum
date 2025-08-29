@@ -1,5 +1,5 @@
-import type { AppError } from "./AppError.tsx";
-import { useConfig } from "../config/ConfigContext.tsx";
+import type { AppError } from './AppError.tsx';
+import { useConfig } from '../../contexts/ConfigContext.tsx';
 
 export const ErrorMessage = ({ error }: { error: AppError | undefined }) => {
   const config = useConfig();

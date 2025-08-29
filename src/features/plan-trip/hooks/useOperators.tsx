@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useConfig } from "../../../shared/config/ConfigContext.tsx";
-import api from "../../../shared/api/api.tsx";
+import { useEffect, useState } from 'react';
+import { useConfig } from '../../../contexts/ConfigContext.tsx';
+import api from '../../../shared/api/api.tsx';
 
 export type Operator = {
   id: string;
@@ -17,7 +17,7 @@ export const useOperators = () => {
       if (response.data) {
         setOperators(response.data.operators);
       } else {
-        console.log("Could not find any operators");
+        console.log('Could not find any operators');
       }
     };
     getOperators().then();
