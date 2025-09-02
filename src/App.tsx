@@ -51,6 +51,10 @@ export default function App() {
                           element={<ProtectedRoute element={<CarPoolingTrip />} />}
                         />
                         <Route
+                          path="/plan-trip/:id"
+                          element={<ProtectedRoute element={<CarPoolingTrip />} />}
+                        />
+                        <Route
                           path="/trips"
                           element={<ProtectedRoute element={<CarPoolingTrips />} />}
                         />
