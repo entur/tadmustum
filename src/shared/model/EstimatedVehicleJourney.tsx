@@ -1,4 +1,4 @@
-import type { EstimatedCalls } from "./EstimatedCalls.tsx";
+import type { EstimatedCalls } from './EstimatedCalls.tsx';
 
 export interface EstimatedVehicleJourney {
   recordedAtTime: string;

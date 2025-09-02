@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { Box, IconButton, useTheme } from "@mui/material";
-import { ChevronLeft, ChevronRight } from "@mui/icons-material";
+import { useEffect, useRef, useState } from 'react';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { Box, IconButton, useTheme } from '@mui/material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import CarPoolingTripData, {
   type CarPoolingTripDataHandle,
-} from "./components/CarPoolingTripData.tsx";
-import { type EditableMapHandle } from "../../shared/components/EditableMap.tsx";
-import EditableMap from "../../shared/components/EditableMap.tsx";
-import { useParams } from "react-router-dom";
-import type { Feature } from "geojson";
+} from './components/CarPoolingTripData.tsx';
+import { type EditableMapHandle } from '../../shared/components/EditableMap.tsx';
+import EditableMap from '../../shared/components/EditableMap.tsx';
+import { useParams } from 'react-router-dom';
+import type { Feature } from 'geojson';
 
 export default function CarPoolingTrip() {
   const theme = useTheme();
@@ -33,15 +33,15 @@ export default function CarPoolingTrip() {
     const handleMouseUp = () => {
       setIsResizing(false);
     };
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing, collapsed]);
   const toggleSidebar = () => {
-    setCollapsed((prev) => !prev);
+    setCollapsed(prev => !prev);
   };
 
   return (
@@ -59,13 +59,9 @@ export default function CarPoolingTrip() {
           tripId={id}
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}
-          onRemoveFlexibleStop={(id) =>
-            editableMapRef.current?.removeFeature(id)
-          }
+          onRemoveFlexibleStop={id => editableMapRef.current?.removeFeature(id)}
           onStopCreatedCallback={() => editableMapRef.current?.currentFeature()}
-          onZoomToFeature={(id: string) =>
-            editableMapRef.current?.zoomToFeature(id)
-          }
+          onZoomToFeature={(id: string) => editableMapRef.current?.zoomToFeature(id)}
           loadedFlexibleStop={(stops: Feature[]) => {
             editableMapRef.current?.addFeatures(stops);
           }}
@@ -91,16 +87,12 @@ export default function CarPoolingTrip() {
           border: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <IconButton size="small">
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </IconButton>
+        <IconButton size="small">{collapsed ? <ChevronRight /> : <ChevronLeft />}</IconButton>
       </Box>
 
       <Box className="map-box">
         <EditableMap
-          onEditableMapModeChange={(e) =>
-            dataHandle.current?.handleEditableMapModeChange({ ...e })
-          }
+          onEditableMapModeChange={e => dataHandle.current?.handleEditableMapModeChange({ ...e })}
           ref={editableMapRef}
         />
       </Box>

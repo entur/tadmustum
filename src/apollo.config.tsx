@@ -1,8 +1,8 @@
 module.exports = {
-    client: {
-        service: {
-            name: 'enlil',
-            localSchemaFile: './data/schema.graphqls'
-        }
-    }
+  client: {
+    service: {
+      name: 'enlil',
+      localSchemaFile: './data/schema.graphqls',
+    },
+  },
 };

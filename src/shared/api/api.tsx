@@ -1,20 +1,20 @@
-import { ApolloClient, ApolloError, gql, InMemoryCache } from "@apollo/client";
-import type { Config } from "../config/ConfigContext.tsx";
-import type { AuthState } from "react-oidc-context";
-import prepareCarpoolingFormData from "./prepareCarpoolingFormData.tsx";
-import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
-import type { AppError } from "../error-message/AppError.tsx";
-import type { Extrajourney } from "../model/Extrajourney.tsx";
-import type { EstimatedCall } from "../model/EstimatedCall.tsx";
+import { ApolloClient, ApolloError, gql, InMemoryCache } from '@apollo/client';
+import type { Config } from '../config/ConfigContext.tsx';
+import type { AuthState } from 'react-oidc-context';
+import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
+import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
+import type { AppError } from '../error-message/AppError.tsx';
+import type { Extrajourney } from '../model/Extrajourney.tsx';
+import type { EstimatedCall } from '../model/EstimatedCall.tsx';
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
-    "ET-Client-Name": "entur - deviation-messages",
+    'ET-Client-Name': 'entur - deviation-messages',
   } as Record<string, string>;
 
   if (auth?.user?.access_token) {
     const access_token = auth?.user?.access_token;
-    headers["Authorization"] = `Bearer ${access_token}`;
+    headers['Authorization'] = `Bearer ${access_token}`;
   }
 
   return new ApolloClient({
@@ -40,8 +40,8 @@ const getAuthorities = (uri: string) => async () => {
 
   return client
     .query({ query })
-    .catch((error) => error)
-    .then((response) => response);
+    .catch(error => error)
+    .then(response => response);
 };
 
 const getOperators = (uri: string) => async () => {
@@ -58,13 +58,13 @@ const getOperators = (uri: string) => async () => {
 
   return client
     .query({ query })
-    .catch((error) => error)
-    .then((response) => response);
+    .catch(error => error)
+    .then(response => response);
 };
 
 const getUserContext = (uri: string, auth: AuthState) => async () => {
   if (!auth.user?.access_token) {
-    throw new Error("Authentication token is missing");
+    throw new Error('Authentication token is missing');
   }
 
   const client = createClient(uri, auth);
@@ -82,15 +82,15 @@ const getUserContext = (uri: string, auth: AuthState) => async () => {
 
   return client
     .query({ query })
-    .catch((error) => error)
-    .then((response) => response);
+    .catch(error => error)
+    .then(response => response);
 };
 
 const mutateExtrajourney =
   (uri: string, auth: AuthState, formData: CarPoolingTripDataFormData) =>
   async (): Promise<{ data?: string; error?: AppError }> => {
     if (!auth.user?.access_token) {
-      throw new Error("Access token is missing");
+      throw new Error('Access token is missing');
     }
     const client = createClient(uri, auth);
 
@@ -100,11 +100,7 @@ const mutateExtrajourney =
         $authority: String!
         $input: ExtrajourneyInput!
       ) {
-        createOrUpdateExtrajourney(
-          codespace: $codespace
-          authority: $authority
-          input: $input
-        )
+        createOrUpdateExtrajourney(codespace: $codespace, authority: $authority, input: $input)
       }
     `;
 
@@ -114,14 +110,13 @@ const mutateExtrajourney =
       const result = await client.mutate({
         mutation,
         variables,
-        errorPolicy: "all",
+        errorPolicy: 'all',
       });
 
       if (result.errors?.length) {
         const error: AppError = {
           message: result.errors[0].message,
-          code:
-            (result.errors[0].extensions?.code as string) || "GRAPHQL_ERROR",
+          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
           details: result.errors[0].path,
         };
         return { error };
@@ -132,9 +127,7 @@ const mutateExtrajourney =
       const error = err as ApolloError;
       const appError: AppError = {
         message: error.message,
-        code:
-          (error.graphQLErrors?.[0]?.extensions?.code as string) ||
-          "NETWORK_ERROR",
+        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
         details: {
           networkError: error.networkError,
           graphQLErrors: error.graphQLErrors,
@@ -150,15 +143,15 @@ const queryExtraJourney =
     auth: AuthState,
     codespace: string,
     authority: string,
-    showCompletedTrips: boolean,
+    showCompletedTrips: boolean
   ) =>
   async (): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
     if (!auth.user?.access_token) {
       return {
         error: {
-          message: "Access token missing",
-          code: "ACCESS_TOKEN_MISSING",
-          details: "no auth.user.access_token",
+          message: 'Access token missing',
+          code: 'ACCESS_TOKEN_MISSING',
+          details: 'no auth.user.access_token',
         },
       };
     }
@@ -238,14 +231,13 @@ const queryExtraJourney =
       const result = await client.query({
         query,
         variables,
-        errorPolicy: "all",
+        errorPolicy: 'all',
       });
 
       if (result.errors?.length) {
         const error: AppError = {
           message: result.errors[0].message,
-          code:
-            (result.errors[0].extensions?.code as string) || "GRAPHQL_ERROR",
+          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
           details: result.errors[0].path,
         };
         return { error };
@@ -258,10 +250,10 @@ const queryExtraJourney =
           };
         }) =>
           extJourney.estimatedVehicleJourney?.estimatedCalls?.estimatedCall?.some(
-            (call) =>
+            call =>
               call.departureStopAssignment != null &&
-              call.departureStopAssignment.expectedFlexibleArea != null,
-          ),
+              call.departureStopAssignment.expectedFlexibleArea != null
+          )
       );
 
       return { data: filtered };
@@ -269,9 +261,7 @@ const queryExtraJourney =
       const error = err as ApolloError;
       const appError: AppError = {
         message: error.message,
-        code:
-          (error.graphQLErrors?.[0]?.extensions?.code as string) ||
-          "NETWORK_ERROR",
+        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
         details: {
           networkError: error.networkError,
           graphQLErrors: error.graphQLErrors,
@@ -283,29 +273,18 @@ const queryExtraJourney =
 
 const api = (config: Config, auth?: AuthState) => {
   return {
-    getAuthorities: getAuthorities(config["journey-planner-api"] as string),
-    getOperators: getOperators(config["journey-planner-api"] as string),
-    getUserContext: getUserContext(
-      config["deviation-messages-api"] as string,
-      auth as AuthState,
-    ),
+    getAuthorities: getAuthorities(config['journey-planner-api'] as string),
+    getOperators: getOperators(config['journey-planner-api'] as string),
+    getUserContext: getUserContext(config['deviation-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
-      mutateExtrajourney(
-        config["deviation-messages-api"] as string,
-        auth as AuthState,
-        formData,
-      ),
-    queryExtraJourney: (
-      codespace: string,
-      authority: string,
-      showCompletedTrips: boolean,
-    ) =>
+      mutateExtrajourney(config['deviation-messages-api'] as string, auth as AuthState, formData),
+    queryExtraJourney: (codespace: string, authority: string, showCompletedTrips: boolean) =>
       queryExtraJourney(
-        config["deviation-messages-api"] as string,
+        config['deviation-messages-api'] as string,
         auth as AuthState,
         codespace,
         authority,
-        showCompletedTrips,
+        showCompletedTrips
       ),
   };
 };
