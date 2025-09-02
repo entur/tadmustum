@@ -136,6 +136,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>((props, ref)
         const newFeatures = { ...features };
         delete newFeatures[id];
         setFeatures(newFeatures);
+
         drawTool.delete([id]);
 
         const noFeatures = Object.values(newFeatures).length === 0;

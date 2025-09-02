@@ -33,7 +33,6 @@ export const useAuth = (): Auth => {
   const logout = useCallback(
     ({ returnTo }: { returnTo?: string }) => {
       {
-        console.log('logging out');
         return signoutRedirect({ post_logout_redirect_uri: returnTo });
       }
     },

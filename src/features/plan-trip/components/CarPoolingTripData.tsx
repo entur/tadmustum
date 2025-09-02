@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
 } from 'react';
 import { type AlertProps, Box, type SnackbarCloseReason } from '@mui/material';
@@ -76,6 +77,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     const [initialState, setInitialState] = useState<CarPoolingTripDataFormData | undefined>(
       undefined
     );
+    const initializing = useRef<boolean>(false);
 
     const mutateExtrajourney = useMutateExtrajourney();
     const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
@@ -88,9 +90,12 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
         setCurrentTripId(result.data);
       }
     };
-    const handleZoomToFeature = (featureId: string) => {
-      onZoomToFeature(featureId);
-    };
+    const handleZoomToFeature = useCallback(
+      (featureId: string) => {
+        onZoomToFeature(featureId);
+      },
+      [onZoomToFeature]
+    );
 
     const handleResetCallback = () => {
       removeDepartureStop();
@@ -164,7 +169,8 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
         };
       };
       const loadInitialState = (id?: string) => {
-        if (!id) return;
+        if (initializing.current || !id) return;
+        initializing.current = true;
         queryOneExtraJourney('ENT', 'ENT:Authority:ENT', id)
           .then(result => {
             if (result.data?.extraJourney) {
@@ -184,12 +190,12 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
             }
           })
           .catch(error => {
-            showSnackbar(error.message || 'Noe gikk galt under lagring.', 'error');
+            showSnackbar(error.message || 'Noe gikk galt under lesing.', 'error');
           });
       };
       setCurrentTripId(tripId);
       loadInitialState(tripId);
-    }, [loadedFlexibleStop, queryOneExtraJourney, tripId]);
+    }, [handleZoomToFeature, loadedFlexibleStop, queryOneExtraJourney, tripId]);
 
     useImperativeHandle(ref, () => ({
       handleEditableMapModeChange,
