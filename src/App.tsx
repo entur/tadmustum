@@ -13,6 +13,8 @@ import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import CarPoolingTrip from './features/plan-trip/CarPoolingTrip.tsx';
 import CarPoolingTrips from './features/planned-trips/CarPoolingTrips.tsx';
+import NoAccessModal from './shared/components/auth/NoAccessModal.tsx';
+import { NoAccessProvider } from './contexts/NoAccessContext.tsx';
 
 export default function App() {
   const { useCustomFeatures } = useCustomization();
@@ -30,31 +32,34 @@ export default function App() {
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <SearchProvider>
             <ThemeProvider theme={theme}>
-              <EditingProvider>
-                <CssBaseline />
-                <Header />
-                <Toolbar
-                  sx={{
-                    minHeight: { xs: '64px' },
-                  }}
-                />
-                <Box className="app-root">
-                  <Box className="app-content">
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route
-                        path="/plan-trip"
-                        element={<ProtectedRoute element={<CarPoolingTrip />} />}
-                      />
-                      <Route
-                        path="/trips"
-                        element={<ProtectedRoute element={<CarPoolingTrips />} />}
-                      />
-                    </Routes>
+              <NoAccessProvider>
+                <NoAccessModal />
+                <EditingProvider>
+                  <CssBaseline />
+                  <Header />
+                  <Toolbar
+                    sx={{
+                      minHeight: { xs: '64px' },
+                    }}
+                  />
+                  <Box className="app-root">
+                    <Box className="app-content">
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route
+                          path="/plan-trip"
+                          element={<ProtectedRoute element={<CarPoolingTrip />} />}
+                        />
+                        <Route
+                          path="/trips"
+                          element={<ProtectedRoute element={<CarPoolingTrips />} />}
+                        />
+                      </Routes>
+                    </Box>
                   </Box>
-                </Box>
-                <SessionExpiredDialog />
-              </EditingProvider>
+                  <SessionExpiredDialog />
+                </EditingProvider>
+              </NoAccessProvider>
             </ThemeProvider>
           </SearchProvider>
         </LocalizationProvider>
