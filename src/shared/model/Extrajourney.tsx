@@ -1,4 +1,4 @@
-import type { EstimatedVehicleJourney } from "./EstimatedVehicleJourney.tsx";
+import type { EstimatedVehicleJourney } from './EstimatedVehicleJourney.tsx';
 
 export interface Extrajourney {
   id?: string;

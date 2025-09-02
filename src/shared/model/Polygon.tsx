@@ -1,4 +1,4 @@
-import type { LinearRing } from "./LinearRing.tsx";
+import type { LinearRing } from './LinearRing.tsx';
 
 export interface Polygon {
   exterior: LinearRing;

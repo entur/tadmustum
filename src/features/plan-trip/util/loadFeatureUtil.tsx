@@ -1,5 +1,5 @@
-import type { Feature, Polygon } from "geojson";
-import { nanoid } from "nanoid";
+import type { Feature, Polygon } from 'geojson';
+import { nanoid } from 'nanoid';
 
 const posListToCoordinates = (posList: string): number[][] => {
   // Split by whitespace, filter out empty strings, and parse as floats
@@ -13,16 +13,14 @@ const posListToCoordinates = (posList: string): number[][] => {
   return coordinates;
 };
 
-const loadFeatureUtil = (polygonJson: {
-  posList: string;
-}): Feature<Polygon> => {
+const loadFeatureUtil = (polygonJson: { posList: string }): Feature<Polygon> => {
   const coordinates = [posListToCoordinates(polygonJson.posList)];
   return {
-    type: "Feature",
+    type: 'Feature',
     id: nanoid(),
     properties: {},
     geometry: {
-      type: "Polygon",
+      type: 'Polygon',
       coordinates,
     },
   };

@@ -1,7 +1,7 @@
-import type { CarPoolingTripDataFormData } from "../../features/plan-trip/model/CarPoolingTripDataFormData.tsx";
-import type { Extrajourney } from "../model/Extrajourney.tsx";
-import dayjs from "dayjs";
-import { v4 as uuidv4 } from "uuid";
+import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
+import type { Extrajourney } from '../model/Extrajourney.tsx';
+import dayjs from 'dayjs';
+import { v4 as uuidv4 } from 'uuid';
 
 function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
   codespace: string;
@@ -15,29 +15,29 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
       estimatedVehicleJourney: {
         recordedAtTime: dayjs().toISOString(), //TODO: Generate iso time stamp
         lineRef: `ENT:CarPooling:${uuidv4()}`, // TODO: Generate CodeSpaced "ENT:Line:<uuid>" UUID reference
-        directionRef: "0",
-        estimatedVehicleJourneyCode: "", // TODO: Generate "<codespace>:ServiceJourney:<uuid>".
+        directionRef: '0',
+        estimatedVehicleJourneyCode: '', // TODO: Generate "<codespace>:ServiceJourney:<uuid>".
         extraJourney: true,
-        vehicleMode: "bus", // TODO: Needs to add car as vehicle mode
-        routeRef: "", // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
+        vehicleMode: 'bus', // TODO: Needs to add car as vehicle mode
+        routeRef: '', // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
         publishedLineName: formData.lineName,
-        groupOfLinesRef: "", // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
-        externalLineRef: "", // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
+        groupOfLinesRef: '', // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
+        externalLineRef: '', // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
         operatorRef: formData.operator,
         monitored: true,
-        dataSource: "ENT", // TODO: Remove hard coding
+        dataSource: 'ENT', // TODO: Remove hard coding
         cancellation: false,
         isCompleteStopSequence: true,
         estimatedCalls: {
           estimatedCall: [
             {
               order: 1,
-              stopPointRef: "Mandatory for now", // TODO: Discuss to make optional in a Profile
+              stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.departureStopName,
               destinationDisplay: formData.destinationDisplay,
               aimedDepartureTime: formData.departureDatetime.toISOString(),
               expectedDepartureTime: formData.departureDatetime.toISOString(),
-              departureBoardingActivity: "boarding",
+              departureBoardingActivity: 'boarding',
               departureStopAssignment: {
                 expectedFlexibleArea: {
                   polygon: {
@@ -50,12 +50,12 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
             },
             {
               order: 2,
-              stopPointRef: "Mandatory for now", // TODO: Discuss to make optional in a Profile
+              stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.destinationStopName,
               destinationDisplay: formData.destinationDisplay,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
               expectedArrivalTime: formData.destinationDatetime.toISOString(),
-              arrivalBoardingActivity: "alighting",
+              arrivalBoardingActivity: 'alighting',
               departureStopAssignment: {
                 expectedFlexibleArea: {
                   polygon: {
@@ -68,7 +68,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
             },
           ],
         },
-        expiresAtEpochMs: formData.destinationDatetime.add(1, "hour").valueOf(),
+        expiresAtEpochMs: formData.destinationDatetime.add(1, 'hour').valueOf(),
       },
     },
   };

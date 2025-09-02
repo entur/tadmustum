@@ -1,4 +1,4 @@
-import type { DepartureStopAssignment } from "./DepartureStopAssignment.tsx";
+import type { DepartureStopAssignment } from './DepartureStopAssignment.tsx';
 
 export interface EstimatedCall {
   stopPointRef: string;

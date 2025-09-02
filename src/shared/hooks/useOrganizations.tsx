@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useConfig } from "../config/ConfigContext.tsx";
-import { useAuth } from "react-oidc-context";
-import api from "../api/api.tsx";
+import { useEffect, useState } from 'react';
+import { useConfig } from '../../contexts/ConfigContext.tsx';
+import { useAuth } from 'react-oidc-context';
+import api from '../api/api.tsx';
 
 type Organization = {
   id: string;
@@ -9,9 +9,9 @@ type Organization = {
 };
 
 const Permission = {
-  MESSAGES: "MESSAGES",
-  CANCELLATIONS: "CANCELLATIONS",
-  EXTRAJOURNEYS: "EXTRAJOURNEYS",
+  MESSAGES: 'MESSAGES',
+  CANCELLATIONS: 'CANCELLATIONS',
+  EXTRAJOURNEYS: 'EXTRAJOURNEYS',
 } as const;
 
 type Permission = keyof typeof Permission;
@@ -38,16 +38,15 @@ export const useOrganizations: () => {
       const userContextResponse = await api(config, auth).getUserContext();
       const userContext = userContextResponse.data.userContext;
       const allowedCodespaceIds = userContext.allowedCodespaces.map(
-        (codespace: Codespace) => codespace.id,
+        (codespace: Codespace) => codespace.id
       );
 
       if (!(allowedCodespaceIds.length > 0)) {
         await auth.signoutRedirect();
       } else {
         const response = await api(config).getAuthorities();
-        const authorities = response.data.authorities.filter(
-          (authority: Organization) =>
-            allowedCodespaceIds.includes(authority.id.split(":")[0]),
+        const authorities = response.data.authorities.filter((authority: Organization) =>
+          allowedCodespaceIds.includes(authority.id.split(':')[0])
         );
 
         if (!(authorities.length > 0)) {
@@ -59,7 +58,7 @@ export const useOrganizations: () => {
             authorities.map(({ id, name }: Organization) => ({
               id,
               name,
-            })),
+            }))
           );
         }
       }

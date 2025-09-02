@@ -11,5 +11,6 @@
       "audience": "https://ror.api.dev.entur.io"
     }
   },
-  "showErrorDetails": false
+  "showErrorDetails": false,
+  "themeFilePath": "/theme-dev.json"
 }
