@@ -1,5 +1,5 @@
 import { ApolloClient, ApolloError, gql, InMemoryCache } from '@apollo/client';
-import type { Config } from '../config/ConfigContext.tsx';
+import type { Config } from '../../contexts/ConfigContext.tsx';
 import type { AuthState } from 'react-oidc-context';
 import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
 import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
