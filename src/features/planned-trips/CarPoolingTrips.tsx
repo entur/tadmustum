@@ -51,6 +51,14 @@ export default function CarPoolingTrips() {
             style={{ marginLeft: 8 }}
           >
             Edit
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => navigate(`/book-trip/${params.row.id}`)}
+            style={{ marginLeft: 8 }}
+          >
+            Book Ride
           </Button>{' '}
           {params.row.id}
         </Box>

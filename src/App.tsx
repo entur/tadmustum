@@ -15,6 +15,7 @@ import CarPoolingTrip from './features/plan-trip/CarPoolingTrip.tsx';
 import CarPoolingTrips from './features/planned-trips/CarPoolingTrips.tsx';
 import NoAccessModal from './shared/components/auth/NoAccessModal.tsx';
 import { NoAccessProvider } from './contexts/NoAccessContext.tsx';
+import PassengerTripBooking from './features/passenger-booking/PassengerTripBooking.tsx';
 
 export default function App() {
   const { useCustomFeatures } = useCustomization();
@@ -57,6 +58,10 @@ export default function App() {
                         <Route
                           path="/trips"
                           element={<ProtectedRoute element={<CarPoolingTrips />} />}
+                        />
+                        <Route
+                          path="/book-trip/:tripId"
+                          element={<ProtectedRoute element={<PassengerTripBooking />} />}
                         />
                       </Routes>
                     </Box>
