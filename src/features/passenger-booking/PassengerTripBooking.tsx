@@ -13,7 +13,15 @@ import {
   Stack,
 } from '@mui/material';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { DirectionsCar, LocationOn, Schedule, Share } from '@mui/icons-material';
+import {
+  DirectionsCar,
+  LocationOn,
+  Schedule,
+  Share,
+  PersonPin,
+  Hail,
+  SensorsOff,
+} from '@mui/icons-material';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import { useQueryExtraJourney } from '../plan-trip/hooks/useQueryOneExtraJourney';
 import PassengerBookingMap from './components/PassengerBookingMap';
@@ -270,9 +278,65 @@ export default function PassengerTripBooking() {
     );
   }
 
-  const estimatedCalls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
-  const departureCall = estimatedCalls?.[0];
-  const arrivalCall = estimatedCalls?.[estimatedCalls.length - 1];
+  const estimatedCalls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
+
+  // Helper function to determine stop type and get appropriate icon/color
+  const getStopTypeInfo = (call: (typeof estimatedCalls)[0], index: number) => {
+    const isFirst = index === 0;
+    const isLast = index === estimatedCalls.length - 1;
+    const isPickup =
+      call.stopPointName?.includes('Pickup') ||
+      (call.departureBoardingActivity === 'boarding' && !isFirst);
+    const isDropoff =
+      call.stopPointName?.includes('Dropoff') ||
+      (call.arrivalBoardingActivity === 'alighting' && !isLast);
+
+    if (isFirst) {
+      return {
+        icon: LocationOn,
+        color: 'success' as const,
+        label: 'Departure',
+        time: call.aimedDepartureTime || call.expectedDepartureTime,
+        timeType: 'Departure' as const,
+      };
+    } else if (isLast) {
+      return {
+        icon: LocationOn,
+        color: 'error' as const,
+        label: 'Destination',
+        time: call.aimedArrivalTime || call.expectedArrivalTime,
+        timeType: 'Arrival' as const,
+      };
+    } else if (isPickup) {
+      return {
+        icon: PersonPin,
+        color: 'primary' as const,
+        label: 'Passenger Pickup',
+        time: call.aimedDepartureTime || call.expectedDepartureTime,
+        timeType: 'Pickup' as const,
+      };
+    } else if (isDropoff) {
+      return {
+        icon: Hail,
+        color: 'secondary' as const,
+        label: 'Passenger Dropoff',
+        time: call.aimedArrivalTime || call.expectedArrivalTime,
+        timeType: 'Dropoff' as const,
+      };
+    } else {
+      return {
+        icon: SensorsOff,
+        color: 'action' as const,
+        label: 'Stop',
+        time:
+          call.aimedArrivalTime ||
+          call.aimedDepartureTime ||
+          call.expectedArrivalTime ||
+          call.expectedDepartureTime,
+        timeType: 'Stop' as const,
+      };
+    }
+  };
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
@@ -300,44 +364,53 @@ export default function PassengerTripBooking() {
                 </Box>
 
                 <Typography color="text.secondary" gutterBottom>
-                  {departureCall?.destinationDisplay}
+                  {estimatedCalls[estimatedCalls.length - 1]?.destinationDisplay}
                 </Typography>
 
                 <Divider />
 
-                {/* Route Information */}
+                {/* Route Information - All Stops */}
                 <Box>
                   <Typography variant="subtitle2" color="primary" gutterBottom>
-                    Trip Route
+                    Trip Route ({estimatedCalls.length} stops)
                   </Typography>
                   <Stack spacing={2}>
-                    {departureCall && (
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <LocationOn color="action" />
-                        <Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {departureCall.stopPointName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Departure: {departureCall.aimedDepartureTime}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
+                    {estimatedCalls.map((call, index) => {
+                      const stopInfo = getStopTypeInfo(call, index);
+                      const IconComponent = stopInfo.icon;
 
-                    {arrivalCall && (
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <LocationOn color="error" />
-                        <Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {arrivalCall.stopPointName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Arrival: {arrivalCall.aimedArrivalTime}
+                      return (
+                        <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
+                          <IconComponent color={stopInfo.color} />
+                          <Box sx={{ flex: 1 }}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Typography variant="body2" fontWeight={500}>
+                                {call.stopPointName}
+                              </Typography>
+                              <Chip
+                                label={stopInfo.label}
+                                size="small"
+                                variant="outlined"
+                                color={stopInfo.color === 'action' ? 'default' : stopInfo.color}
+                                sx={{ fontSize: '0.7rem', height: '20px' }}
+                              />
+                            </Box>
+                            {stopInfo.time && (
+                              <Typography variant="caption" color="text.secondary">
+                                {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ minWidth: '40px' }}
+                          >
+                            #{call.order}
                           </Typography>
                         </Box>
-                      </Box>
-                    )}
+                      );
+                    })}
                   </Stack>
                 </Box>
               </Stack>

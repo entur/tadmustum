@@ -4,7 +4,7 @@ import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 export default function CarPoolingTrips() {
   const navigate = useNavigate();
@@ -93,18 +93,41 @@ export default function CarPoolingTrips() {
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
     },
     {
+      field: 'stopCount',
+      headerName: 'Stops',
+      width: 80,
+      valueGetter: (_value: string, row: Extrajourney) => {
+        const callsLength = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall.length || 0;
+        return callsLength;
+      },
+      renderCell: params => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="body2" fontWeight="bold">
+            {params.value}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            stops
+          </Typography>
+        </Box>
+      ),
+    },
+    {
       field: 'arrivalStopName',
-      headerName: 'Arrival stop name',
+      headerName: 'Final destination',
       flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney?.estimatedCalls?.estimatedCall[1].stopPointName,
+      valueGetter: (_value: string, row: Extrajourney) => {
+        const calls = row.estimatedVehicleJourney?.estimatedCalls?.estimatedCall;
+        return calls && calls.length > 0 ? calls[calls.length - 1].stopPointName : '';
+      },
     },
     {
       field: 'arrivalTimeName',
       headerName: 'Arrival time',
       flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls.estimatedCall[1].aimedArrivalTime,
+      valueGetter: (_value: string, row: Extrajourney) => {
+        const calls = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
+        return calls && calls.length > 0 ? calls[calls.length - 1].aimedArrivalTime : '';
+      },
     },
   ];
 
