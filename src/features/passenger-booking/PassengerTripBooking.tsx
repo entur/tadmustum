@@ -17,6 +17,7 @@ import { DirectionsCar, LocationOn, Schedule, Share } from '@mui/icons-material'
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import { useQueryExtraJourney } from '../plan-trip/hooks/useQueryOneExtraJourney';
 import PassengerBookingMap from './components/PassengerBookingMap';
+import { useBookPassengerRide } from './hooks/useBookPassengerRide';
 
 interface PassengerBookingFormData {
   origin: string;
@@ -38,8 +39,11 @@ export default function PassengerTripBooking() {
     destination: '',
   });
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isBookingInProgress, setIsBookingInProgress] = useState(false);
 
   const queryExtraJourney = useQueryExtraJourney();
+  const bookPassengerRide = useBookPassengerRide();
 
   // Parse coordinates from URL parameters
   const parseCoordinatesFromURL = (param: string | null): [number, number] | undefined => {
@@ -180,9 +184,43 @@ export default function PassengerTripBooking() {
     }));
   };
 
-  const handleBookRide = () => {
-    calculateEstimatedTimes();
-    setIsBookingConfirmed(true);
+  const handleBookRide = async () => {
+    if (!trip || !bookingData.pickupCoordinates || !bookingData.dropoffCoordinates) {
+      setBookingError('Please select both pickup and dropoff locations');
+      return;
+    }
+
+    if (!trip.id) {
+      setBookingError('Trip ID is missing');
+      return;
+    }
+
+    setIsBookingInProgress(true);
+    setBookingError(null);
+
+    try {
+      const bookingPayload = {
+        tripId: trip.id,
+        pickupCoordinates: bookingData.pickupCoordinates,
+        dropoffCoordinates: bookingData.dropoffCoordinates,
+        pickupTime: bookingData.estimatedPickupTime,
+        dropoffTime: bookingData.estimatedDropoffTime,
+      };
+
+      const result = await bookPassengerRide(trip, bookingPayload);
+
+      if (result.error) {
+        setBookingError(result.error.message);
+      } else {
+        // Calculate times and confirm booking
+        calculateEstimatedTimes();
+        setIsBookingConfirmed(true);
+      }
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setIsBookingInProgress(false);
+    }
   };
 
   // Share current URL with coordinates
@@ -358,8 +396,15 @@ export default function PassengerTripBooking() {
                 {isBookingConfirmed && (
                   <Alert severity="success">
                     <Typography variant="body2">
-                      Ride booking confirmed! You will be contacted with pickup details.
+                      Ride booking confirmed! The trip has been updated with your pickup and dropoff
+                      locations.
                     </Typography>
+                  </Alert>
+                )}
+
+                {bookingError && (
+                  <Alert severity="error">
+                    <Typography variant="body2">Booking failed: {bookingError}</Typography>
                   </Alert>
                 )}
 
@@ -374,10 +419,19 @@ export default function PassengerTripBooking() {
                   <Button
                     variant="contained"
                     onClick={handleBookRide}
-                    disabled={!bookingData.origin || !bookingData.destination || isBookingConfirmed}
+                    disabled={
+                      !bookingData.pickupCoordinates ||
+                      !bookingData.dropoffCoordinates ||
+                      isBookingConfirmed ||
+                      isBookingInProgress
+                    }
                     sx={{ minWidth: 120 }}
                   >
-                    {isBookingConfirmed ? 'Booked' : 'Book Ride'}
+                    {isBookingInProgress
+                      ? 'Booking...'
+                      : isBookingConfirmed
+                        ? 'Booked'
+                        : 'Book Ride'}
                   </Button>
                   {bookingData.pickupCoordinates && bookingData.dropoffCoordinates && (
                     <Button

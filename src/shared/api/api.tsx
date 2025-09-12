@@ -2,6 +2,7 @@ import { ApolloClient, ApolloError, gql, InMemoryCache } from '@apollo/client';
 import type { Config } from '../../contexts/ConfigContext.tsx';
 import type { AuthState } from 'react-oidc-context';
 import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
+import prepareBookingData, { type PassengerBookingData } from './prepareBookingData.tsx';
 import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
 import type { AppError } from '../error-message/AppError.tsx';
 import type { Extrajourney } from '../model/Extrajourney.tsx';
@@ -271,6 +272,57 @@ const queryExtraJourney =
     }
   };
 
+const bookPassengerRide =
+  (uri: string, auth: AuthState, originalTrip: Extrajourney, bookingData: PassengerBookingData) =>
+  async (): Promise<{ data?: string; error?: AppError }> => {
+    if (!auth.user?.access_token) {
+      throw new Error('Access token is missing');
+    }
+    const client = createClient(uri, auth);
+
+    const mutation = gql`
+      mutation CreateOrUpdateExtrajourney(
+        $codespace: String!
+        $authority: String!
+        $input: ExtrajourneyInput!
+      ) {
+        createOrUpdateExtrajourney(codespace: $codespace, authority: $authority, input: $input)
+      }
+    `;
+
+    try {
+      const variables = prepareBookingData(originalTrip, bookingData);
+
+      const result = await client.mutate({
+        mutation,
+        variables,
+        errorPolicy: 'all',
+      });
+
+      if (result.errors?.length) {
+        const error: AppError = {
+          message: result.errors[0].message,
+          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
+          details: result.errors[0].path,
+        };
+        return { error };
+      }
+
+      return { data: result.data?.createOrUpdateExtrajourney };
+    } catch (err) {
+      const error = err as ApolloError;
+      const appError: AppError = {
+        message: error.message,
+        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
+        details: {
+          networkError: error.networkError,
+          graphQLErrors: error.graphQLErrors,
+        },
+      };
+      return { error: appError };
+    }
+  };
+
 const api = (config: Config, auth?: AuthState) => {
   return {
     getAuthorities: getAuthorities(config['journey-planner-api'] as string),
@@ -285,6 +337,13 @@ const api = (config: Config, auth?: AuthState) => {
         codespace,
         authority,
         showCompletedTrips
+      ),
+    bookPassengerRide: (originalTrip: Extrajourney, bookingData: PassengerBookingData) =>
+      bookPassengerRide(
+        config['deviation-messages-api'] as string,
+        auth as AuthState,
+        originalTrip,
+        bookingData
       ),
   };
 };
