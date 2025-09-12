@@ -12,8 +12,8 @@ import {
   Chip,
   Stack,
 } from '@mui/material';
-import { useParams } from 'react-router-dom';
-import { DirectionsCar, LocationOn, Schedule } from '@mui/icons-material';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { DirectionsCar, LocationOn, Schedule, Share } from '@mui/icons-material';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import { useQueryExtraJourney } from '../plan-trip/hooks/useQueryOneExtraJourney';
 import PassengerBookingMap from './components/PassengerBookingMap';
@@ -29,6 +29,7 @@ interface PassengerBookingFormData {
 
 export default function PassengerTripBooking() {
   const { tripId } = useParams<{ tripId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [trip, setTrip] = useState<Extrajourney | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,42 @@ export default function PassengerTripBooking() {
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
 
   const queryExtraJourney = useQueryExtraJourney();
+
+  // Parse coordinates from URL parameters
+  const parseCoordinatesFromURL = (param: string | null): [number, number] | undefined => {
+    if (!param) return undefined;
+
+    const coords = param.split(',');
+    if (coords.length === 2) {
+      const lat = parseFloat(coords[0]);
+      const lng = parseFloat(coords[1]);
+
+      // Validate coordinates
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return [lng, lat]; // Return as [longitude, latitude]
+      }
+    }
+    return undefined;
+  };
+
+  // Update URL parameters when coordinates change
+  const updateURLParams = (pickup?: [number, number], dropoff?: [number, number]) => {
+    const newParams = new URLSearchParams(searchParams);
+
+    if (pickup) {
+      newParams.set('pickup', `${pickup[1]},${pickup[0]}`); // Store as lat,lng in URL
+    } else {
+      newParams.delete('pickup');
+    }
+
+    if (dropoff) {
+      newParams.set('dropoff', `${dropoff[1]},${dropoff[0]}`); // Store as lat,lng in URL
+    } else {
+      newParams.delete('dropoff');
+    }
+
+    setSearchParams(newParams, { replace: true });
+  };
 
   useEffect(() => {
     if (!tripId) return;
@@ -58,28 +95,73 @@ export default function PassengerTripBooking() {
       });
   }, [tripId, queryExtraJourney]);
 
-  const handleInputChange =
-    (field: keyof PassengerBookingFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Initialize form with URL parameters
+  useEffect(() => {
+    const pickupParam = searchParams.get('pickup');
+    const dropoffParam = searchParams.get('dropoff');
+
+    const pickupCoords = parseCoordinatesFromURL(pickupParam);
+    const dropoffCoords = parseCoordinatesFromURL(dropoffParam);
+
+    if (pickupCoords || dropoffCoords) {
       setBookingData(prev => ({
         ...prev,
-        [field]: event.target.value,
+        pickupCoordinates: pickupCoords,
+        dropoffCoordinates: dropoffCoords,
+        origin: pickupCoords
+          ? `${pickupCoords[1].toFixed(6)}, ${pickupCoords[0].toFixed(6)}`
+          : prev.origin,
+        destination: dropoffCoords
+          ? `${dropoffCoords[1].toFixed(6)}, ${dropoffCoords[0].toFixed(6)}`
+          : prev.destination,
       }));
+    }
+  }, [searchParams]);
+
+  const handleInputChange =
+    (field: keyof PassengerBookingFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setBookingData(prev => {
+        const updated = { ...prev, [field]: event.target.value };
+
+        // If user manually edits the text field, clear the corresponding coordinates
+        if (field === 'origin' && updated.pickupCoordinates) {
+          updated.pickupCoordinates = undefined;
+          updateURLParams(undefined, updated.dropoffCoordinates);
+        } else if (field === 'destination' && updated.dropoffCoordinates) {
+          updated.dropoffCoordinates = undefined;
+          updateURLParams(updated.pickupCoordinates, undefined);
+        }
+
+        return updated;
+      });
     };
 
   const handlePickupLocationSelect = (coordinates: [number, number], address?: string) => {
-    setBookingData(prev => ({
-      ...prev,
+    const newBookingData = {
       pickupCoordinates: coordinates,
       origin: address || `${coordinates[1].toFixed(6)}, ${coordinates[0].toFixed(6)}`,
-    }));
+    };
+
+    setBookingData(prev => {
+      const updated = { ...prev, ...newBookingData };
+      // Update URL with new coordinates
+      updateURLParams(updated.pickupCoordinates, updated.dropoffCoordinates);
+      return updated;
+    });
   };
 
   const handleDropoffLocationSelect = (coordinates: [number, number], address?: string) => {
-    setBookingData(prev => ({
-      ...prev,
+    const newBookingData = {
       dropoffCoordinates: coordinates,
       destination: address || `${coordinates[1].toFixed(6)}, ${coordinates[0].toFixed(6)}`,
-    }));
+    };
+
+    setBookingData(prev => {
+      const updated = { ...prev, ...newBookingData };
+      // Update URL with new coordinates
+      updateURLParams(updated.pickupCoordinates, updated.dropoffCoordinates);
+      return updated;
+    });
   };
 
   const calculateEstimatedTimes = () => {
@@ -101,6 +183,37 @@ export default function PassengerTripBooking() {
   const handleBookRide = () => {
     calculateEstimatedTimes();
     setIsBookingConfirmed(true);
+  };
+
+  // Share current URL with coordinates
+  const handleShareURL = async () => {
+    const currentURL = window.location.href;
+
+    if (navigator.share && bookingData.pickupCoordinates && bookingData.dropoffCoordinates) {
+      try {
+        await navigator.share({
+          title: 'Car Pooling Trip Booking',
+          text: `Book a ride on ${trip?.estimatedVehicleJourney.publishedLineName}`,
+          url: currentURL,
+        });
+      } finally {
+        // Fallback to clipboard if share fails
+        copyToClipboard(currentURL);
+      }
+    } else {
+      // Fallback to clipboard
+      copyToClipboard(currentURL);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // You could add a toast notification here
+      console.log('URL copied to clipboard');
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+    }
   };
 
   if (loading) {
@@ -250,7 +363,7 @@ export default function PassengerTripBooking() {
                   </Alert>
                 )}
 
-                <Box display="flex" gap={2}>
+                <Box display="flex" gap={2} flexWrap="wrap">
                   <Button
                     variant="outlined"
                     onClick={calculateEstimatedTimes}
@@ -266,6 +379,16 @@ export default function PassengerTripBooking() {
                   >
                     {isBookingConfirmed ? 'Booked' : 'Book Ride'}
                   </Button>
+                  {bookingData.pickupCoordinates && bookingData.dropoffCoordinates && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<Share />}
+                      onClick={handleShareURL}
+                      sx={{ minWidth: 120 }}
+                    >
+                      Share Trip
+                    </Button>
+                  )}
                 </Box>
               </Stack>
             </CardContent>
@@ -283,6 +406,13 @@ export default function PassengerTripBooking() {
                 View the trip route and click the buttons below to select your pickup and drop-off
                 locations on the map.
               </Typography>
+              {(searchParams.has('pickup') || searchParams.has('dropoff')) && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    📍 Locations have been pre-selected from the shared URL
+                  </Typography>
+                </Alert>
+              )}
               <PassengerBookingMap
                 trip={trip}
                 onPickupLocationSelect={handlePickupLocationSelect}
