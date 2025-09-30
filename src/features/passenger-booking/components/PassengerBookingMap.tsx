@@ -216,6 +216,49 @@ export default function PassengerBookingMap({
           </Source>
         )}
 
+        {/* Stop Markers - Show centroid of each flexible area */}
+        {flexibleAreas.map((area, index) => {
+          const coords = area.geometry.coordinates[0];
+          let totalLng = 0,
+            totalLat = 0;
+          coords.forEach(coord => {
+            totalLng += coord[0];
+            totalLat += coord[1];
+          });
+          const centerLng = totalLng / coords.length;
+          const centerLat = totalLat / coords.length;
+
+          const color =
+            area.properties?.type === 'pickup'
+              ? '#4CAF50'
+              : area.properties?.type === 'dropoff'
+                ? '#f44336'
+                : '#2196F3';
+
+          return (
+            <Marker key={`marker-${index}`} longitude={centerLng} latitude={centerLat}>
+              <Box
+                sx={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  border: '3px solid white',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                }}
+              >
+                {index + 1}
+              </Box>
+            </Marker>
+          );
+        })}
+
         {/* Pickup Location Marker */}
         {pickupLocation && (
           <Marker longitude={pickupLocation[0]} latitude={pickupLocation[1]}>

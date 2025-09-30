@@ -6,6 +6,7 @@ import {
   NavigationControl,
   Source,
   Layer,
+  Marker,
 } from 'react-map-gl/maplibre';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -14,6 +15,7 @@ import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from '../util/MAPBOXDRAW_DEFAULT_CONST
 import type { IControl } from 'maplibre-gl';
 import usePrevious from '../util/usePrevious.tsx';
 import maplibregl from 'maplibre-gl';
+import { Box } from '@mui/material';
 
 type EditableMapEventType = 'editableMap.mapModeChange';
 
@@ -320,6 +322,46 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>((props, ref)
           />
         </Source>
       )}
+
+      {/* Stop Markers - Show centroid of each feature */}
+      {featureArray.map((feature, index) => {
+        if (feature.geometry.type !== 'Polygon') return null;
+
+        const coords = feature.geometry.coordinates[0];
+        let totalLng = 0,
+          totalLat = 0;
+        coords.forEach(coord => {
+          totalLng += coord[0];
+          totalLat += coord[1];
+        });
+        const centerLng = totalLng / coords.length;
+        const centerLat = totalLat / coords.length;
+
+        const color = getFeatureColor(index);
+
+        return (
+          <Marker key={`marker-${feature.id}`} longitude={centerLng} latitude={centerLat}>
+            <Box
+              sx={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                backgroundColor: color,
+                border: '3px solid white',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '12px',
+              }}
+            >
+              {index + 1}
+            </Box>
+          </Marker>
+        );
+      })}
     </Map>
   );
 });
