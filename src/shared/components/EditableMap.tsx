@@ -41,6 +41,7 @@ export type EditableMapHandle = {
   drawFeature: () => void;
   removeFeature: (id: string) => void;
   zoomToFeature: (id: string) => void;
+  zoomToAllFeatures: () => void;
 };
 
 export interface MapMode {
@@ -232,6 +233,29 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>((props, ref)
       coords.forEach(coord => bounds.extend(coord));
 
       mapRef.current?.fitBounds(bounds, { padding: 60 });
+    },
+    zoomToAllFeatures: () => {
+      const featureArray = Object.values(features);
+      if (featureArray.length === 0) return;
+
+      // Calculate bounds to include all features
+      const allCoords: [number, number][] = [];
+      featureArray.forEach(feature => {
+        if (feature.geometry.type === 'Polygon') {
+          const coords = feature.geometry.coordinates[0];
+          coords.forEach(coord => allCoords.push(coord as [number, number]));
+        }
+      });
+
+      if (allCoords.length === 0) return;
+
+      const firstCoord = allCoords[0];
+      const bounds = new maplibregl.LngLatBounds(firstCoord, firstCoord);
+
+      // Extend bounds to include all coordinates
+      allCoords.forEach(coord => bounds.extend(coord));
+
+      mapRef.current?.fitBounds(bounds, { padding: 80, duration: 1000 });
     },
   }));
 

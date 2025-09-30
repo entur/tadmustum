@@ -35,6 +35,7 @@ export interface CarPoolingTripDataProps {
   tripId?: string;
   onAddFlexibleStop: () => void;
   onZoomToFeature: (id: string) => void;
+  onZoomToAllFeatures: () => void;
   onRemoveFlexibleStop: (id: string) => void;
   onStopCreatedCallback: () => Feature | null | undefined;
   loadedFlexibleStop: (stops: Feature[]) => void;
@@ -52,6 +53,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       onRemoveFlexibleStop,
       onStopCreatedCallback,
       onZoomToFeature,
+      onZoomToAllFeatures,
       tripId,
       loadedFlexibleStop,
     } = stops;
@@ -192,10 +194,14 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
               if (allFeatures.length >= 2) {
                 setDepartureStop(allFeatures[0]);
                 setArrivalStop(allFeatures[allFeatures.length - 1]);
-                handleZoomToFeature(allFeatures[0]?.id as string);
 
                 // Load all features to the map
                 loadedFlexibleStop(allFeatures);
+
+                // Zoom to fit all features with a small delay to ensure map is ready
+                setTimeout(() => {
+                  onZoomToAllFeatures();
+                }, 100);
               }
             }
           })
