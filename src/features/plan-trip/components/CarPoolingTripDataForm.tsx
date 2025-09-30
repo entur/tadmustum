@@ -12,8 +12,12 @@ import {
   MenuItem,
   Select,
   TextField,
+  Divider,
+  Stack,
+  Chip,
 } from '@mui/material';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import { LocationOn, PersonPin, Hail, SensorsOff } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -24,6 +28,7 @@ import featureToPoslist from '../../../shared/util/featureToPoslist.tsx';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
 import { ErrorMessage } from '../../../shared/error-message/ErrorMessage.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
+import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
 
 declare module 'yup' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -87,6 +92,7 @@ export interface CarPoolingTripDataFormProps {
   mapDepartureFlexibleStop: Feature | null;
   mapDestinationFlexibleStop: Feature | null;
   drawingStopsAllowed: boolean;
+  tripData?: Extrajourney | null;
 }
 
 export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProps) {
@@ -102,6 +108,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     drawingStopsAllowed,
+    tripData,
   } = props;
   const { authorities } = useOrganizations();
   const operators = useOperators();
@@ -187,6 +194,70 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     errors?.destinationFlexibleStop?.message,
   ]);
 
+  // Helper function to determine stop type and get appropriate icon/color
+  const getStopTypeInfo = (
+    call: Extrajourney['estimatedVehicleJourney']['estimatedCalls']['estimatedCall'][0],
+    index: number,
+    totalStops: number
+  ) => {
+    const isFirst = index === 0;
+    const isLast = index === totalStops - 1;
+    const isPickup =
+      call.stopPointName?.includes('Pickup') ||
+      (call.departureBoardingActivity === 'boarding' && !isFirst);
+    const isDropoff =
+      call.stopPointName?.includes('Dropoff') ||
+      (call.arrivalBoardingActivity === 'alighting' && !isLast);
+
+    if (isFirst) {
+      return {
+        icon: LocationOn,
+        color: 'success' as const,
+        label: 'Departure',
+        time: call.aimedDepartureTime || call.expectedDepartureTime,
+        timeType: 'Departure' as const,
+      };
+    } else if (isLast) {
+      return {
+        icon: LocationOn,
+        color: 'error' as const,
+        label: 'Destination',
+        time: call.aimedArrivalTime || call.expectedArrivalTime,
+        timeType: 'Arrival' as const,
+      };
+    } else if (isPickup) {
+      return {
+        icon: PersonPin,
+        color: 'primary' as const,
+        label: 'Passenger Pickup',
+        time: call.aimedDepartureTime || call.expectedDepartureTime,
+        timeType: 'Pickup' as const,
+      };
+    } else if (isDropoff) {
+      return {
+        icon: Hail,
+        color: 'secondary' as const,
+        label: 'Passenger Dropoff',
+        time: call.aimedArrivalTime || call.expectedArrivalTime,
+        timeType: 'Dropoff' as const,
+      };
+    } else {
+      return {
+        icon: SensorsOff,
+        color: 'action' as const,
+        label: 'Stop',
+        time:
+          call.aimedArrivalTime ||
+          call.aimedDepartureTime ||
+          call.expectedArrivalTime ||
+          call.expectedDepartureTime,
+        timeType: 'Stop' as const,
+      };
+    }
+  };
+
+  const estimatedCalls = tripData?.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
+
   return (
     <Box
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}
@@ -199,6 +270,51 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       <Typography variant="h5" component="h1">
         Trip data
       </Typography>
+
+      {/* All Stops Display */}
+      {estimatedCalls.length > 0 && (
+        <Box>
+          <Typography variant="h6" component="h2" gutterBottom>
+            Trip Route ({estimatedCalls.length} stops)
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Stack spacing={2}>
+            {estimatedCalls.map((call, index) => {
+              const stopInfo = getStopTypeInfo(call, index, estimatedCalls.length);
+              const IconComponent = stopInfo.icon;
+
+              return (
+                <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
+                  <IconComponent color={stopInfo.color} />
+                  <Box sx={{ flex: 1 }}>
+                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                      <Typography variant="body2" fontWeight={500}>
+                        {call.stopPointName}
+                      </Typography>
+                      <Chip
+                        label={stopInfo.label}
+                        size="small"
+                        variant="outlined"
+                        color={stopInfo.color === 'action' ? 'default' : stopInfo.color}
+                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                      />
+                    </Box>
+                    {stopInfo.time && (
+                      <Typography variant="caption" color="text.secondary">
+                        {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ minWidth: '30px' }}>
+                    #{call.order}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Stack>
+          <Divider sx={{ mt: 2 }} />
+        </Box>
+      )}
       <FormControl fullWidth error={!!errors.authority} margin="normal">
         <Controller
           name="authority"

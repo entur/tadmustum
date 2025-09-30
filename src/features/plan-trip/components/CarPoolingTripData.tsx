@@ -77,6 +77,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     const [initialState, setInitialState] = useState<CarPoolingTripDataFormData | undefined>(
       undefined
     );
+    const [tripData, setTripData] = useState<Extrajourney | null>(null);
     const initializing = useRef<boolean>(false);
 
     const mutateExtrajourney = useMutateExtrajourney();
@@ -142,30 +143,25 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
 
     useEffect(() => {
       const mapToFormdData = (journey: Extrajourney): CarPoolingTripDataFormData => {
+        const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
+        const firstCall = calls[0];
+        const lastCall = calls[calls.length - 1];
+
         return {
           codespace: 'ENT',
           authority: 'ENT:Authority:ENT',
           operator: journey.estimatedVehicleJourney.operatorRef,
           id: journey.id,
           lineName: journey.estimatedVehicleJourney.publishedLineName,
-          destinationDisplay:
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[0].destinationDisplay,
-          departureStopName:
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[0].stopPointName,
-          departureDatetime: dayjs(
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[0].aimedDepartureTime
-          ),
+          destinationDisplay: firstCall.destinationDisplay,
+          departureStopName: firstCall.stopPointName,
+          departureDatetime: dayjs(firstCall.aimedDepartureTime),
           departureFlexibleStop:
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[0].departureStopAssignment
-              .expectedFlexibleArea.polygon.exterior.posList,
-          destinationStopName:
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[1].stopPointName,
-          destinationDatetime: dayjs(
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[1].aimedArrivalTime
-          ),
+            firstCall.departureStopAssignment.expectedFlexibleArea.polygon.exterior.posList,
+          destinationStopName: lastCall.stopPointName,
+          destinationDatetime: dayjs(lastCall.aimedArrivalTime),
           destinationFlexibleStop:
-            journey.estimatedVehicleJourney.estimatedCalls.estimatedCall[1].departureStopAssignment
-              .expectedFlexibleArea.polygon.exterior.posList,
+            lastCall.departureStopAssignment.expectedFlexibleArea.polygon.exterior.posList,
         };
       };
       const loadInitialState = (id?: string) => {
@@ -174,19 +170,33 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
         queryOneExtraJourney('ENT', 'ENT:Authority:ENT', id)
           .then(result => {
             if (result.data?.extraJourney) {
-              const state = mapToFormdData(result.data.extraJourney as Extrajourney);
+              const journey = result.data.extraJourney as Extrajourney;
+              const state = mapToFormdData(journey);
               setInitialState(state);
-              const departure = loadFeatureUtil({
-                posList: state.departureFlexibleStop,
-              });
-              setDepartureStop(departure);
-              handleZoomToFeature(departure?.id as string);
-              const destination = loadFeatureUtil({
-                posList: state.destinationFlexibleStop,
-              });
-              setArrivalStop(destination);
+              setTripData(journey);
 
-              loadedFlexibleStop([departure, destination]);
+              // Load all flexible stops from all estimated calls
+              const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
+              const allFeatures: Feature[] = [];
+
+              calls.forEach(call => {
+                const flexArea = call.departureStopAssignment?.expectedFlexibleArea;
+                if (flexArea?.polygon?.exterior?.posList) {
+                  const feature = loadFeatureUtil({
+                    posList: flexArea.polygon.exterior.posList,
+                  });
+                  allFeatures.push(feature);
+                }
+              });
+
+              if (allFeatures.length >= 2) {
+                setDepartureStop(allFeatures[0]);
+                setArrivalStop(allFeatures[allFeatures.length - 1]);
+                handleZoomToFeature(allFeatures[0]?.id as string);
+
+                // Load all features to the map
+                loadedFlexibleStop(allFeatures);
+              }
             }
           })
           .catch(error => {
@@ -215,6 +225,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
           drawingStopsAllowed={drawingStopsAllowed}
           mapDepartureFlexibleStop={departureStop}
           mapDestinationFlexibleStop={arrivalStop}
+          tripData={tripData}
         />
         <Snackbar
           open={snackbar.open}
