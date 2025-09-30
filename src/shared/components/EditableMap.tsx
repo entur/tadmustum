@@ -1,8 +1,15 @@
 import { mapStyle } from '../util/mapStyle.ts';
-import { GeolocateControl, Map, type MapRef, NavigationControl } from 'react-map-gl/maplibre';
+import {
+  GeolocateControl,
+  Map,
+  type MapRef,
+  NavigationControl,
+  Source,
+  Layer,
+} from 'react-map-gl/maplibre';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import type { Feature, Polygon } from 'geojson';
+import type { Feature, Polygon, LineString } from 'geojson';
 import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from '../util/MAPBOXDRAW_DEFAULT_CONSTRUCTOR.tsx';
 import type { IControl } from 'maplibre-gl';
 import usePrevious from '../util/usePrevious.tsx';
@@ -176,6 +183,37 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>((props, ref)
     emitChangeMapModeEvent(prevMode, mapMode);
   }, [emitChangeMapModeEvent, mapMode, prevMode]);
 
+  // Create route line between stops
+  const createRouteLineString = useCallback((): Feature<LineString> | null => {
+    const featureArray = Object.values(features);
+    if (featureArray.length < 2) return null;
+
+    // Calculate centroids of each polygon
+    const coordinates: [number, number][] = featureArray.map(feature => {
+      if (feature.geometry.type !== 'Polygon') return [0, 0];
+
+      const coords = feature.geometry.coordinates[0];
+      let totalLng = 0,
+        totalLat = 0;
+      coords.forEach(coord => {
+        totalLng += coord[0];
+        totalLat += coord[1];
+      });
+      return [totalLng / coords.length, totalLat / coords.length];
+    });
+
+    return {
+      type: 'Feature',
+      properties: { type: 'route' },
+      geometry: {
+        type: 'LineString',
+        coordinates,
+      },
+    };
+  }, [features]);
+
+  const routeLine = createRouteLineString();
+
   useImperativeHandle(ref, () => ({
     addFeatures,
     currentFeature: () => currentFeature,
@@ -197,6 +235,15 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>((props, ref)
     },
   }));
 
+  // Get feature array and determine colors
+  const featureArray = Object.values(features);
+  const getFeatureColor = (index: number) => {
+    if (featureArray.length === 0) return '#2196F3';
+    if (index === 0) return '#4CAF50'; // Green for departure/start
+    if (index === featureArray.length - 1) return '#f44336'; // Red for destination/end
+    return '#2196F3'; // Blue for intermediate stops
+  };
+
   return (
     <Map
       ref={mapRef}
@@ -209,6 +256,46 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>((props, ref)
     >
       <NavigationControl position="bottom-right" />
       <GeolocateControl position="bottom-right" />
+
+      {/* Render flexible areas with improved styling */}
+      {featureArray.map((feature, index) => {
+        const color = getFeatureColor(index);
+        return (
+          <Source key={`flexible-area-${feature.id}`} type="geojson" data={feature}>
+            <Layer
+              id={`flexible-area-fill-${feature.id}`}
+              type="fill"
+              paint={{
+                'fill-color': color,
+                'fill-opacity': 0.2,
+              }}
+            />
+            <Layer
+              id={`flexible-area-outline-${feature.id}`}
+              type="line"
+              paint={{
+                'line-color': color,
+                'line-width': 3,
+              }}
+            />
+          </Source>
+        );
+      })}
+
+      {/* Route Line */}
+      {routeLine && (
+        <Source type="geojson" data={routeLine}>
+          <Layer
+            id="route-line"
+            type="line"
+            paint={{
+              'line-color': '#FF9800',
+              'line-width': 4,
+              'line-dasharray': [2, 2],
+            }}
+          />
+        </Source>
+      )}
     </Map>
   );
 });
