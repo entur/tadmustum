@@ -1,5 +1,5 @@
 {
-  "deviation-messages-api": "https://api.dev.entur.io/deviation-messages/v2/graphql",
+  "carpool-messages-api": "https://api.dev.entur.io/carpool-messages/v1/graphql",
   "journey-planner-api": "https://api.dev.entur.io/journey-planner/v3/graphql",
   "applicationEnv": "development",
   "claimsNamespace": "https://ror.entur.io/role_assignments",
