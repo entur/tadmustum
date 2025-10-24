@@ -327,12 +327,12 @@ const api = (config: Config, auth?: AuthState) => {
   return {
     getAuthorities: getAuthorities(config['journey-planner-api'] as string),
     getOperators: getOperators(config['journey-planner-api'] as string),
-    getUserContext: getUserContext(config['carpool-messages-api'] as string, auth as AuthState),
+    getUserContext: getUserContext(config['deviation-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
-      mutateExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, formData),
+      mutateExtrajourney(config['deviation-messages-api'] as string, auth as AuthState, formData),
     queryExtraJourney: (codespace: string, authority: string, showCompletedTrips: boolean) =>
       queryExtraJourney(
-        config['carpool-messages-api'] as string,
+        config['deviation-messages-api'] as string,
         auth as AuthState,
         codespace,
         authority,
@@ -340,7 +340,7 @@ const api = (config: Config, auth?: AuthState) => {
       ),
     bookPassengerRide: (originalTrip: Extrajourney, bookingData: PassengerBookingData) =>
       bookPassengerRide(
-        config['carpool-messages-api'] as string,
+        config['deviation-messages-api'] as string,
         auth as AuthState,
         originalTrip,
         bookingData
