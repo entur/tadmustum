@@ -8,7 +8,7 @@
     "authority": "https://ror-entur-dev.eu.auth0.com",
     "client_id": "6QhlepsRl4qsg59nraT5nRGcPIgtSFyW",
     "extraQueryParams": {
-      "audience": "https://ror.api.dev.entur.io"
+      "audience": "https://api.dev.entur.io"
     }
   },
   "showErrorDetails": true,
