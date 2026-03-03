@@ -71,6 +71,7 @@ export function prepareBookingData(
     destinationDisplay: lastCall.destinationDisplay,
     aimedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     expectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
+    latestExpectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     arrivalBoardingActivity: 'alighting',
     departureStopAssignment: {
       expectedFlexibleArea: {

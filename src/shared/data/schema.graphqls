@@ -336,6 +336,7 @@ type EstimatedCall {
   destinationDisplay: String
   aimedArrivalTime: String
   expectedArrivalTime: String
+  latestExpectedArrivalTime: String
   aimedDepartureTime: String
   expectedDepartureTime: String
   arrivalStatus: String
@@ -354,6 +355,7 @@ input EstimatedCallInput {
   destinationDisplay: String
   aimedArrivalTime: String
   expectedArrivalTime: String
+  latestExpectedArrivalTime: String
   aimedDepartureTime: String
   expectedDepartureTime: String
   arrivalStatus: String

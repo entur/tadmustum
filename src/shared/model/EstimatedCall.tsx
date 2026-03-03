@@ -7,6 +7,7 @@ export interface EstimatedCall {
   destinationDisplay: string;
   aimedArrivalTime?: string;
   expectedArrivalTime?: string;
+  latestExpectedArrivalTime?: string;
   aimedDepartureTime?: string;
   expectedDepartureTime?: string;
   arrivalBoardingActivity?: string;

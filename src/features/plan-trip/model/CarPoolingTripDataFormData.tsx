@@ -13,4 +13,5 @@ export type CarPoolingTripDataFormData = {
   destinationStopName: string;
   destinationDatetime: Dayjs;
   destinationFlexibleStop: string;
+  driverDeviationBudget: number | null;
 };

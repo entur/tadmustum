@@ -197,6 +197,7 @@ const queryExtraJourney =
                 departureStatus
                 destinationDisplay
                 expectedArrivalTime
+                latestExpectedArrivalTime
                 expectedDepartureTime
                 order
                 requestStop
