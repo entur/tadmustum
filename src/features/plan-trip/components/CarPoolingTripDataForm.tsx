@@ -84,6 +84,10 @@ const schema = Yup.object({
     .min(0, 'Must be zero or a positive integer')
     .nullable()
     .transform((value, original) => (original === '' ? null : value)),
+  contactUrl: Yup.string()
+    .url('Must be a valid URL')
+    .nullable()
+    .transform((value, original) => (original === '' ? null : value)),
 });
 
 export interface CarPoolingTripDataFormProps {
@@ -141,6 +145,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       destinationStopName: '',
       destinationFlexibleStop: '',
       driverDeviationBudget: 8,
+      contactUrl: null,
     },
   });
 
@@ -539,6 +544,23 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               label="Driver deviation budget in minutes"
               error={!!errors.driverDeviationBudget}
               helperText={errors.driverDeviationBudget?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
+
+      <Controller
+        name="contactUrl"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              label="Contact URL"
+              error={!!errors.contactUrl}
+              helperText={errors.contactUrl?.message}
               fullWidth
             />
           );

@@ -171,6 +171,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
                   'minutes'
                 )
               : null,
+          contactUrl: journey.estimatedVehicleJourney.publicContact?.url ?? null,
         };
       };
       const loadInitialState = (id?: string) => {

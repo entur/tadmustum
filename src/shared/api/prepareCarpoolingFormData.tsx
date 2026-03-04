@@ -75,6 +75,10 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
           ],
         },
         expiresAtEpochMs: formData.destinationDatetime.add(1, 'hour').valueOf(),
+        publicContact: {
+          phoneNumber: null,
+          url: formData.contactUrl,
+        },
       },
     },
   };

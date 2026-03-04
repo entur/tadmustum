@@ -218,6 +218,10 @@ const queryExtraJourney =
               dataFrameRef
               datedVehicleJourneyRef
             }
+            publicContact {
+              url
+              phoneNumber
+            }
           }
         }
       }
