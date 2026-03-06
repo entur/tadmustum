@@ -10,6 +10,7 @@ export interface PassengerBookingData {
   pickupTime?: string;
   dropoffTime?: string;
   numberOfPassengers: number;
+  passengerDeviationBudget?: number;
 }
 
 export function prepareBookingData(
@@ -53,6 +54,12 @@ export function prepareBookingData(
     destinationDisplay: lastCall.destinationDisplay,
     aimedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
     expectedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
+    latestExpectedArrivalTime:
+      bookingData.passengerDeviationBudget != null
+        ? dayjs(bookingData.pickupTime || pickupTime.toISOString())
+            .add(bookingData.passengerDeviationBudget, 'minutes')
+            .toISOString()
+        : undefined,
     departureBoardingActivity: 'boarding',
     expectedDepartureOccupancy: [
       {
@@ -82,7 +89,12 @@ export function prepareBookingData(
     destinationDisplay: lastCall.destinationDisplay,
     aimedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     expectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
-    latestExpectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
+    latestExpectedArrivalTime:
+      bookingData.passengerDeviationBudget != null
+        ? dayjs(bookingData.dropoffTime || dropoffTime.toISOString())
+            .add(bookingData.passengerDeviationBudget, 'minutes')
+            .toISOString()
+        : undefined,
     arrivalBoardingActivity: 'alighting',
     expectedDepartureOccupancy: [
       {

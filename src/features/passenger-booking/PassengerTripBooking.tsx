@@ -31,6 +31,7 @@ interface PassengerBookingFormData {
   origin: string;
   destination: string;
   numberOfPassengers: number;
+  passengerDeviationBudget: number;
   pickupCoordinates?: [number, number];
   dropoffCoordinates?: [number, number];
   estimatedPickupTime?: string;
@@ -47,6 +48,7 @@ export default function PassengerTripBooking() {
     origin: '',
     destination: '',
     numberOfPassengers: 1,
+    passengerDeviationBudget: 5,
   });
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -216,6 +218,7 @@ export default function PassengerTripBooking() {
         pickupTime: bookingData.estimatedPickupTime,
         dropoffTime: bookingData.estimatedDropoffTime,
         numberOfPassengers: bookingData.numberOfPassengers,
+        passengerDeviationBudget: bookingData.passengerDeviationBudget,
       };
 
       const result = await bookPassengerRide(trip, bookingPayload);
@@ -458,6 +461,21 @@ export default function PassengerTripBooking() {
                     }))
                   }
                   slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                  variant="outlined"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Passenger deviation budget (minutes)"
+                  type="number"
+                  value={bookingData.passengerDeviationBudget}
+                  onChange={e =>
+                    setBookingData(prev => ({
+                      ...prev,
+                      passengerDeviationBudget: Math.max(0, parseInt(e.target.value) || 0),
+                    }))
+                  }
+                  slotProps={{ htmlInput: { min: 0, step: 1 } }}
                   variant="outlined"
                 />
 
