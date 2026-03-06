@@ -83,22 +83,26 @@ const schema = Yup.object({
     .integer('Must be an integer')
     .min(0, 'Must be zero or a positive integer')
     .nullable()
+    .defined()
     .transform((value, original) => (original === '' ? null : value)),
   contactUrl: Yup.string()
     .url('Must be a valid URL')
     .nullable()
+    .defined()
     .transform((value, original) => (original === '' ? null : value)),
   totalCapacity: Yup.number()
     .typeError('Must be a number')
     .integer('Must be an integer')
     .min(0, 'Must be zero or a positive integer')
     .nullable()
+    .defined()
     .transform((value, original) => (original === '' ? null : value)),
   boardingCount: Yup.number()
     .typeError('Must be a number')
     .integer('Must be an integer')
     .min(0, 'Must be zero or a positive integer')
     .nullable()
+    .defined()
     .transform((value, original) => (original === '' ? null : value)),
 });
 
