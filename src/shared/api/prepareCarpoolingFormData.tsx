@@ -38,6 +38,16 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               aimedDepartureTime: formData.departureDatetime.toISOString(),
               expectedDepartureTime: formData.departureDatetime.toISOString(),
               departureBoardingActivity: 'boarding',
+              expectedDepartureOccupancy: [
+                {
+                  boardingCount: formData.boardingCount ?? undefined,
+                },
+              ],
+              expectedDepartureCapacities: [
+                {
+                  totalCapacity: formData.totalCapacity ?? undefined,
+                },
+              ],
               departureStopAssignment: {
                 expectedFlexibleArea: {
                   polygon: {
@@ -62,6 +72,16 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
                       .toISOString()
                   : undefined,
               arrivalBoardingActivity: 'alighting',
+              expectedDepartureOccupancy: [
+                {
+                  boardingCount: formData.boardingCount ?? undefined,
+                },
+              ],
+              expectedDepartureCapacities: [
+                {
+                  totalCapacity: formData.totalCapacity ?? undefined,
+                },
+              ],
               departureStopAssignment: {
                 expectedFlexibleArea: {
                   polygon: {

@@ -1,4 +1,6 @@
 import type { DepartureStopAssignment } from './DepartureStopAssignment.tsx';
+import type { VehicleOccupancyStructure } from './VehicleOccupancyStructure.tsx';
+import type { PassengerCapacityStructure } from './PassengerCapacityStructure.tsx';
 
 export interface EstimatedCall {
   stopPointRef: string;
@@ -13,4 +15,6 @@ export interface EstimatedCall {
   arrivalBoardingActivity?: string;
   departureBoardingActivity?: string;
   departureStopAssignment: DepartureStopAssignment;
+  expectedDepartureOccupancy?: VehicleOccupancyStructure[];
+  expectedDepartureCapacities?: PassengerCapacityStructure[];
 }

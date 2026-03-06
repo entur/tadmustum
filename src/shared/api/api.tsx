@@ -203,6 +203,12 @@ const queryExtraJourney =
                 requestStop
                 stopPointName
                 stopPointRef
+                expectedDepartureOccupancy {
+                  boardingCount
+                }
+                expectedDepartureCapacities {
+                  totalCapacity
+                }
                 departureStopAssignment {
                   expectedFlexibleArea {
                     polygon {

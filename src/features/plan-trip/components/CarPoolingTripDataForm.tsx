@@ -88,6 +88,18 @@ const schema = Yup.object({
     .url('Must be a valid URL')
     .nullable()
     .transform((value, original) => (original === '' ? null : value)),
+  totalCapacity: Yup.number()
+    .typeError('Must be a number')
+    .integer('Must be an integer')
+    .min(0, 'Must be zero or a positive integer')
+    .nullable()
+    .transform((value, original) => (original === '' ? null : value)),
+  boardingCount: Yup.number()
+    .typeError('Must be a number')
+    .integer('Must be an integer')
+    .min(0, 'Must be zero or a positive integer')
+    .nullable()
+    .transform((value, original) => (original === '' ? null : value)),
 });
 
 export interface CarPoolingTripDataFormProps {
@@ -146,6 +158,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       destinationFlexibleStop: '',
       driverDeviationBudget: 8,
       contactUrl: null,
+      totalCapacity: 5,
+      boardingCount: 1,
     },
   });
 
@@ -561,6 +575,40 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               label="Contact URL"
               error={!!errors.contactUrl}
               helperText={errors.contactUrl?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
+
+      <Controller
+        name="totalCapacity"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              label="Total Capacity"
+              error={!!errors.totalCapacity}
+              helperText={errors.totalCapacity?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
+
+      <Controller
+        name="boardingCount"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              label="Number of people in the vehicle"
+              error={!!errors.boardingCount}
+              helperText={errors.boardingCount?.message}
               fullWidth
             />
           );
