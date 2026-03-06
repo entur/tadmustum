@@ -9,6 +9,7 @@ export interface PassengerBookingData {
   dropoffCoordinates: [number, number]; // [lng, lat]
   pickupTime?: string;
   dropoffTime?: string;
+  numberOfPassengers: number;
 }
 
 export function prepareBookingData(
@@ -32,6 +33,9 @@ export function prepareBookingData(
   const firstCall = originalCalls[0];
   const lastCall = originalCalls[originalCalls.length - 1];
 
+  const firstCallBoardingCount = firstCall.expectedDepartureOccupancy?.[0]?.boardingCount ?? 1;
+  const firstCallTotalCapacity = firstCall.expectedDepartureCapacities?.[0]?.totalCapacity;
+
   // Calculate estimated times for pickup and dropoff based on original trip times
   const firstDepartureTime = dayjs(firstCall.aimedDepartureTime || firstCall.expectedDepartureTime);
   const lastArrivalTime = dayjs(lastCall.aimedArrivalTime || lastCall.expectedArrivalTime);
@@ -50,6 +54,13 @@ export function prepareBookingData(
     aimedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
     expectedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
     departureBoardingActivity: 'boarding',
+    expectedDepartureOccupancy: [
+      {
+        boardingCount: firstCallBoardingCount + bookingData.numberOfPassengers,
+      },
+    ],
+    expectedDepartureCapacities:
+      firstCallTotalCapacity != null ? [{ totalCapacity: firstCallTotalCapacity }] : undefined,
     departureStopAssignment: {
       // For point stops, we can either omit expectedFlexibleArea or provide a very small area
       // For now, let's create a minimal area around the point
@@ -73,6 +84,14 @@ export function prepareBookingData(
     expectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     latestExpectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     arrivalBoardingActivity: 'alighting',
+    expectedDepartureOccupancy: [
+      {
+        boardingCount:
+          lastCall.expectedDepartureOccupancy?.[0]?.boardingCount ?? firstCallBoardingCount,
+      },
+    ],
+    expectedDepartureCapacities:
+      firstCallTotalCapacity != null ? [{ totalCapacity: firstCallTotalCapacity }] : undefined,
     departureStopAssignment: {
       expectedFlexibleArea: {
         polygon: {

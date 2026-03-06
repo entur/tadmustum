@@ -30,6 +30,7 @@ import { useBookPassengerRide } from './hooks/useBookPassengerRide';
 interface PassengerBookingFormData {
   origin: string;
   destination: string;
+  numberOfPassengers: number;
   pickupCoordinates?: [number, number];
   dropoffCoordinates?: [number, number];
   estimatedPickupTime?: string;
@@ -45,6 +46,7 @@ export default function PassengerTripBooking() {
   const [bookingData, setBookingData] = useState<PassengerBookingFormData>({
     origin: '',
     destination: '',
+    numberOfPassengers: 1,
   });
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -213,6 +215,7 @@ export default function PassengerTripBooking() {
         dropoffCoordinates: bookingData.dropoffCoordinates,
         pickupTime: bookingData.estimatedPickupTime,
         dropoffTime: bookingData.estimatedDropoffTime,
+        numberOfPassengers: bookingData.numberOfPassengers,
       };
 
       const result = await bookPassengerRide(trip, bookingPayload);
@@ -440,6 +443,21 @@ export default function PassengerTripBooking() {
                   placeholder="Enter drop-off address or location"
                   value={bookingData.destination}
                   onChange={handleInputChange('destination')}
+                  variant="outlined"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Number of passengers"
+                  type="number"
+                  value={bookingData.numberOfPassengers}
+                  onChange={e =>
+                    setBookingData(prev => ({
+                      ...prev,
+                      numberOfPassengers: Math.max(1, parseInt(e.target.value) || 1),
+                    }))
+                  }
+                  slotProps={{ htmlInput: { min: 1, step: 1 } }}
                   variant="outlined"
                 />
 
