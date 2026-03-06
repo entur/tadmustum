@@ -297,6 +297,8 @@ export default function PassengerTripBooking() {
       call.stopPointName?.includes('Dropoff') ||
       (call.arrivalBoardingActivity === 'alighting' && !isLast);
 
+    const latestTime = call.latestExpectedArrivalTime;
+
     if (isFirst) {
       return {
         icon: LocationOn,
@@ -304,6 +306,7 @@ export default function PassengerTripBooking() {
         label: 'Departure',
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Departure' as const,
+        latestTime,
       };
     } else if (isLast) {
       return {
@@ -312,6 +315,7 @@ export default function PassengerTripBooking() {
         label: 'Destination',
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Arrival' as const,
+        latestTime,
       };
     } else if (isPickup) {
       return {
@@ -320,6 +324,7 @@ export default function PassengerTripBooking() {
         label: 'Passenger Pickup',
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Pickup' as const,
+        latestTime,
       };
     } else if (isDropoff) {
       return {
@@ -328,6 +333,7 @@ export default function PassengerTripBooking() {
         label: 'Passenger Dropoff',
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Dropoff' as const,
+        latestTime,
       };
     } else {
       return {
@@ -340,6 +346,7 @@ export default function PassengerTripBooking() {
           call.expectedArrivalTime ||
           call.expectedDepartureTime,
         timeType: 'Stop' as const,
+        latestTime,
       };
     }
   };
@@ -404,6 +411,12 @@ export default function PassengerTripBooking() {
                             {stopInfo.time && (
                               <Typography variant="caption" color="text.secondary">
                                 {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
+                                {stopInfo.latestTime && (
+                                  <>
+                                    {' '}
+                                    (latest: {new Date(stopInfo.latestTime).toLocaleTimeString()})
+                                  </>
+                                )}
                               </Typography>
                             )}
                           </Box>

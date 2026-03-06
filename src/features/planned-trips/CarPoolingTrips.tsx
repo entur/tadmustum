@@ -129,6 +129,17 @@ export default function CarPoolingTrips() {
         return calls && calls.length > 0 ? calls[calls.length - 1].aimedArrivalTime : '';
       },
     },
+    {
+      field: 'latestExpectedArrivalTime',
+      headerName: 'Latest expected arrival time',
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) => {
+        const calls = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
+        return calls && calls.length > 0
+          ? (calls[calls.length - 1].latestExpectedArrivalTime ?? '')
+          : '';
+      },
+    },
   ];
 
   return (
