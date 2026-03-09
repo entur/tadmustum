@@ -278,6 +278,16 @@ input ExtrajourneyInput {
   estimatedVehicleJourney: EstimatedVehicleJourneyInput!
 }
 
+type SimpleContactStructure {
+  phoneNumber: String
+  url: String
+}
+
+input SimpleContactStructureInput {
+  phoneNumber: String
+  url: String
+}
+
 type EstimatedVehicleJourney {
   recordedAtTime: String
   lineRef: String
@@ -296,6 +306,7 @@ type EstimatedVehicleJourney {
   estimatedCalls: EstimatedCalls
   isCompleteStopSequence: Boolean
   expiresAtEpochMs: Float
+  publicContact: SimpleContactStructure
 }
 
 input EstimatedVehicleJourneyInput {
@@ -317,6 +328,7 @@ input EstimatedVehicleJourneyInput {
   estimatedCalls: EstimatedCallsInput
   isCompleteStopSequence: Boolean
   expiresAtEpochMs: Float
+  publicContact: SimpleContactStructureInput
 }
 
 type EstimatedCalls {
@@ -336,6 +348,7 @@ type EstimatedCall {
   destinationDisplay: String
   aimedArrivalTime: String
   expectedArrivalTime: String
+  latestExpectedArrivalTime: String
   aimedDepartureTime: String
   expectedDepartureTime: String
   arrivalStatus: String
@@ -354,6 +367,7 @@ input EstimatedCallInput {
   destinationDisplay: String
   aimedArrivalTime: String
   expectedArrivalTime: String
+  latestExpectedArrivalTime: String
   aimedDepartureTime: String
   expectedDepartureTime: String
   arrivalStatus: String

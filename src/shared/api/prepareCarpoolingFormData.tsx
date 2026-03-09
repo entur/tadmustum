@@ -38,6 +38,16 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               aimedDepartureTime: formData.departureDatetime.toISOString(),
               expectedDepartureTime: formData.departureDatetime.toISOString(),
               departureBoardingActivity: 'boarding',
+              expectedDepartureOccupancy: [
+                {
+                  onboardCount: formData.onboardCount ?? undefined,
+                },
+              ],
+              expectedDepartureCapacities: [
+                {
+                  totalCapacity: formData.totalCapacity ?? undefined,
+                },
+              ],
               departureStopAssignment: {
                 expectedFlexibleArea: {
                   polygon: {
@@ -55,7 +65,23 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               destinationDisplay: formData.destinationDisplay,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
               expectedArrivalTime: formData.destinationDatetime.toISOString(),
+              latestExpectedArrivalTime:
+                formData.driverDeviationBudget != null
+                  ? formData.destinationDatetime
+                      .add(formData.driverDeviationBudget, 'minutes')
+                      .toISOString()
+                  : undefined,
               arrivalBoardingActivity: 'alighting',
+              expectedDepartureOccupancy: [
+                {
+                  onboardCount: formData.onboardCount ?? undefined,
+                },
+              ],
+              expectedDepartureCapacities: [
+                {
+                  totalCapacity: formData.totalCapacity ?? undefined,
+                },
+              ],
               departureStopAssignment: {
                 expectedFlexibleArea: {
                   polygon: {
@@ -69,6 +95,10 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
           ],
         },
         expiresAtEpochMs: formData.destinationDatetime.add(1, 'hour').valueOf(),
+        publicContact: {
+          phoneNumber: null,
+          url: formData.contactUrl,
+        },
       },
     },
   };

@@ -164,6 +164,16 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
           destinationDatetime: dayjs(lastCall.aimedArrivalTime),
           destinationFlexibleStop:
             lastCall.departureStopAssignment.expectedFlexibleArea.polygon.exterior.posList,
+          driverDeviationBudget:
+            lastCall.latestExpectedArrivalTime && lastCall.aimedArrivalTime
+              ? dayjs(lastCall.latestExpectedArrivalTime).diff(
+                  dayjs(lastCall.aimedArrivalTime),
+                  'minutes'
+                )
+              : null,
+          contactUrl: journey.estimatedVehicleJourney.publicContact?.url ?? null,
+          totalCapacity: firstCall.expectedDepartureCapacities?.[0]?.totalCapacity ?? null,
+          onboardCount: firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? null,
         };
       };
       const loadInitialState = (id?: string) => {

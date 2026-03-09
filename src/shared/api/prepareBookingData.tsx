@@ -9,6 +9,8 @@ export interface PassengerBookingData {
   dropoffCoordinates: [number, number]; // [lng, lat]
   pickupTime?: string;
   dropoffTime?: string;
+  numberOfPassengers: number;
+  passengerDeviationBudget?: number;
 }
 
 export function prepareBookingData(
@@ -32,6 +34,9 @@ export function prepareBookingData(
   const firstCall = originalCalls[0];
   const lastCall = originalCalls[originalCalls.length - 1];
 
+  const firstCallOnboardCount = firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? 1;
+  const firstCallTotalCapacity = firstCall.expectedDepartureCapacities?.[0]?.totalCapacity;
+
   // Calculate estimated times for pickup and dropoff based on original trip times
   const firstDepartureTime = dayjs(firstCall.aimedDepartureTime || firstCall.expectedDepartureTime);
   const lastArrivalTime = dayjs(lastCall.aimedArrivalTime || lastCall.expectedArrivalTime);
@@ -49,7 +54,20 @@ export function prepareBookingData(
     destinationDisplay: lastCall.destinationDisplay,
     aimedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
     expectedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
+    latestExpectedArrivalTime:
+      bookingData.passengerDeviationBudget != null
+        ? dayjs(bookingData.pickupTime || pickupTime.toISOString())
+            .add(bookingData.passengerDeviationBudget, 'minutes')
+            .toISOString()
+        : undefined,
     departureBoardingActivity: 'boarding',
+    expectedDepartureOccupancy: [
+      {
+        onboardCount: firstCallOnboardCount + bookingData.numberOfPassengers,
+      },
+    ],
+    expectedDepartureCapacities:
+      firstCallTotalCapacity != null ? [{ totalCapacity: firstCallTotalCapacity }] : undefined,
     departureStopAssignment: {
       // For point stops, we can either omit expectedFlexibleArea or provide a very small area
       // For now, let's create a minimal area around the point
@@ -71,7 +89,21 @@ export function prepareBookingData(
     destinationDisplay: lastCall.destinationDisplay,
     aimedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     expectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
+    latestExpectedArrivalTime:
+      bookingData.passengerDeviationBudget != null
+        ? dayjs(bookingData.dropoffTime || dropoffTime.toISOString())
+            .add(bookingData.passengerDeviationBudget, 'minutes')
+            .toISOString()
+        : undefined,
     arrivalBoardingActivity: 'alighting',
+    expectedDepartureOccupancy: [
+      {
+        onboardCount:
+          lastCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? firstCallOnboardCount,
+      },
+    ],
+    expectedDepartureCapacities:
+      firstCallTotalCapacity != null ? [{ totalCapacity: firstCallTotalCapacity }] : undefined,
     departureStopAssignment: {
       expectedFlexibleArea: {
         polygon: {

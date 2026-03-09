@@ -1,4 +1,5 @@
 import type { EstimatedCalls } from './EstimatedCalls.tsx';
+import type { SimpleContactStructure } from './SimpleContactStructure.tsx';
 
 export interface EstimatedVehicleJourney {
   recordedAtTime: string;
@@ -17,4 +18,5 @@ export interface EstimatedVehicleJourney {
   estimatedCalls: EstimatedCalls;
   isCompleteStopSequence: boolean;
   expiresAtEpochMs: number;
+  publicContact: SimpleContactStructure;
 }

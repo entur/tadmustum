@@ -78,6 +78,32 @@ const schema = Yup.object({
       value => value === null || dayjs.isDayjs(value)
     ),
   destinationFlexibleStop: Yup.string().required(),
+  driverDeviationBudget: Yup.number()
+    .typeError('Must be a number')
+    .integer('Must be an integer')
+    .min(0, 'Must be zero or a positive integer')
+    .nullable()
+    .defined()
+    .transform((value, original) => (original === '' ? null : value)),
+  contactUrl: Yup.string()
+    .url('Must be a valid URL')
+    .nullable()
+    .defined()
+    .transform((value, original) => (original === '' ? null : value)),
+  totalCapacity: Yup.number()
+    .typeError('Must be a number')
+    .integer('Must be an integer')
+    .min(0, 'Must be zero or a positive integer')
+    .nullable()
+    .defined()
+    .transform((value, original) => (original === '' ? null : value)),
+  onboardCount: Yup.number()
+    .typeError('Must be a number')
+    .integer('Must be an integer')
+    .min(0, 'Must be zero or a positive integer')
+    .nullable()
+    .defined()
+    .transform((value, original) => (original === '' ? null : value)),
 });
 
 export interface CarPoolingTripDataFormProps {
@@ -134,6 +160,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       departureFlexibleStop: '',
       destinationStopName: '',
       destinationFlexibleStop: '',
+      driverDeviationBudget: 8,
+      contactUrl: null,
+      totalCapacity: 5,
+      onboardCount: 1,
     },
   });
 
@@ -209,6 +239,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       call.stopPointName?.includes('Dropoff') ||
       (call.arrivalBoardingActivity === 'alighting' && !isLast);
 
+    const latestTime = call.latestExpectedArrivalTime;
+
     if (isFirst) {
       return {
         icon: LocationOn,
@@ -216,6 +248,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         label: 'Departure',
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Departure' as const,
+        latestTime,
       };
     } else if (isLast) {
       return {
@@ -224,6 +257,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         label: 'Destination',
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Arrival' as const,
+        latestTime,
       };
     } else if (isPickup) {
       return {
@@ -232,6 +266,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         label: 'Passenger Pickup',
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Pickup' as const,
+        latestTime,
       };
     } else if (isDropoff) {
       return {
@@ -240,6 +275,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         label: 'Passenger Dropoff',
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Dropoff' as const,
+        latestTime,
       };
     } else {
       return {
@@ -252,6 +288,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           call.expectedArrivalTime ||
           call.expectedDepartureTime,
         timeType: 'Stop' as const,
+        latestTime,
       };
     }
   };
@@ -302,6 +339,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                     {stopInfo.time && (
                       <Typography variant="caption" color="text.secondary">
                         {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
+                        {stopInfo.latestTime && (
+                          <> (latest: {new Date(stopInfo.latestTime).toLocaleTimeString()})</>
+                        )}
                       </Typography>
                     )}
                   </Box>
@@ -521,6 +561,73 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           </IconButton>
         )}
       </Box>
+
+      <Controller
+        name="driverDeviationBudget"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              label="Driver deviation budget in minutes"
+              error={!!errors.driverDeviationBudget}
+              helperText={errors.driverDeviationBudget?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
+
+      <Controller
+        name="contactUrl"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              label="Contact URL"
+              error={!!errors.contactUrl}
+              helperText={errors.contactUrl?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
+
+      <Controller
+        name="totalCapacity"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              label="Total Capacity"
+              error={!!errors.totalCapacity}
+              helperText={errors.totalCapacity?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
+
+      <Controller
+        name="onboardCount"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              label="Number of people in the vehicle"
+              error={!!errors.onboardCount}
+              helperText={errors.onboardCount?.message}
+              fullWidth
+            />
+          );
+        }}
+      />
 
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button type="submit" variant="contained" color="primary">

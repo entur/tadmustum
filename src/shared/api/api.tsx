@@ -197,11 +197,18 @@ const queryExtraJourney =
                 departureStatus
                 destinationDisplay
                 expectedArrivalTime
+                latestExpectedArrivalTime
                 expectedDepartureTime
                 order
                 requestStop
                 stopPointName
                 stopPointRef
+                expectedDepartureOccupancy {
+                  onboardCount
+                }
+                expectedDepartureCapacities {
+                  totalCapacity
+                }
                 departureStopAssignment {
                   expectedFlexibleArea {
                     polygon {
@@ -216,6 +223,10 @@ const queryExtraJourney =
             framedVehicleJourneyRef {
               dataFrameRef
               datedVehicleJourneyRef
+            }
+            publicContact {
+              url
+              phoneNumber
             }
           }
         }
