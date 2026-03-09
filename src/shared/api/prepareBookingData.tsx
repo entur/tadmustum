@@ -34,7 +34,7 @@ export function prepareBookingData(
   const firstCall = originalCalls[0];
   const lastCall = originalCalls[originalCalls.length - 1];
 
-  const firstCallBoardingCount = firstCall.expectedDepartureOccupancy?.[0]?.boardingCount ?? 1;
+  const firstCallOnboardCount = firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? 1;
   const firstCallTotalCapacity = firstCall.expectedDepartureCapacities?.[0]?.totalCapacity;
 
   // Calculate estimated times for pickup and dropoff based on original trip times
@@ -63,7 +63,7 @@ export function prepareBookingData(
     departureBoardingActivity: 'boarding',
     expectedDepartureOccupancy: [
       {
-        boardingCount: firstCallBoardingCount + bookingData.numberOfPassengers,
+        onboardCount: firstCallOnboardCount + bookingData.numberOfPassengers,
       },
     ],
     expectedDepartureCapacities:
@@ -98,8 +98,8 @@ export function prepareBookingData(
     arrivalBoardingActivity: 'alighting',
     expectedDepartureOccupancy: [
       {
-        boardingCount:
-          lastCall.expectedDepartureOccupancy?.[0]?.boardingCount ?? firstCallBoardingCount,
+        onboardCount:
+          lastCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? firstCallOnboardCount,
       },
     ],
     expectedDepartureCapacities:

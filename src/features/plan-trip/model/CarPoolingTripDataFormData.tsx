@@ -16,5 +16,5 @@ export type CarPoolingTripDataFormData = {
   driverDeviationBudget: number | null;
   contactUrl: string | null;
   totalCapacity: number | null;
-  boardingCount: number | null;
+  onboardCount: number | null;
 };

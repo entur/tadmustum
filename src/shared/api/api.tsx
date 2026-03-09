@@ -204,7 +204,7 @@ const queryExtraJourney =
                 stopPointName
                 stopPointRef
                 expectedDepartureOccupancy {
-                  boardingCount
+                  onboardCount
                 }
                 expectedDepartureCapacities {
                   totalCapacity

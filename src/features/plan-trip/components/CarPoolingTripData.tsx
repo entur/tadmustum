@@ -173,7 +173,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
               : null,
           contactUrl: journey.estimatedVehicleJourney.publicContact?.url ?? null,
           totalCapacity: firstCall.expectedDepartureCapacities?.[0]?.totalCapacity ?? null,
-          boardingCount: firstCall.expectedDepartureOccupancy?.[0]?.boardingCount ?? null,
+          onboardCount: firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? null,
         };
       };
       const loadInitialState = (id?: string) => {

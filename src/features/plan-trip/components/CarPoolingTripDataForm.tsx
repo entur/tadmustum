@@ -97,7 +97,7 @@ const schema = Yup.object({
     .nullable()
     .defined()
     .transform((value, original) => (original === '' ? null : value)),
-  boardingCount: Yup.number()
+  onboardCount: Yup.number()
     .typeError('Must be a number')
     .integer('Must be an integer')
     .min(0, 'Must be zero or a positive integer')
@@ -163,7 +163,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       driverDeviationBudget: 8,
       contactUrl: null,
       totalCapacity: 5,
-      boardingCount: 1,
+      onboardCount: 1,
     },
   });
 
@@ -613,7 +613,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       />
 
       <Controller
-        name="boardingCount"
+        name="onboardCount"
         control={control}
         render={({ field }) => {
           return (
@@ -621,8 +621,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               {...field}
               value={field.value ?? ''}
               label="Number of people in the vehicle"
-              error={!!errors.boardingCount}
-              helperText={errors.boardingCount?.message}
+              error={!!errors.onboardCount}
+              helperText={errors.onboardCount?.message}
               fullWidth
             />
           );

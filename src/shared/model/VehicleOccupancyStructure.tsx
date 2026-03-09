@@ -1,3 +1,3 @@
 export interface VehicleOccupancyStructure {
-  boardingCount?: number | null;
+  onboardCount?: number | null;
 }

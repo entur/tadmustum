@@ -40,7 +40,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               departureBoardingActivity: 'boarding',
               expectedDepartureOccupancy: [
                 {
-                  boardingCount: formData.boardingCount ?? undefined,
+                  onboardCount: formData.onboardCount ?? undefined,
                 },
               ],
               expectedDepartureCapacities: [
@@ -74,7 +74,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               arrivalBoardingActivity: 'alighting',
               expectedDepartureOccupancy: [
                 {
-                  boardingCount: formData.boardingCount ?? undefined,
+                  onboardCount: formData.onboardCount ?? undefined,
                 },
               ],
               expectedDepartureCapacities: [
