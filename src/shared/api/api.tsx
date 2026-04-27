@@ -1,4 +1,12 @@
-import { ApolloClient, ApolloError, gql, InMemoryCache } from '@apollo/client';
+import {
+  ApolloClient,
+  ApolloError,
+  ApolloLink,
+  gql,
+  HttpLink,
+  InMemoryCache,
+} from '@apollo/client';
+import { removeTypenameFromVariables } from '@apollo/client/link/remove-typename';
 import type { Config } from '../../contexts/ConfigContext.tsx';
 import type { AuthState } from 'react-oidc-context';
 import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
@@ -18,12 +26,11 @@ const createClient = (uri: string, auth?: AuthState) => {
     headers['Authorization'] = `Bearer ${access_token}`;
   }
 
+  // Strip __typename from mutation variables: query responses get __typename
+  // by default, and the booking flow reuses fetched objects as mutation input.
   return new ApolloClient({
-    uri,
-    headers: headers,
-    cache: new InMemoryCache({
-      addTypename: false,
-    }),
+    link: ApolloLink.from([removeTypenameFromVariables(), new HttpLink({ uri, headers })]),
+    cache: new InMemoryCache(),
   });
 };
 
@@ -211,6 +218,11 @@ const queryExtraJourney =
                 }
                 departureStopAssignment {
                   expectedFlexibleArea {
+                    circularArea {
+                      radius
+                      longitude
+                      latitude
+                    }
                     polygon {
                       exterior {
                         posList

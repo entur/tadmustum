@@ -5,6 +5,10 @@ import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
+import dayjs from 'dayjs';
+
+const formatMinuteResolution = (value: string | null | undefined) =>
+  value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '';
 
 export default function CarPoolingTrips() {
   const navigate = useNavigate();
@@ -91,6 +95,7 @@ export default function CarPoolingTrips() {
       flex: 1,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
+      valueFormatter: (value: string) => formatMinuteResolution(value),
     },
     {
       field: 'stopCount',
@@ -128,6 +133,7 @@ export default function CarPoolingTrips() {
         const calls = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
         return calls && calls.length > 0 ? calls[calls.length - 1].aimedArrivalTime : '';
       },
+      valueFormatter: (value: string) => formatMinuteResolution(value),
     },
     {
       field: 'latestExpectedArrivalTime',
@@ -139,6 +145,24 @@ export default function CarPoolingTrips() {
           ? (calls[calls.length - 1].latestExpectedArrivalTime ?? '')
           : '';
       },
+      valueFormatter: (value: string) => formatMinuteResolution(value),
+    },
+    {
+      field: 'recordedAtTime',
+      headerName: 'Recorded at',
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.recordedAtTime,
+      valueFormatter: (value: string) => formatMinuteResolution(value),
+    },
+    {
+      field: 'expiresAtEpochMs',
+      headerName: 'Expires at',
+      flex: 1,
+      valueGetter: (_value: number, row: Extrajourney) =>
+        row.estimatedVehicleJourney.expiresAtEpochMs,
+      valueFormatter: (value: number | null | undefined) =>
+        value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '',
     },
   ];
 

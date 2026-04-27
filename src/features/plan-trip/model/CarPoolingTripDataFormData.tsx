@@ -1,18 +1,21 @@
-import { Dayjs } from 'dayjs';
+import type { Dayjs } from 'dayjs';
+import type { Position } from 'geojson';
 
 export type CarPoolingTripDataFormData = {
   codespace: string;
   authority: string;
   operator: string;
   id?: string;
+  lineRef?: string;
+  estimatedVehicleJourneyCode?: string;
   lineName: string;
   destinationDisplay: string;
   departureStopName: string;
   departureDatetime: Dayjs;
-  departureFlexibleStop: string;
+  departureFlexibleStop: Position | null;
   destinationStopName: string;
   destinationDatetime: Dayjs;
-  destinationFlexibleStop: string;
+  destinationFlexibleStop: Position | null;
   driverDeviationBudget: number | null;
   contactUrl: string | null;
   totalCapacity: number | null;

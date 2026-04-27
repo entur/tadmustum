@@ -27,3 +27,7 @@ tsconfig.tsbuildinfo
 
 public/config-*.json
 public/theme-*.json
+
+# Claude AI
+.claude/
+thoughts/
