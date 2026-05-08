@@ -403,13 +403,13 @@ input ExpectedFlexibleAreaInput {
 }
 
 type CircularArea {
-    radius: Int
-    longitude: Float
-    latitude: Float
+  radius: Int
+  longitude: Float
+  latitude: Float
 }
 
 input CircularAreaInput {
-    radius: Int
-    longitude: Float
-    latitude: Float
+  radius: Int
+  longitude: Float
+  latitude: Float
 }
