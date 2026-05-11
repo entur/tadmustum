@@ -10,7 +10,7 @@ export const MAPBOXDRAW_DEFAULT_CONSTRUCTOR = {
     trash: true,
   },
   modes: {
-    draw_polygon: MapboxDraw.modes.draw_polygon,
+    draw_point: MapboxDraw.modes.draw_point,
     direct_select: MapboxDraw.modes.direct_select,
     simple_select: MapboxDraw.modes.simple_select,
   },

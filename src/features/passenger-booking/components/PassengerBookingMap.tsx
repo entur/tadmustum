@@ -12,8 +12,8 @@ import { Box } from '@mui/material';
 import { LocationOn, FmdGood, DirectionsWalk } from '@mui/icons-material';
 import { mapStyle } from '../../../shared/util/mapStyle.ts';
 import type { Extrajourney } from '../../../shared/model/Extrajourney';
-import type { Feature, LineString, Polygon } from 'geojson';
-import loadFeatureUtil from '../../plan-trip/util/loadFeatureUtil';
+import type { Feature, LineString, Point } from 'geojson';
+import loadFeatureFromFlexArea from '../../plan-trip/util/loadFeatureFromFlexArea.tsx';
 
 interface PassengerBookingMapProps {
   trip: Extrajourney | null;
@@ -41,25 +41,21 @@ export default function PassengerBookingMap({
   );
 
   // Extract flexible areas for pickup and dropoff zones
-  const getFlexibleAreas = useCallback((): Feature<Polygon>[] => {
+  const getFlexibleAreas = useCallback((): Feature<Point>[] => {
     if (!trip) return [];
 
-    const areas: Feature<Polygon>[] = [];
+    const areas: Feature<Point>[] = [];
     tripData.forEach((call, index) => {
       const flexArea = call.departureStopAssignment?.expectedFlexibleArea;
-      if (flexArea?.polygon?.exterior?.posList) {
-        try {
-          const feature = loadFeatureUtil({ posList: flexArea.polygon.exterior.posList });
-          feature.properties = {
-            ...feature.properties,
-            stopName: call.stopPointName,
-            type: index === 0 ? 'pickup' : index === tripData.length - 1 ? 'dropoff' : 'stop',
-            order: call.order,
-          };
-          areas.push(feature);
-        } catch (error) {
-          console.warn('Failed to parse flexible area:', error);
-        }
+      const feature = loadFeatureFromFlexArea(flexArea);
+      if (feature) {
+        feature.properties = {
+          ...feature.properties,
+          stopName: call.stopPointName,
+          type: index === 0 ? 'pickup' : index === tripData.length - 1 ? 'dropoff' : 'stop',
+          order: call.order,
+        };
+        areas.push(feature);
       }
     });
     return areas;
@@ -72,18 +68,9 @@ export default function PassengerBookingMap({
     const flexAreas = getFlexibleAreas();
     if (flexAreas.length < 2) return null;
 
-    // Use center points of flexible areas for the route line
-    const coordinates: [number, number][] = flexAreas.map(area => {
-      const coords = area.geometry.coordinates[0];
-      // Calculate centroid
-      let totalLng = 0,
-        totalLat = 0;
-      coords.forEach(coord => {
-        totalLng += coord[0];
-        totalLat += coord[1];
-      });
-      return [totalLng / coords.length, totalLat / coords.length];
-    });
+    const coordinates: [number, number][] = flexAreas.map(
+      area => area.geometry.coordinates as [number, number]
+    );
 
     return {
       type: 'Feature',
@@ -128,12 +115,11 @@ export default function PassengerBookingMap({
       maxLat = -Infinity;
 
     flexAreas.forEach(area => {
-      area.geometry.coordinates[0].forEach(([lng, lat]) => {
-        minLng = Math.min(minLng, lng);
-        maxLng = Math.max(maxLng, lng);
-        minLat = Math.min(minLat, lat);
-        maxLat = Math.max(maxLat, lat);
-      });
+      const [lng, lat] = area.geometry.coordinates;
+      minLng = Math.min(minLng, lng);
+      maxLng = Math.max(maxLng, lng);
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
     });
 
     // Add padding
@@ -169,38 +155,6 @@ export default function PassengerBookingMap({
         <NavigationControl position="top-right" />
         <GeolocateControl position="top-right" />
 
-        {/* Flexible Areas */}
-        {flexibleAreas.map((area, index) => (
-          <Source key={`flexible-area-${index}`} type="geojson" data={area}>
-            <Layer
-              id={`flexible-area-fill-${index}`}
-              type="fill"
-              paint={{
-                'fill-color':
-                  area.properties?.type === 'pickup'
-                    ? '#4CAF50'
-                    : area.properties?.type === 'dropoff'
-                      ? '#f44336'
-                      : '#2196F3',
-                'fill-opacity': 0.2,
-              }}
-            />
-            <Layer
-              id={`flexible-area-outline-${index}`}
-              type="line"
-              paint={{
-                'line-color':
-                  area.properties?.type === 'pickup'
-                    ? '#4CAF50'
-                    : area.properties?.type === 'dropoff'
-                      ? '#f44336'
-                      : '#2196F3',
-                'line-width': 2,
-              }}
-            />
-          </Source>
-        ))}
-
         {/* Route Line */}
         {routeLine && (
           <Source type="geojson" data={routeLine}>
@@ -216,17 +170,9 @@ export default function PassengerBookingMap({
           </Source>
         )}
 
-        {/* Stop Markers - Show centroid of each flexible area */}
+        {/* Stop Markers */}
         {flexibleAreas.map((area, index) => {
-          const coords = area.geometry.coordinates[0];
-          let totalLng = 0,
-            totalLat = 0;
-          coords.forEach(coord => {
-            totalLng += coord[0];
-            totalLat += coord[1];
-          });
-          const centerLng = totalLng / coords.length;
-          const centerLat = totalLat / coords.length;
+          const [centerLng, centerLat] = area.geometry.coordinates;
 
           const color =
             area.properties?.type === 'pickup'

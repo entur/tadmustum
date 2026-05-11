@@ -17,10 +17,11 @@ export default function CarPoolingTrip() {
   const editableMapRef = useRef<EditableMapHandle>(null);
   const dataHandle = useRef<CarPoolingTripDataHandle>(null);
 
-  const [sidebarWidth, setSidebarWidth] = useState<number>(300);
-
+  const [sidebarWidth, setSidebarWidth] = useState<number>(360);
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [departureStopId, setDepartureStopId] = useState<string | null>(null);
+  const [arrivalStopId, setArrivalStopId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -60,12 +61,13 @@ export default function CarPoolingTrip() {
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}
           onRemoveFlexibleStop={id => editableMapRef.current?.removeFeature(id)}
-          onStopCreatedCallback={() => editableMapRef.current?.currentFeature()}
           onZoomToFeature={(id: string) => editableMapRef.current?.zoomToFeature(id)}
           onZoomToAllFeatures={() => editableMapRef.current?.zoomToAllFeatures()}
           loadedFlexibleStop={(stops: Feature[]) => {
             editableMapRef.current?.addFeatures(stops);
           }}
+          onDepartureStopChange={setDepartureStopId}
+          onArrivalStopChange={setArrivalStopId}
         />
       </Box>
 
@@ -93,7 +95,10 @@ export default function CarPoolingTrip() {
 
       <Box className="map-box">
         <EditableMap
-          onEditableMapModeChange={e => dataHandle.current?.handleEditableMapModeChange({ ...e })}
+          onStopCreated={feature => dataHandle.current?.onStopCreated(feature)}
+          onDrawingStateChange={isDrawing => dataHandle.current?.onDrawingStateChange(isDrawing)}
+          departureStopId={departureStopId}
+          arrivalStopId={arrivalStopId}
           ref={editableMapRef}
         />
       </Box>

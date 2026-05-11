@@ -2,21 +2,28 @@ import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/
 import type { Extrajourney } from '../model/Extrajourney.tsx';
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
+import { encodePointAsCircularArea } from '../model/circularAreaCodec.tsx';
 
 function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
   codespace: string;
   authority: string;
   input: Extrajourney;
 } {
+  if (!formData.departureFlexibleStop || !formData.destinationFlexibleStop) {
+    // Form validation prevents submit without both stops; this guard narrows
+    // the types and turns any validation bug into a clear failure instead of
+    // an unrelated null deref further down.
+    throw new Error('Cannot prepare carpooling form: departure and destination stops are required');
+  }
   const variables = {
     codespace: formData.codespace,
     authority: formData.authority,
     input: {
       estimatedVehicleJourney: {
-        recordedAtTime: dayjs().toISOString(), //TODO: Generate iso time stamp
-        lineRef: `ENT:CarPooling:${uuidv4()}`, // TODO: Generate CodeSpaced "ENT:Line:<uuid>" UUID reference
+        recordedAtTime: dayjs().toISOString(),
+        lineRef: formData.lineRef ?? `${formData.codespace}:CarPooling:${uuidv4()}`,
         directionRef: '0',
-        estimatedVehicleJourneyCode: '', // TODO: Generate "<codespace>:ServiceJourney:<uuid>".
+        estimatedVehicleJourneyCode: formData.estimatedVehicleJourneyCode ?? '',
         extraJourney: true,
         vehicleMode: 'bus', // TODO: Needs to add car as vehicle mode
         routeRef: '', // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
@@ -50,11 +57,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               ],
               departureStopAssignment: {
                 expectedFlexibleArea: {
-                  polygon: {
-                    exterior: {
-                      posList: formData.departureFlexibleStop,
-                    },
-                  },
+                  circularArea: encodePointAsCircularArea(formData.departureFlexibleStop),
                 },
               },
             },
@@ -84,17 +87,13 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               ],
               departureStopAssignment: {
                 expectedFlexibleArea: {
-                  polygon: {
-                    exterior: {
-                      posList: formData.destinationFlexibleStop,
-                    },
-                  },
+                  circularArea: encodePointAsCircularArea(formData.destinationFlexibleStop),
                 },
               },
             },
           ],
         },
-        expiresAtEpochMs: formData.destinationDatetime.add(1, 'hour').valueOf(),
+        expiresAtEpochMs: formData.destinationDatetime.add(7, 'day').valueOf(),
         publicContact: {
           phoneNumber: null,
           url: formData.contactUrl,
