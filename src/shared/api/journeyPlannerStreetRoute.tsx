@@ -6,6 +6,25 @@ export interface StreetRouteResult {
   expectedEndTime: string;
   duration: number;
   distance: number;
+  fromName: string | null;
+  toName: string | null;
+}
+
+interface LegPlace {
+  name?: string | null;
+}
+
+interface Leg {
+  fromPlace?: LegPlace | null;
+  toPlace?: LegPlace | null;
+}
+
+interface TripPattern {
+  expectedStartTime: string;
+  expectedEndTime: string;
+  duration: number;
+  distance: number;
+  legs?: Leg[] | null;
 }
 
 const getStreetRoute =
@@ -27,6 +46,14 @@ const getStreetRoute =
             expectedEndTime
             duration
             distance
+            legs {
+              fromPlace {
+                name
+              }
+              toPlace {
+                name
+              }
+            }
           }
         }
       }
@@ -40,8 +67,22 @@ const getStreetRoute =
     };
 
     const result = await client.query({ query, variables });
-    const patterns = result.data?.trip?.tripPatterns;
-    return patterns && patterns.length > 0 ? patterns[0] : null;
+    const patterns: TripPattern[] | undefined = result.data?.trip?.tripPatterns;
+    if (!patterns || patterns.length === 0) return null;
+
+    const pattern = patterns[0];
+    const legs = pattern.legs ?? [];
+    const fromName = legs[0]?.fromPlace?.name ?? null;
+    const toName = legs[legs.length - 1]?.toPlace?.name ?? null;
+
+    return {
+      expectedStartTime: pattern.expectedStartTime,
+      expectedEndTime: pattern.expectedEndTime,
+      duration: pattern.duration,
+      distance: pattern.distance,
+      fromName,
+      toName,
+    };
   };
 
 export default getStreetRoute;

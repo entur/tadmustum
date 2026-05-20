@@ -185,8 +185,18 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       dayjs(departureMs).toISOString()
     )
       .then(result => {
-        if (cancelled || !result?.expectedEndTime) return;
-        setValue('destinationDatetime', dayjs(result.expectedEndTime));
+        if (cancelled || !result) return;
+        if (result.expectedEndTime) {
+          setValue('destinationDatetime', dayjs(result.expectedEndTime), {
+            shouldValidate: true,
+          });
+        }
+        if (result.fromName) {
+          setValue('departureStopName', result.fromName, { shouldValidate: true });
+        }
+        if (result.toName) {
+          setValue('destinationStopName', result.toName, { shouldValidate: true });
+        }
       })
       .catch(() => {
         // Ignore street-routing failures; user can still set arrival manually.
