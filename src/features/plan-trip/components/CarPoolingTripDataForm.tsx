@@ -428,6 +428,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           </IconButton>
         )}
       </Box>
+      <Divider />
       <Typography variant="h6" component="h2">
         Destination
       </Typography>
@@ -494,6 +495,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           </IconButton>
         )}
       </Box>
+
+      <Divider />
 
       <Controller
         name="driverDeviationBudget"
