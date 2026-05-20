@@ -86,20 +86,6 @@ export default function CarPoolingTrips() {
       ),
     },
     {
-      field: 'lineNameValue',
-      headerName: 'Line name',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.publishedLineName,
-    },
-    {
-      field: 'destinationDisplayValue',
-      headerName: 'Destination display',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].destinationDisplay,
-    },
-    {
       field: 'departureStopName',
       headerName: 'Departure stop name',
       flex: 1,
