@@ -81,7 +81,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       authority: '',
       operator: '',
       id: undefined,
-      lineName: '',
       destinationDisplay: '',
       departureStopName: '',
       departureFlexibleStop: null,
@@ -347,22 +346,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         />
         <FormHelperText>{errors.operator?.message}</FormHelperText>
       </FormControl>
-      <Controller
-        name="lineName"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              label="Line name"
-              error={!!errors.lineName}
-              helperText={errors.lineName?.message}
-              required
-              fullWidth
-            />
-          );
-        }}
-      />
       <Controller
         name="destinationDisplay"
         control={control}

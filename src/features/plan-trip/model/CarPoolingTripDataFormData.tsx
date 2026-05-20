@@ -8,7 +8,6 @@ export type CarPoolingTripDataFormData = {
   id?: string;
   lineRef?: string;
   estimatedVehicleJourneyCode?: string;
-  lineName: string;
   destinationDisplay: string;
   departureStopName: string;
   departureDatetime: Dayjs;

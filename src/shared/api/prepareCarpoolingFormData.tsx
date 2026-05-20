@@ -27,7 +27,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         extraJourney: true,
         vehicleMode: 'bus', // TODO: Needs to add car as vehicle mode
         routeRef: '', // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
-        publishedLineName: formData.lineName,
+        publishedLineName: `Carpooling trip ${formData.authority}`,
         groupOfLinesRef: '', // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
         externalLineRef: '', // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
         operatorRef: formData.operator,

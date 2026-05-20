@@ -34,7 +34,6 @@ export const carPoolingTripDataSchema = Yup.object({
   codespace: Yup.string().required().length(3),
   authority: Yup.string().required(),
   operator: Yup.string().required(),
-  lineName: Yup.string().min(3, 'Line name must be at least 3 characters').required(),
   destinationDisplay: Yup.string()
     .min(3, 'Destination display must be at least 3 characters')
     .required(),
