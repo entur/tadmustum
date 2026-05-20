@@ -44,7 +44,7 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
             dayjs(lastCall.aimedArrivalTime),
             'minutes'
           )
-        : null,
+        : 5,
     contactUrl: journey.estimatedVehicleJourney.publicContact?.url ?? null,
     totalCapacity: firstCall.expectedDepartureCapacities?.[0]?.totalCapacity ?? null,
     onboardCount: firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? null,

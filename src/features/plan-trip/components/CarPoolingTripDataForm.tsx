@@ -22,12 +22,14 @@ import { useEffect, useState } from 'react';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
 import { useOperators } from '../hooks/useOperators.tsx';
+import { useStreetRoute } from '../hooks/useStreetRoute.tsx';
 import type { Feature, Point, Position } from 'geojson';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
 import { carPoolingTripDataSchema } from '../model/carPoolingTripDataSchema.tsx';
 import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
+import dayjs from 'dayjs';
 
 export interface CarPoolingTripDataFormProps {
   initialState?: CarPoolingTripDataFormData;
@@ -84,10 +86,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       departureDestinationDisplay: 'Departure Display',
       destinationDestinationDisplay: 'Destination Display',
       departureStopName: '',
+      departureDatetime: dayjs(),
       departureFlexibleStop: null,
       destinationStopName: '',
       destinationFlexibleStop: null,
-      driverDeviationBudget: null,
+      driverDeviationBudget: 5,
       contactUrl: null,
       totalCapacity: null,
       onboardCount: null,
@@ -97,6 +100,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const authority = watch('authority');
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
+  const departureDatetime = watch('departureDatetime');
+  const streetRoute = useStreetRoute();
   const [error, setError] = useState<AppError | undefined>(undefined);
   const [errorDismissed, setErrorDismissed] = useState<boolean>(false);
   const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
@@ -155,6 +160,48 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     error,
     errors?.departureFlexibleStop?.message,
     errors?.destinationFlexibleStop?.message,
+  ]);
+
+  const departureLng = departureFlexibleStop?.[0];
+  const departureLat = departureFlexibleStop?.[1];
+  const destinationLng = destinationFlexibleStop?.[0];
+  const destinationLat = destinationFlexibleStop?.[1];
+  const departureMs = departureDatetime?.isValid() ? departureDatetime.valueOf() : undefined;
+
+  useEffect(() => {
+    if (
+      departureLng == null ||
+      departureLat == null ||
+      destinationLng == null ||
+      destinationLat == null ||
+      departureMs == null
+    ) {
+      return;
+    }
+    let cancelled = false;
+    streetRoute(
+      [departureLng, departureLat],
+      [destinationLng, destinationLat],
+      dayjs(departureMs).toISOString()
+    )
+      .then(result => {
+        if (cancelled || !result?.expectedEndTime) return;
+        setValue('destinationDatetime', dayjs(result.expectedEndTime));
+      })
+      .catch(() => {
+        // Ignore street-routing failures; user can still set arrival manually.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    departureLng,
+    departureLat,
+    destinationLng,
+    destinationLat,
+    departureMs,
+    streetRoute,
+    setValue,
   ]);
 
   // Helper function to determine stop type and get appropriate icon/color

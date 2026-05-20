@@ -68,12 +68,9 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               destinationDisplay: formData.destinationDestinationDisplay,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
               expectedArrivalTime: formData.destinationDatetime.toISOString(),
-              latestExpectedArrivalTime:
-                formData.driverDeviationBudget != null
-                  ? formData.destinationDatetime
-                      .add(formData.driverDeviationBudget, 'minutes')
-                      .toISOString()
-                  : undefined,
+              latestExpectedArrivalTime: formData.destinationDatetime
+                .add(formData.driverDeviationBudget, 'minutes')
+                .toISOString(),
               arrivalBoardingActivity: 'alighting',
               expectedDepartureOccupancy: [
                 {
