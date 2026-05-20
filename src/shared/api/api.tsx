@@ -11,6 +11,7 @@ import type { Config } from '../../contexts/ConfigContext.tsx';
 import type { AuthState } from 'react-oidc-context';
 import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
 import prepareBookingData, { type PassengerBookingData } from './prepareBookingData.tsx';
+import getStreetRoute from './journeyPlannerStreetRoute.tsx';
 import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
 import type { AppError } from '../error-message/AppError.tsx';
 import type { Extrajourney } from '../model/Extrajourney.tsx';
@@ -368,6 +369,7 @@ const api = (config: Config, auth?: AuthState) => {
         originalTrip,
         bookingData
       ),
+    getStreetRoute: getStreetRoute(config['journey-planner-api'] as string),
   };
 };
 

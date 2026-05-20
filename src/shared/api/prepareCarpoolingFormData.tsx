@@ -27,7 +27,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         extraJourney: true,
         vehicleMode: 'bus', // TODO: Needs to add car as vehicle mode
         routeRef: '', // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
-        publishedLineName: formData.lineName,
+        publishedLineName: `Carpooling trip ${formData.authority}`,
         groupOfLinesRef: '', // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
         externalLineRef: '', // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
         operatorRef: formData.operator,
@@ -41,7 +41,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               order: 1,
               stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.departureStopName,
-              destinationDisplay: formData.destinationDisplay,
+              destinationDisplay: formData.departureDestinationDisplay,
               aimedDepartureTime: formData.departureDatetime.toISOString(),
               expectedDepartureTime: formData.departureDatetime.toISOString(),
               departureBoardingActivity: 'boarding',
@@ -65,15 +65,12 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               order: 2,
               stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.destinationStopName,
-              destinationDisplay: formData.destinationDisplay,
+              destinationDisplay: formData.destinationDestinationDisplay,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
               expectedArrivalTime: formData.destinationDatetime.toISOString(),
-              latestExpectedArrivalTime:
-                formData.driverDeviationBudget != null
-                  ? formData.destinationDatetime
-                      .add(formData.driverDeviationBudget, 'minutes')
-                      .toISOString()
-                  : undefined,
+              latestExpectedArrivalTime: formData.destinationDatetime
+                .add(formData.driverDeviationBudget, 'minutes')
+                .toISOString(),
               arrivalBoardingActivity: 'alighting',
               expectedDepartureOccupancy: [
                 {

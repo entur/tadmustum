@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography } from '@mui/material';
+import { Box, Checkbox, FormControlLabel, Stack, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 
 const formatMinuteResolution = (value: string | null | undefined) =>
@@ -15,6 +15,8 @@ export default function CarPoolingTrips() {
   const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPastArrivals, setShowPastArrivals] = useState(false);
+  const [showExpired, setShowExpired] = useState(false);
 
   const queryExtraJourneys = useQueryExtraJourney();
 
@@ -30,6 +32,23 @@ export default function CarPoolingTrips() {
       });
   }, [queryExtraJourneys]);
 
+  const rows = useMemo(() => {
+    if (!plannedTrips) return plannedTrips;
+    const now = Date.now();
+    return plannedTrips.filter(trip => {
+      if (!showPastArrivals) {
+        const calls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
+        const latestExpected =
+          calls && calls.length > 0 ? calls[calls.length - 1].latestExpectedArrivalTime : null;
+        if (latestExpected && dayjs(latestExpected).valueOf() < now) return false;
+      }
+      if (!showExpired) {
+        if (trip.estimatedVehicleJourney.expiresAtEpochMs < now) return false;
+      }
+      return true;
+    });
+  }, [plannedTrips, showPastArrivals, showExpired]);
+
   if (loading) {
     return <div className="alert alert-info">Loading...</div>;
   }
@@ -37,8 +56,6 @@ export default function CarPoolingTrips() {
   if (error) {
     return <div className="alert alert-danger">{error}</div>;
   }
-
-  const rows = plannedTrips;
 
   const columns: GridColDef[] = [
     {
@@ -67,20 +84,6 @@ export default function CarPoolingTrips() {
           {params.row.id}
         </Box>
       ),
-    },
-    {
-      field: 'lineNameValue',
-      headerName: 'Line name',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.publishedLineName,
-    },
-    {
-      field: 'destinationDisplayValue',
-      headerName: 'Destination display',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].destinationDisplay,
     },
     {
       field: 'departureStopName',
@@ -168,7 +171,36 @@ export default function CarPoolingTrips() {
 
   return (
     <div>
-      <DataGrid rows={rows} columns={columns} />
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showPastArrivals}
+              onChange={event => setShowPastArrivals(event.target.checked)}
+            />
+          }
+          label="Show completed trips"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showExpired}
+              onChange={event => setShowExpired(event.target.checked)}
+            />
+          }
+          label="Show expired trips"
+        />
+        <Typography variant="body2" color="text.secondary">
+          Showing {rows?.length ?? 0} of {plannedTrips?.length ?? 0} trips
+        </Typography>
+      </Stack>
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        initialState={{
+          sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
+        }}
+      />
     </div>
   );
 }

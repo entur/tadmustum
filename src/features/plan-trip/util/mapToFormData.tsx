@@ -22,8 +22,8 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,
     estimatedVehicleJourneyCode: journey.estimatedVehicleJourney.estimatedVehicleJourneyCode,
-    lineName: journey.estimatedVehicleJourney.publishedLineName,
-    destinationDisplay: firstCall.destinationDisplay,
+    departureDestinationDisplay: firstCall.destinationDisplay,
+    destinationDestinationDisplay: lastCall.destinationDisplay,
     departureStopName: firstCall.stopPointName,
     departureDatetime: dayjs(firstCall.aimedDepartureTime),
     departureFlexibleStop: flexAreaToPosition(
@@ -44,7 +44,7 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
             dayjs(lastCall.aimedArrivalTime),
             'minutes'
           )
-        : null,
+        : 5,
     contactUrl: journey.estimatedVehicleJourney.publicContact?.url ?? null,
     totalCapacity: firstCall.expectedDepartureCapacities?.[0]?.totalCapacity ?? null,
     onboardCount: firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? null,
