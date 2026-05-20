@@ -81,7 +81,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       authority: '',
       operator: '',
       id: undefined,
-      destinationDisplay: '',
+      departureDestinationDisplay: 'Departure Display',
+      destinationDestinationDisplay: 'Destination Display',
       departureStopName: '',
       departureFlexibleStop: null,
       destinationStopName: '',
@@ -346,25 +347,25 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         />
         <FormHelperText>{errors.operator?.message}</FormHelperText>
       </FormControl>
+      <Typography variant="h6" component="h2">
+        Departure
+      </Typography>
       <Controller
-        name="destinationDisplay"
+        name="departureDestinationDisplay"
         control={control}
         render={({ field }) => {
           return (
             <TextField
               {...field}
               label="Destination display"
-              error={!!errors.destinationDisplay}
-              helperText={errors.destinationDisplay?.message}
+              error={!!errors.departureDestinationDisplay}
+              helperText={errors.departureDestinationDisplay?.message}
               required
               fullWidth
             />
           );
         }}
       />
-      <Typography variant="h6" component="h2">
-        Departure
-      </Typography>
       <Controller
         name="departureStopName"
         control={control}
@@ -432,6 +433,22 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       <Typography variant="h6" component="h2">
         Destination
       </Typography>
+      <Controller
+        name="destinationDestinationDisplay"
+        control={control}
+        render={({ field }) => {
+          return (
+            <TextField
+              {...field}
+              label="Destination display"
+              error={!!errors.destinationDestinationDisplay}
+              helperText={errors.destinationDestinationDisplay?.message}
+              required
+              fullWidth
+            />
+          );
+        }}
+      />
       <Controller
         name="destinationStopName"
         control={control}
