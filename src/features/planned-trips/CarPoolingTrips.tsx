@@ -43,8 +43,7 @@ export default function CarPoolingTrips() {
         if (latestExpected && dayjs(latestExpected).valueOf() < now) return false;
       }
       if (!showExpired) {
-        const expiresAt = trip.estimatedVehicleJourney.expiresAtEpochMs;
-        if (expiresAt && expiresAt < now) return false;
+        if (trip.estimatedVehicleJourney.expiresAtEpochMs < now) return false;
       }
       return true;
     });
@@ -186,7 +185,7 @@ export default function CarPoolingTrips() {
 
   return (
     <div>
-      <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
         <FormControlLabel
           control={
             <Checkbox
@@ -205,6 +204,9 @@ export default function CarPoolingTrips() {
           }
           label="Show expired trips"
         />
+        <Typography variant="body2" color="text.secondary">
+          Showing {rows?.length ?? 0} of {plannedTrips?.length ?? 0} trips
+        </Typography>
       </Stack>
       <DataGrid rows={rows} columns={columns} />
     </div>
