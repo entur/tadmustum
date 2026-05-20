@@ -208,7 +208,13 @@ export default function CarPoolingTrips() {
           Showing {rows?.length ?? 0} of {plannedTrips?.length ?? 0} trips
         </Typography>
       </Stack>
-      <DataGrid rows={rows} columns={columns} />
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        initialState={{
+          sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
+        }}
+      />
     </div>
   );
 }
