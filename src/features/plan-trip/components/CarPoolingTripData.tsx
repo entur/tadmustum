@@ -11,14 +11,14 @@ import { type AlertProps, Box, type SnackbarCloseReason } from '@mui/material';
 import type { Feature } from 'geojson';
 import CarPoolingTripDataForm from './CarPoolingTripDataForm.tsx';
 import { useMutateExtrajourney } from '../hooks/useMutateExtrajourney.tsx';
+import { useStopsController } from '../hooks/useStopsController.tsx';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
-import type { MapModes } from '../../../shared/components/EditableMap.tsx';
 import { useQueryExtraJourney } from '../hooks/useQueryOneExtraJourney.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
-import dayjs from 'dayjs';
-import loadFeatureUtil from '../util/loadFeatureUtil.tsx';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
+import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
+import mapToFormData from '../util/mapToFormData.tsx';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -37,25 +37,27 @@ export interface CarPoolingTripDataProps {
   onZoomToFeature: (id: string) => void;
   onZoomToAllFeatures: () => void;
   onRemoveFlexibleStop: (id: string) => void;
-  onStopCreatedCallback: () => Feature | null | undefined;
   loadedFlexibleStop: (stops: Feature[]) => void;
+  onDepartureStopChange: (id: string | null) => void;
+  onArrivalStopChange: (id: string | null) => void;
 }
 
 export type CarPoolingTripDataHandle = {
-  handleEditableMapModeChange: (args: { prevMode: MapModes; mode: MapModes }) => void;
+  onStopCreated: (feature: Feature) => void;
+  onDrawingStateChange: (isDrawing: boolean) => void;
 };
 
 const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDataProps>(
   (stops, ref) => {
-    const [drawingStopsAllowed, setDrawingStopsAllowed] = useState<boolean>(true);
     const {
       onAddFlexibleStop,
       onRemoveFlexibleStop,
-      onStopCreatedCallback,
       onZoomToFeature,
       onZoomToAllFeatures,
       tripId,
       loadedFlexibleStop,
+      onDepartureStopChange,
+      onArrivalStopChange,
     } = stops;
     const [snackbar, setSnackbar] = useState<SnackbarState>({
       open: false,
@@ -72,15 +74,32 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       if (reason === 'clickaway') return;
       setSnackbar(prev => ({ ...prev, open: false }));
     };
-    const [departureStop, setDepartureStop] = useState<Feature | null>(null);
-    const [arrivalStop, setArrivalStop] = useState<Feature | null>(null);
-    const [currentStop, setCurrentStop] = useState<null | 'departure' | 'arrival'>(null);
     const [currentTripId, setCurrentTripId] = useState<string | undefined>(undefined);
     const [initialState, setInitialState] = useState<CarPoolingTripDataFormData | undefined>(
       undefined
     );
     const [tripData, setTripData] = useState<Extrajourney | null>(null);
     const initializing = useRef<boolean>(false);
+
+    const stopsController = useStopsController({
+      onAddFlexibleStop,
+      onRemoveFlexibleStop,
+      onDepartureStopChange,
+      onArrivalStopChange,
+    });
+    const {
+      departureStop,
+      arrivalStop,
+      drawingStopsAllowed,
+      startAddDepartureStop,
+      startAddArrivalStop,
+      removeDepartureStop,
+      removeArrivalStop,
+      resetStops,
+      initializeStops,
+      onStopCreated,
+      onDrawingStateChange,
+    } = stopsController;
 
     const mutateExtrajourney = useMutateExtrajourney();
     const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
@@ -100,82 +119,9 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       [onZoomToFeature]
     );
 
-    const handleResetCallback = () => {
-      removeDepartureStop();
-      removeArrivalStop();
-    };
-    const removeDepartureStop = () => {
-      if (departureStop) {
-        onRemoveFlexibleStop(departureStop?.id as string);
-      }
-      setDepartureStop(null);
-    };
-    const removeArrivalStop = () => {
-      if (arrivalStop) {
-        onRemoveFlexibleStop(arrivalStop?.id as string);
-      }
-      setArrivalStop(null);
-    };
-    const startAddDepartureStop = () => {
-      setCurrentStop('departure');
-      onAddFlexibleStop();
-    };
-    const startAddArrivalStop = () => {
-      setCurrentStop('arrival');
-      onAddFlexibleStop();
-    };
     const queryOneExtraJourney = useQueryExtraJourney();
-    const handleEditableMapModeChange = useCallback(
-      (args: { prevMode: MapModes; mode: MapModes }) => {
-        if (args.prevMode == 'drawing' && args.mode != 'drawing') {
-          const stopCreatedCallback = onStopCreatedCallback();
-
-          if (currentStop == 'departure') {
-            setDepartureStop(stopCreatedCallback ? stopCreatedCallback : null);
-          } else if (currentStop == 'arrival') {
-            setArrivalStop(stopCreatedCallback ? stopCreatedCallback : null);
-          }
-          setCurrentStop(null);
-        }
-
-        setDrawingStopsAllowed(args.mode === 'viewing');
-      },
-      [currentStop, onStopCreatedCallback]
-    );
 
     useEffect(() => {
-      const mapToFormdData = (journey: Extrajourney): CarPoolingTripDataFormData => {
-        const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
-        const firstCall = calls[0];
-        const lastCall = calls[calls.length - 1];
-
-        return {
-          codespace: 'ENT',
-          authority: 'ENT:Authority:ENT',
-          operator: journey.estimatedVehicleJourney.operatorRef,
-          id: journey.id,
-          lineName: journey.estimatedVehicleJourney.publishedLineName,
-          destinationDisplay: firstCall.destinationDisplay,
-          departureStopName: firstCall.stopPointName,
-          departureDatetime: dayjs(firstCall.aimedDepartureTime),
-          departureFlexibleStop:
-            firstCall.departureStopAssignment.expectedFlexibleArea.polygon.exterior.posList,
-          destinationStopName: lastCall.stopPointName,
-          destinationDatetime: dayjs(lastCall.aimedArrivalTime),
-          destinationFlexibleStop:
-            lastCall.departureStopAssignment.expectedFlexibleArea.polygon.exterior.posList,
-          driverDeviationBudget:
-            lastCall.latestExpectedArrivalTime && lastCall.aimedArrivalTime
-              ? dayjs(lastCall.latestExpectedArrivalTime).diff(
-                  dayjs(lastCall.aimedArrivalTime),
-                  'minutes'
-                )
-              : null,
-          contactUrl: journey.estimatedVehicleJourney.publicContact?.url ?? null,
-          totalCapacity: firstCall.expectedDepartureCapacities?.[0]?.totalCapacity ?? null,
-          onboardCount: firstCall.expectedDepartureOccupancy?.[0]?.onboardCount ?? null,
-        };
-      };
       const loadInitialState = (id?: string) => {
         if (initializing.current || !id) return;
         initializing.current = true;
@@ -183,7 +129,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
           .then(result => {
             if (result.data?.extraJourney) {
               const journey = result.data.extraJourney as Extrajourney;
-              const state = mapToFormdData(journey);
+              const state = mapToFormData(journey);
               setInitialState(state);
               setTripData(journey);
 
@@ -193,17 +139,14 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
 
               calls.forEach(call => {
                 const flexArea = call.departureStopAssignment?.expectedFlexibleArea;
-                if (flexArea?.polygon?.exterior?.posList) {
-                  const feature = loadFeatureUtil({
-                    posList: flexArea.polygon.exterior.posList,
-                  });
+                const feature = loadFeatureFromFlexArea(flexArea);
+                if (feature !== null) {
                   allFeatures.push(feature);
                 }
               });
 
               if (allFeatures.length >= 2) {
-                setDepartureStop(allFeatures[0]);
-                setArrivalStop(allFeatures[allFeatures.length - 1]);
+                initializeStops(allFeatures[0], allFeatures[allFeatures.length - 1]);
 
                 // Load all features to the map
                 loadedFlexibleStop(allFeatures);
@@ -221,11 +164,23 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       };
       setCurrentTripId(tripId);
       loadInitialState(tripId);
-    }, [handleZoomToFeature, loadedFlexibleStop, queryOneExtraJourney, tripId]);
+    }, [
+      handleZoomToFeature,
+      initializeStops,
+      loadedFlexibleStop,
+      onZoomToAllFeatures,
+      queryOneExtraJourney,
+      tripId,
+    ]);
 
-    useImperativeHandle(ref, () => ({
-      handleEditableMapModeChange,
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        onStopCreated,
+        onDrawingStateChange,
+      }),
+      [onStopCreated, onDrawingStateChange]
+    );
 
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
@@ -235,8 +190,9 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
           onRemoveDepartureStopClick={removeDepartureStop}
           onAddDestinationtopClick={startAddArrivalStop}
           onRemoveDestinationStopClick={removeArrivalStop}
-          onResetCallback={handleResetCallback}
+          onResetCallback={resetStops}
           onSubmitCallback={handleSubmitCallback}
+          onViewTripCallback={onZoomToAllFeatures}
           onZoomToFeature={handleZoomToFeature}
           drawingStopsAllowed={drawingStopsAllowed}
           mapDepartureFlexibleStop={departureStop}

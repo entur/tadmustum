@@ -1,0 +1,16 @@
+{
+  "carpool-messages-api": "http://localhost:8082/graphql",
+  "journey-planner-api": "http://localhost:8080/otp/routers/default/transmodel/index/graphql",
+  "applicationEnv": "development",
+  "claimsNamespace": "https://ror.entur.io/role_assignments",
+  "preferredNameNamespace": "https://ror.entur.io/preferred_name",
+  "oidcConfig": {
+    "authority": "https://partner.dev.entur.org",
+    "client_id": "NmNuuhKo3mbi3FatxNoFUnnQKM2IqWdX",
+    "extraQueryParams": {
+      "audience": "https://api.dev.entur.io"
+    }
+  },
+  "showErrorDetails": true,
+  "themeFilePath": "/theme-dev.json"
+}

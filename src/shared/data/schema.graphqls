@@ -386,25 +386,30 @@ input DepartureStopAssignmentInput {
 }
 
 type ExpectedFlexibleArea {
+  circularArea: CircularArea
   polygon: Polygon
-}
-
-input ExpectedFlexibleAreaInput {
-  polygon: PolygonInput
 }
 
 type Polygon {
   exterior: LinearRing
 }
 
-input PolygonInput {
-  exterior: LinearRingInput
-}
-
 type LinearRing {
   posList: String
 }
 
-input LinearRingInput {
-  posList: String
+input ExpectedFlexibleAreaInput {
+  circularArea: CircularAreaInput
+}
+
+type CircularArea {
+  radius: Int
+  longitude: Float
+  latitude: Float
+}
+
+input CircularAreaInput {
+  radius: Int
+  longitude: Float
+  latitude: Float
 }

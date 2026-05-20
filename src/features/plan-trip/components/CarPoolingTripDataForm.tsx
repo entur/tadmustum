@@ -1,9 +1,7 @@
-import * as dayjs from 'dayjs';
-import { Dayjs } from 'dayjs';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, type Resolver, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as Yup from 'yup';
 import {
+  Alert,
   Box,
   Button,
   FormControl,
@@ -11,6 +9,7 @@ import {
   IconButton,
   MenuItem,
   Select,
+  Snackbar,
   TextField,
   Divider,
   Stack,
@@ -21,90 +20,14 @@ import { LocationOn, PersonPin, Hail, SensorsOff } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { useOrganizations } from '../../../shared/hooks/useOrganizations.tsx';
+import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
 import { useOperators } from '../hooks/useOperators.tsx';
-import type { Feature } from 'geojson';
-import featureToPoslist from '../../../shared/util/featureToPoslist.tsx';
+import type { Feature, Point, Position } from 'geojson';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
-import { ErrorMessage } from '../../../shared/error-message/ErrorMessage.tsx';
+import { carPoolingTripDataSchema } from '../model/carPoolingTripDataSchema.tsx';
+import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
-
-declare module 'yup' {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface MixedSchema<TType, TContext, TDefault, TFlags> {
-    dayjs(message?: string): this;
-  }
-}
-
-Yup.addMethod(Yup.mixed, 'dayjs', function (message = 'Invalid date') {
-  return this.test('dayjs', message, value => {
-    return !value || (value as Dayjs).isValid();
-  });
-});
-
-const schema = Yup.object({
-  codespace: Yup.string().required().length(3),
-  authority: Yup.string().required(),
-  operator: Yup.string().required(),
-  lineName: Yup.string().min(3, 'Line name must be at least 3 characters').required(),
-  destinationDisplay: Yup.string()
-    .min(3, 'Destination display must be at least 3 charaters')
-    .required(),
-  departureStopName: Yup.string()
-    .min(3, 'Departure stop name must be at least 3 charaters')
-    .required(),
-
-  departureDatetime: Yup.mixed<Dayjs>()
-    .nullable()
-    .required()
-    .dayjs('Not a valid departure date')
-    .test(
-      'min-date',
-      'Date must be in the future',
-      value => value === null || dayjs.isDayjs(value)
-    ),
-  departureFlexibleStop: Yup.string().required(),
-  destinationStopName: Yup.string()
-    .min(3, 'Departure stop name must be at least 3 charaters')
-    .required(),
-  destinationDatetime: Yup.mixed<Dayjs>()
-    .nullable()
-    .required()
-    .dayjs('Not a valid arrival date')
-    .test(
-      'min-date',
-      'Date must be in the future',
-      value => value === null || dayjs.isDayjs(value)
-    ),
-  destinationFlexibleStop: Yup.string().required(),
-  driverDeviationBudget: Yup.number()
-    .typeError('Must be a number')
-    .integer('Must be an integer')
-    .min(0, 'Must be zero or a positive integer')
-    .nullable()
-    .defined()
-    .transform((value, original) => (original === '' ? null : value)),
-  contactUrl: Yup.string()
-    .url('Must be a valid URL')
-    .nullable()
-    .defined()
-    .transform((value, original) => (original === '' ? null : value)),
-  totalCapacity: Yup.number()
-    .typeError('Must be a number')
-    .integer('Must be an integer')
-    .min(0, 'Must be zero or a positive integer')
-    .nullable()
-    .defined()
-    .transform((value, original) => (original === '' ? null : value)),
-  onboardCount: Yup.number()
-    .typeError('Must be a number')
-    .integer('Must be an integer')
-    .min(0, 'Must be zero or a positive integer')
-    .nullable()
-    .defined()
-    .transform((value, original) => (original === '' ? null : value)),
-});
 
 export interface CarPoolingTripDataFormProps {
   initialState?: CarPoolingTripDataFormData;
@@ -114,6 +37,7 @@ export interface CarPoolingTripDataFormProps {
   onRemoveDestinationStopClick: () => void;
   onResetCallback: () => void;
   onSubmitCallback: (formData: CarPoolingTripDataFormData) => void;
+  onViewTripCallback: () => void;
   onZoomToFeature: (id: string) => void;
   mapDepartureFlexibleStop: Feature | null;
   mapDestinationFlexibleStop: Feature | null;
@@ -130,13 +54,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     onRemoveDestinationStopClick,
     onResetCallback,
     onSubmitCallback,
+    onViewTripCallback,
     onZoomToFeature,
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     drawingStopsAllowed,
     tripData,
   } = props;
-  const { authorities } = useOrganizations();
+  const { authorities } = useAuthorities();
   const operators = useOperators();
 
   const {
@@ -148,29 +73,32 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     reset,
     clearErrors,
   } = useForm<CarPoolingTripDataFormData>({
-    resolver: yupResolver(schema),
+    // Cast: schema requires non-null Position; form models the pre-validation null state.
+    resolver: yupResolver(carPoolingTripDataSchema) as Resolver<CarPoolingTripDataFormData>,
     mode: 'onBlur', // or "onChange", depending on UX preference
     defaultValues: {
       codespace: 'ENT', // TODO fix hardcoding
       authority: '',
       operator: '',
+      id: undefined,
       lineName: '',
       destinationDisplay: '',
       departureStopName: '',
-      departureFlexibleStop: '',
+      departureFlexibleStop: null,
       destinationStopName: '',
-      destinationFlexibleStop: '',
-      driverDeviationBudget: 8,
+      destinationFlexibleStop: null,
+      driverDeviationBudget: null,
       contactUrl: null,
-      totalCapacity: 5,
-      onboardCount: 1,
+      totalCapacity: null,
+      onboardCount: null,
     },
   });
 
   const authority = watch('authority');
-  const departureFlexibleStop = watch('departureFlexibleStop');
-  const destinationFlexibleStop = watch('destinationFlexibleStop');
+  const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
+  const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const [error, setError] = useState<AppError | undefined>(undefined);
+  const [errorDismissed, setErrorDismissed] = useState<boolean>(false);
   const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
 
   useEffect(() => {
@@ -179,29 +107,34 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     }
 
     if (mapDepartureFlexibleStop) {
-      setValue('departureFlexibleStop', featureToPoslist(mapDepartureFlexibleStop));
+      setValue('departureFlexibleStop', (mapDepartureFlexibleStop.geometry as Point).coordinates);
     } else {
-      setValue('departureFlexibleStop', '');
+      setValue('departureFlexibleStop', null);
     }
 
     if (mapDestinationFlexibleStop) {
-      setValue('destinationFlexibleStop', featureToPoslist(mapDestinationFlexibleStop));
+      setValue(
+        'destinationFlexibleStop',
+        (mapDestinationFlexibleStop.geometry as Point).coordinates
+      );
     } else {
-      setValue('destinationFlexibleStop', '');
+      setValue('destinationFlexibleStop', null);
     }
 
-    let msg = '';
+    const messages: string[] = [];
     if (errors?.departureFlexibleStop?.message) {
-      msg = msg + errors.departureFlexibleStop.message;
+      messages.push(errors.departureFlexibleStop.message);
     }
     if (errors?.destinationFlexibleStop?.message) {
-      msg = msg + errors.destinationFlexibleStop.message;
+      messages.push(errors.destinationFlexibleStop.message);
     }
+    const msg = messages.join('\n');
 
     if (!error && msg.length > 0) {
       setError({ message: msg, code: 'VALIDATION_ERROR' });
     } else if (error?.code === 'VALIDATION_ERROR' && msg === '') {
       setError(undefined);
+      setErrorDismissed(false);
     }
 
     if (initialState && !initialStateSet) {
@@ -299,11 +232,22 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     <Box
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}
       component="form"
-      onSubmit={handleSubmit(onSubmitCallback)}
+      onSubmit={handleSubmit(onSubmitCallback, () => setErrorDismissed(false))}
       noValidate
       autoComplete="off"
     >
-      <ErrorMessage error={error} />
+      <Snackbar
+        open={!!error && !errorDismissed}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErrorDismissed(true)}
+          sx={{ width: '100%', whiteSpace: 'pre-line' }}
+        >
+          {error?.code ? `${humanizeCode(error.code)}: ${error.message}` : error?.message}
+        </Alert>
+      </Snackbar>
       <Typography variant="h5" component="h1">
         Trip data
       </Typography>
@@ -365,6 +309,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                 <MenuItem value="" disabled>
                   <em>Authority</em>
                 </MenuItem>
+                {field.value && !authorities.some(a => a.id === field.value) && (
+                  <MenuItem value={field.value}>{field.value}</MenuItem>
+                )}
                 {authorities.map(authority => (
                   <MenuItem key={authority.id} value={authority.id}>
                     {authority.name}
@@ -386,6 +333,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                 <MenuItem value="" disabled>
                   <em>Operator</em>
                 </MenuItem>
+                {field.value && !operators.some(o => o.id === field.value) && (
+                  <MenuItem value={field.value}>{field.value}</MenuItem>
+                )}
                 {operators.map(operator => (
                   <MenuItem key={operator.id} value={operator.id}>
                     {operator.name}
@@ -569,6 +519,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           return (
             <TextField
               {...field}
+              value={field.value ?? ''}
               label="Driver deviation budget in minutes"
               error={!!errors.driverDeviationBudget}
               helperText={errors.driverDeviationBudget?.message}
@@ -642,6 +593,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           }}
         >
           Reset
+        </Button>
+        <Button variant="outlined" onClick={onViewTripCallback}>
+          View
         </Button>
       </Box>
     </Box>
