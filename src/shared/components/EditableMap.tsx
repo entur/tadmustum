@@ -103,13 +103,23 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       });
     }, []);
 
+    // Cancel paths (Escape, trash control) exit draw_point without firing
+    // draw.create, so without this the drawing flag stays stuck true.
+    const onMapboxDrawModeChange = useCallback((e: { mode: string }) => {
+      if (isDrawingRef.current && e.mode !== 'draw_point') {
+        isDrawingRef.current = false;
+        callbacksRef.current.onDrawingStateChange?.(false);
+      }
+    }, []);
+
     const mapBoxDrawDefaultOnAdd = useCallback(
       (map: MapRef | null): void => {
         map?.on('draw.create', onMapboxDrawUpdate);
         map?.on('draw.update', onMapboxDrawUpdate);
         map?.on('draw.delete', onMapboxDrawDelete);
+        map?.on('draw.modechange', onMapboxDrawModeChange);
       },
-      [onMapboxDrawDelete, onMapboxDrawUpdate]
+      [onMapboxDrawDelete, onMapboxDrawUpdate, onMapboxDrawModeChange]
     );
     // const mapBoxDrawDefaultOnRemove = useCallback(
     //   (map: MapRef | null): void => {
