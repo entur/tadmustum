@@ -29,6 +29,7 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
     departureFlexibleStop: flexAreaToPosition(
       firstCall.departureStopAssignment?.expectedFlexibleArea
     ),
+    departureCancellation: firstCall.cancellation ?? false,
     destinationStopName: lastCall.stopPointName,
     destinationDatetime: dayjs(lastCall.aimedArrivalTime),
     // SIRI-ET handbook: "either the ArrivalStopAssignment or
@@ -38,6 +39,9 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
     destinationFlexibleStop: flexAreaToPosition(
       lastCall.departureStopAssignment?.expectedFlexibleArea
     ),
+    destinationCancellation: lastCall.cancellation ?? false,
+    intermediateCalls: calls.slice(1, -1),
+    tripCancellation: journey.estimatedVehicleJourney.cancellation ?? false,
     driverDeviationBudget:
       lastCall.latestExpectedArrivalTime && lastCall.aimedArrivalTime
         ? dayjs(lastCall.latestExpectedArrivalTime).diff(

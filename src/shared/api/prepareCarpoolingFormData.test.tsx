@@ -18,9 +18,13 @@ const baseForm = (
   departureStopName: 'Oslo S',
   departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
   departureFlexibleStop: [10.7522, 59.9139],
+  departureCancellation: false,
   destinationStopName: 'Bergen stasjon',
   destinationDatetime: dayjs('2026-06-01T15:00:00.000Z'),
   destinationFlexibleStop: [5.3221, 60.3913],
+  destinationCancellation: false,
+  intermediateCalls: [],
+  tripCancellation: false,
   driverDeviationBudget: 30,
   contactUrl: 'https://example.com/driver/1',
   totalCapacity: 4,
@@ -119,5 +123,110 @@ describe('prepareCarpoolingFormData', () => {
     expect(() => prepareCarpoolingFormData(baseForm({ destinationFlexibleStop: null }))).toThrow(
       /departure and destination stops are required/
     );
+  });
+
+  it('defaults departure and destination cancellation to false', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls[0].cancellation).toBe(false);
+    expect(calls[1].cancellation).toBe(false);
+  });
+
+  it('propagates departureCancellation to the first estimated call', () => {
+    const result = prepareCarpoolingFormData(baseForm({ departureCancellation: true }));
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls[0].cancellation).toBe(true);
+    expect(calls[1].cancellation).toBe(false);
+  });
+
+  it('propagates destinationCancellation to the last estimated call', () => {
+    const result = prepareCarpoolingFormData(baseForm({ destinationCancellation: true }));
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls[0].cancellation).toBe(false);
+    expect(calls[1].cancellation).toBe(true);
+  });
+
+  it('defaults trip-level cancellation to false', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    expect(result.input.estimatedVehicleJourney.cancellation).toBe(false);
+  });
+
+  it('propagates tripCancellation to estimatedVehicleJourney.cancellation', () => {
+    const result = prepareCarpoolingFormData(baseForm({ tripCancellation: true }));
+
+    expect(result.input.estimatedVehicleJourney.cancellation).toBe(true);
+  });
+
+  it('keeps trip-level and stop-level cancellations independent', () => {
+    const result = prepareCarpoolingFormData(
+      baseForm({
+        tripCancellation: true,
+        departureCancellation: false,
+        destinationCancellation: false,
+      })
+    );
+
+    expect(result.input.estimatedVehicleJourney.cancellation).toBe(true);
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls[0].cancellation).toBe(false);
+    expect(calls[1].cancellation).toBe(false);
+  });
+
+  it('preserves stop cancellations even when the trip itself is not cancelled', () => {
+    const result = prepareCarpoolingFormData(
+      baseForm({
+        tripCancellation: false,
+        departureCancellation: true,
+        destinationCancellation: true,
+      })
+    );
+
+    expect(result.input.estimatedVehicleJourney.cancellation).toBe(false);
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls[0].cancellation).toBe(true);
+    expect(calls[1].cancellation).toBe(true);
+  });
+
+  it('inserts intermediate calls between departure and destination and renumbers order', () => {
+    const result = prepareCarpoolingFormData(
+      baseForm({
+        intermediateCalls: [
+          {
+            order: 99, // overridden by renumbering
+            stopPointRef: 'ENT:Pickup:1',
+            stopPointName: 'Pickup A',
+            destinationDisplay: 'Bergen',
+            aimedDepartureTime: '2026-06-01T10:00:00.000Z',
+            departureStopAssignment: {
+              expectedFlexibleArea: { circularArea: { longitude: 11, latitude: 60, radius: 1 } },
+            },
+          },
+          {
+            order: 99,
+            stopPointRef: 'ENT:Dropoff:1',
+            stopPointName: 'Dropoff B',
+            cancellation: true,
+            destinationDisplay: 'Bergen',
+            aimedArrivalTime: '2026-06-01T12:00:00.000Z',
+            departureStopAssignment: {
+              expectedFlexibleArea: { circularArea: { longitude: 11, latitude: 60, radius: 1 } },
+            },
+          },
+        ],
+      })
+    );
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls).toHaveLength(4);
+    expect(calls.map(c => c.order)).toEqual([1, 2, 3, 4]);
+    expect(calls[0].stopPointName).toBe('Oslo S');
+    expect(calls[1].stopPointName).toBe('Pickup A');
+    expect(calls[2].stopPointName).toBe('Dropoff B');
+    expect(calls[2].cancellation).toBe(true);
+    expect(calls[3].stopPointName).toBe('Bergen stasjon');
   });
 });

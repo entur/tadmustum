@@ -4,7 +4,7 @@ import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
-import { Box, Checkbox, FormControlLabel, Stack, Typography } from '@mui/material';
+import { Box, Checkbox, Chip, FormControlLabel, Stack, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 
 const formatMinuteResolution = (value: string | null | undefined) =>
@@ -84,6 +84,28 @@ export default function CarPoolingTrips() {
           {params.row.id}
         </Box>
       ),
+    },
+    {
+      field: 'cancellation',
+      headerName: 'Status',
+      width: 150,
+      valueGetter: (_value: string, row: Extrajourney) => {
+        if (row.estimatedVehicleJourney.cancellation) return 'cancelled';
+        const calls = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+        const cancelledCalls = calls.filter(c => c.cancellation).length;
+        if (cancelledCalls > 0 && cancelledCalls === calls.length) return 'cancelled';
+        if (cancelledCalls > 0) return 'partially_cancelled';
+        return 'active';
+      },
+      renderCell: params => {
+        if (params.value === 'cancelled') {
+          return <Chip label="Cancelled" size="small" color="error" />;
+        }
+        if (params.value === 'partially_cancelled') {
+          return <Chip label="Partially cancelled" size="small" color="warning" />;
+        }
+        return null;
+      },
     },
     {
       field: 'departureStopName',
@@ -199,6 +221,19 @@ export default function CarPoolingTrips() {
         columns={columns}
         initialState={{
           sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
+        }}
+        getRowClassName={params => {
+          const journey = (params.row as Extrajourney).estimatedVehicleJourney;
+          if (journey?.cancellation) return 'row-cancelled';
+          const calls = journey?.estimatedCalls?.estimatedCall ?? [];
+          if (calls.length > 0 && calls.every(c => c.cancellation)) return 'row-cancelled';
+          return '';
+        }}
+        sx={{
+          '& .row-cancelled': {
+            textDecoration: 'line-through',
+            color: 'text.disabled',
+          },
         }}
       />
     </div>

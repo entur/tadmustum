@@ -45,11 +45,15 @@ export const carPoolingTripDataSchema = Yup.object({
     .required(),
   departureDatetime: dateSchema.required(),
   departureFlexibleStop: positionSchema.required('Please place the departure stop on the map.'),
+  departureCancellation: Yup.boolean().required(),
   destinationStopName: Yup.string()
     .min(3, 'Destination stop name must be at least 3 characters')
     .required(),
   destinationDatetime: dateSchema.required(),
   destinationFlexibleStop: positionSchema.required('Please place the destination stop on the map.'),
+  destinationCancellation: Yup.boolean().required(),
+  intermediateCalls: Yup.array().required(),
+  tripCancellation: Yup.boolean().required(),
   driverDeviationBudget: Yup.number()
     .typeError('Must be a number')
     .integer('Must be an integer')

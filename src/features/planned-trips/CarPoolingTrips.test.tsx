@@ -102,6 +102,109 @@ describe('CarPoolingTrips', () => {
     expect(screen.getByText(/Showing 2 of 2 trips/)).toBeInTheDocument();
   });
 
+  it('shows a Cancelled chip on rows whose trip is cancelled', async () => {
+    const cancelled = trip({
+      id: 'ENT:ServiceJourney:cancelled',
+      estimatedVehicleJourney: {
+        cancellation: true,
+        recordedAtTime: '2026-05-20T09:00:00.000Z',
+        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
+        estimatedCalls: {
+          estimatedCall: [
+            {
+              order: 1,
+              stopPointName: 'Cancelled departure',
+              aimedDepartureTime: '2026-06-01T08:00:00.000Z',
+            },
+            {
+              order: 2,
+              stopPointName: 'Cancelled arrival',
+              aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+            },
+          ],
+        },
+      },
+    } as Extrajourney);
+
+    queryExtraJourneys.mockResolvedValue({ data: [trip(), cancelled] });
+
+    renderInRouter();
+
+    const cancelledRow = await screen.findByRole('row', { name: /Cancelled departure/ });
+    expect(within(cancelledRow).getByText('Cancelled')).toBeInTheDocument();
+
+    const activeRow = await screen.findByRole('row', { name: /Oslo S/ });
+    expect(within(activeRow).queryByText('Cancelled')).not.toBeInTheDocument();
+  });
+
+  it('shows a Partially cancelled chip when some but not all calls are cancelled', async () => {
+    const partial = trip({
+      id: 'ENT:ServiceJourney:partial',
+      estimatedVehicleJourney: {
+        cancellation: false,
+        recordedAtTime: '2026-05-20T09:00:00.000Z',
+        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
+        estimatedCalls: {
+          estimatedCall: [
+            {
+              order: 1,
+              stopPointName: 'Partial departure',
+              aimedDepartureTime: '2026-06-01T08:00:00.000Z',
+              cancellation: true,
+            },
+            {
+              order: 2,
+              stopPointName: 'Partial arrival',
+              aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+            },
+          ],
+        },
+      },
+    } as Extrajourney);
+
+    queryExtraJourneys.mockResolvedValue({ data: [partial] });
+
+    renderInRouter();
+
+    const row = await screen.findByRole('row', { name: /Partial departure/ });
+    expect(within(row).getByText('Partially cancelled')).toBeInTheDocument();
+  });
+
+  it('shows Cancelled when every call is cancelled even if trip-level cancellation is false', async () => {
+    const allCallsCancelled = trip({
+      id: 'ENT:ServiceJourney:all-calls-cancelled',
+      estimatedVehicleJourney: {
+        cancellation: false,
+        recordedAtTime: '2026-05-20T09:00:00.000Z',
+        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
+        estimatedCalls: {
+          estimatedCall: [
+            {
+              order: 1,
+              stopPointName: 'All-cancelled departure',
+              aimedDepartureTime: '2026-06-01T08:00:00.000Z',
+              cancellation: true,
+            },
+            {
+              order: 2,
+              stopPointName: 'All-cancelled arrival',
+              aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+              cancellation: true,
+            },
+          ],
+        },
+      },
+    } as Extrajourney);
+
+    queryExtraJourneys.mockResolvedValue({ data: [allCallsCancelled] });
+
+    renderInRouter();
+
+    const row = await screen.findByRole('row', { name: /All-cancelled departure/ });
+    expect(within(row).getByText('Cancelled')).toBeInTheDocument();
+    expect(within(row).queryByText('Partially cancelled')).not.toBeInTheDocument();
+  });
+
   it('shows an error message when the query rejects', async () => {
     queryExtraJourneys.mockRejectedValue('boom');
 
