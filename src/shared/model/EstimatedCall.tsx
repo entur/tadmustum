@@ -6,6 +6,7 @@ export interface EstimatedCall {
   stopPointRef: string;
   order: number;
   stopPointName: string;
+  cancellation?: boolean;
   destinationDisplay: string;
   aimedArrivalTime?: string;
   expectedArrivalTime?: string;

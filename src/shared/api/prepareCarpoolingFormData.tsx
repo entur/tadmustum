@@ -15,6 +15,11 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
     // an unrelated null deref further down.
     throw new Error('Cannot prepare carpooling form: departure and destination stops are required');
   }
+  const intermediateCalls = formData.intermediateCalls.map((call, index) => ({
+    ...call,
+    order: index + 2,
+  }));
+  const destinationOrder = intermediateCalls.length + 2;
   const variables = {
     codespace: formData.codespace,
     authority: formData.authority,
@@ -33,7 +38,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         operatorRef: formData.operator,
         monitored: true,
         dataSource: 'ENT', // TODO: Remove hard coding
-        cancellation: false,
+        cancellation: formData.tripCancellation,
         isCompleteStopSequence: true,
         estimatedCalls: {
           estimatedCall: [
@@ -41,6 +46,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               order: 1,
               stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.departureStopName,
+              cancellation: formData.departureCancellation,
               destinationDisplay: formData.departureDestinationDisplay,
               aimedDepartureTime: formData.departureDatetime.toISOString(),
               expectedDepartureTime: formData.departureDatetime.toISOString(),
@@ -61,10 +67,12 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
                 },
               },
             },
+            ...intermediateCalls,
             {
-              order: 2,
+              order: destinationOrder,
               stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.destinationStopName,
+              cancellation: formData.destinationCancellation,
               destinationDisplay: formData.destinationDestinationDisplay,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
               expectedArrivalTime: formData.destinationDatetime.toISOString(),

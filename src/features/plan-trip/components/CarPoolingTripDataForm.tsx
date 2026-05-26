@@ -16,7 +16,7 @@ import {
   Chip,
 } from '@mui/material';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
-import { LocationOn, PersonPin, Hail, SensorsOff } from '@mui/icons-material';
+import { LocationOn, PersonPin, Hail, SensorsOff, Cancel, Replay } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -88,8 +88,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       departureStopName: '',
       departureDatetime: dayjs(),
       departureFlexibleStop: null,
+      departureCancellation: false,
       destinationStopName: '',
       destinationFlexibleStop: null,
+      destinationCancellation: false,
+      intermediateCalls: [],
+      tripCancellation: false,
       driverDeviationBudget: 5,
       contactUrl: null,
       totalCapacity: null,
@@ -101,6 +105,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
+  const departureCancellation = watch('departureCancellation');
+  const destinationCancellation = watch('destinationCancellation');
+  const intermediateCalls = watch('intermediateCalls');
+  const tripCancellation = watch('tripCancellation');
   const streetRoute = useStreetRoute();
   const [error, setError] = useState<AppError | undefined>(undefined);
   const [errorDismissed, setErrorDismissed] = useState<boolean>(false);
@@ -305,9 +313,27 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           {error?.code ? `${humanizeCode(error.code)}: ${error.message}` : error?.message}
         </Alert>
       </Snackbar>
-      <Typography variant="h5" component="h1">
-        Trip data
-      </Typography>
+      <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{
+            textDecoration: tripCancellation ? 'line-through' : 'none',
+            color: tripCancellation ? 'text.disabled' : 'text.primary',
+          }}
+        >
+          Trip data
+        </Typography>
+        {tripCancellation && <Chip label="Cancelled" size="small" color="error" />}
+        <IconButton
+          size="small"
+          onClick={() => setValue('tripCancellation', !tripCancellation, { shouldDirty: true })}
+          aria-label={tripCancellation ? 'Restore trip' : 'Cancel trip'}
+          title={tripCancellation ? 'Restore trip' : 'Cancel trip'}
+        >
+          {tripCancellation ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
+        </IconButton>
+      </Box>
 
       {/* All Stops Display */}
       {estimatedCalls.length > 0 && (
@@ -320,13 +346,47 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             {estimatedCalls.map((call, index) => {
               const stopInfo = getStopTypeInfo(call, index, estimatedCalls.length);
               const IconComponent = stopInfo.icon;
+              const isFirst = index === 0;
+              const isLast = index === estimatedCalls.length - 1;
+              const intermediateIndex = isFirst || isLast ? -1 : index - 1;
+              const cancelled = isFirst
+                ? departureCancellation
+                : isLast
+                  ? destinationCancellation
+                  : (intermediateCalls?.[intermediateIndex]?.cancellation ??
+                    call.cancellation ??
+                    false);
+              const toggleCancellation = () => {
+                if (isFirst) {
+                  setValue('departureCancellation', !departureCancellation, {
+                    shouldDirty: true,
+                  });
+                } else if (isLast) {
+                  setValue('destinationCancellation', !destinationCancellation, {
+                    shouldDirty: true,
+                  });
+                } else {
+                  const current = intermediateCalls ?? [];
+                  const next = current.map((c, i) =>
+                    i === intermediateIndex ? { ...c, cancellation: !(c.cancellation ?? false) } : c
+                  );
+                  setValue('intermediateCalls', next, { shouldDirty: true });
+                }
+              };
 
               return (
                 <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
-                  <IconComponent color={stopInfo.color} />
+                  <IconComponent color={cancelled ? 'disabled' : stopInfo.color} />
                   <Box sx={{ flex: 1 }}>
                     <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{
+                          textDecoration: cancelled ? 'line-through' : 'none',
+                          color: cancelled ? 'text.disabled' : 'text.primary',
+                        }}
+                      >
                         {call.stopPointName}
                       </Typography>
                       <Chip
@@ -336,9 +396,21 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                         color={stopInfo.color === 'action' ? 'default' : stopInfo.color}
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
+                      {cancelled && (
+                        <Chip
+                          label="Cancelled"
+                          size="small"
+                          color="error"
+                          sx={{ fontSize: '0.7rem', height: '20px' }}
+                        />
+                      )}
                     </Box>
                     {stopInfo.time && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ textDecoration: cancelled ? 'line-through' : 'none' }}
+                      >
                         {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
                         {stopInfo.latestTime && (
                           <> (latest: {new Date(stopInfo.latestTime).toLocaleTimeString()})</>
@@ -346,6 +418,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                       </Typography>
                     )}
                   </Box>
+                  <IconButton
+                    size="small"
+                    onClick={toggleCancellation}
+                    aria-label={cancelled ? 'Restore stop' : 'Cancel stop'}
+                    title={cancelled ? 'Restore stop' : 'Cancel stop'}
+                  >
+                    {cancelled ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
+                  </IconButton>
                   <Typography variant="caption" color="text.secondary" sx={{ minWidth: '30px' }}>
                     #{call.order}
                   </Typography>
