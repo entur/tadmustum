@@ -1,0 +1,123 @@
+import { describe, expect, it, vi } from 'vitest';
+import dayjs from 'dayjs';
+import prepareCarpoolingFormData from './prepareCarpoolingFormData';
+import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData';
+
+vi.mock('uuid', () => ({
+  v4: () => 'fixed-uuid',
+}));
+
+const baseForm = (
+  overrides: Partial<CarPoolingTripDataFormData> = {}
+): CarPoolingTripDataFormData => ({
+  codespace: 'ENT',
+  authority: 'ENT:Authority:ENT',
+  operator: 'ENT:Operator:1',
+  departureDestinationDisplay: 'Oslo',
+  destinationDestinationDisplay: 'Bergen',
+  departureStopName: 'Oslo S',
+  departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
+  departureFlexibleStop: [10.7522, 59.9139],
+  destinationStopName: 'Bergen stasjon',
+  destinationDatetime: dayjs('2026-06-01T15:00:00.000Z'),
+  destinationFlexibleStop: [5.3221, 60.3913],
+  driverDeviationBudget: 30,
+  contactUrl: 'https://example.com/driver/1',
+  totalCapacity: 4,
+  onboardCount: 1,
+  ...overrides,
+});
+
+describe('prepareCarpoolingFormData', () => {
+  it('maps departure and destination into SIRI estimated calls', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls).toHaveLength(2);
+
+    expect(calls[0]).toMatchObject({
+      order: 1,
+      stopPointName: 'Oslo S',
+      destinationDisplay: 'Oslo',
+      aimedDepartureTime: '2026-06-01T08:00:00.000Z',
+      expectedDepartureTime: '2026-06-01T08:00:00.000Z',
+      departureBoardingActivity: 'boarding',
+    });
+
+    expect(calls[1]).toMatchObject({
+      order: 2,
+      stopPointName: 'Bergen stasjon',
+      destinationDisplay: 'Bergen',
+      aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+      expectedArrivalTime: '2026-06-01T15:00:00.000Z',
+      arrivalBoardingActivity: 'alighting',
+    });
+  });
+
+  it('encodes flexible stops as CircularArea with sentinel radius', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall;
+    expect(calls[0].departureStopAssignment?.expectedFlexibleArea?.circularArea).toEqual({
+      longitude: 10.7522,
+      latitude: 59.9139,
+      radius: 1,
+    });
+    expect(calls[1].departureStopAssignment?.expectedFlexibleArea?.circularArea).toEqual({
+      longitude: 5.3221,
+      latitude: 60.3913,
+      radius: 1,
+    });
+  });
+
+  it('derives latestExpectedArrivalTime from driverDeviationBudget', () => {
+    const result = prepareCarpoolingFormData(baseForm({ driverDeviationBudget: 45 }));
+
+    const arrival = result.input.estimatedVehicleJourney.estimatedCalls!.estimatedCall[1];
+    expect(arrival.latestExpectedArrivalTime).toBe('2026-06-01T15:45:00.000Z');
+  });
+
+  it('sets expiresAtEpochMs to 7 days after the destination time', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    expect(result.input.estimatedVehicleJourney.expiresAtEpochMs).toBe(
+      dayjs('2026-06-08T15:00:00.000Z').valueOf()
+    );
+  });
+
+  it('generates a lineRef using the codespace and a uuid when none is provided', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    expect(result.input.estimatedVehicleJourney.lineRef).toBe('ENT:CarPooling:fixed-uuid');
+  });
+
+  it('reuses the provided lineRef when present', () => {
+    const result = prepareCarpoolingFormData(baseForm({ lineRef: 'ENT:Line:existing' }));
+
+    expect(result.input.estimatedVehicleJourney.lineRef).toBe('ENT:Line:existing');
+  });
+
+  it('includes input.id when editing an existing trip', () => {
+    const result = prepareCarpoolingFormData(baseForm({ id: 'trip-42' }));
+
+    expect(result.input.id).toBe('trip-42');
+  });
+
+  it('omits input.id when creating a new trip', () => {
+    const result = prepareCarpoolingFormData(baseForm());
+
+    expect(result.input).not.toHaveProperty('id');
+  });
+
+  it('throws when departureFlexibleStop is missing', () => {
+    expect(() => prepareCarpoolingFormData(baseForm({ departureFlexibleStop: null }))).toThrow(
+      /departure and destination stops are required/
+    );
+  });
+
+  it('throws when destinationFlexibleStop is missing', () => {
+    expect(() => prepareCarpoolingFormData(baseForm({ destinationFlexibleStop: null }))).toThrow(
+      /departure and destination stops are required/
+    );
+  });
+});
