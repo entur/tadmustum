@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { type AlertProps, Box, type SnackbarCloseReason } from '@mui/material';
 import type { Feature } from 'geojson';
+import { useNavigate } from 'react-router-dom';
 import CarPoolingTripDataForm from './CarPoolingTripDataForm.tsx';
 import { useMutateExtrajourney } from '../hooks/useMutateExtrajourney.tsx';
 import { useStopsController } from '../hooks/useStopsController.tsx';
@@ -102,14 +103,15 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     } = stopsController;
 
     const mutateExtrajourney = useMutateExtrajourney();
+    const navigate = useNavigate();
     const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
       formData.id = currentTripId;
       const result = await mutateExtrajourney(formData);
       if (result.error) {
         showSnackbar(result.error.message || 'Noe gikk galt under lagring.', 'error');
       } else {
-        showSnackbar('Turen ble lagret!', 'success');
         setCurrentTripId(result.data);
+        navigate('/trips', { state: { savedMessage: 'Turen ble lagret!' } });
       }
     };
     const handleZoomToFeature = useCallback(

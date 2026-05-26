@@ -3,8 +3,17 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import Button from '@mui/material/Button';
-import { useNavigate } from 'react-router-dom';
-import { Box, Checkbox, Chip, FormControlLabel, Stack, Typography } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Alert,
+  Box,
+  Checkbox,
+  Chip,
+  FormControlLabel,
+  Snackbar,
+  Stack,
+  Typography,
+} from '@mui/material';
 import dayjs from 'dayjs';
 
 const formatMinuteResolution = (value: string | null | undefined) =>
@@ -12,13 +21,24 @@ const formatMinuteResolution = (value: string | null | undefined) =>
 
 export default function CarPoolingTrips() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPastArrivals, setShowPastArrivals] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   const queryExtraJourneys = useQueryExtraJourney();
+
+  useEffect(() => {
+    const message = (location.state as { savedMessage?: string } | null)?.savedMessage;
+    if (message) {
+      setSavedMessage(message);
+      // Drop the state so the snackbar doesn't re-trigger on back/forward or refresh.
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
     queryExtraJourneys('ENT', 'ENT:Authority:ENT', true)
@@ -236,6 +256,21 @@ export default function CarPoolingTrips() {
           },
         }}
       />
+      <Snackbar
+        open={!!savedMessage}
+        autoHideDuration={4000}
+        onClose={() => setSavedMessage(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSavedMessage(null)}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {savedMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
