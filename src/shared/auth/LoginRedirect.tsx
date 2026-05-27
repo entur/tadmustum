@@ -1,21 +1,17 @@
 import { useEffect } from 'react';
 import { useAuth } from './index';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useConfig } from '../../contexts/ConfigContext.tsx';
+import { useLocation } from 'react-router-dom';
 
 const LoginRedirect = () => {
-  const { oidcConfig } = useConfig();
   const { isAuthenticated, isLoading, login } = useAuth();
-  const navigate = useNavigate();
-  const returnUrl = useLocation().pathname;
+  const { pathname, search } = useLocation();
+  const returnUrl = pathname + search;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      login(oidcConfig?.redirect_uri || window.location.origin + returnUrl);
-    } else if (isAuthenticated) {
-      navigate(returnUrl);
+      login(returnUrl);
     }
-  }, [isLoading, isAuthenticated, login, navigate, returnUrl, oidcConfig?.redirect_uri]);
+  }, [isLoading, isAuthenticated, login, returnUrl]);
 
   if (isLoading) return <div>Checking authentication status...</div>;
 
