@@ -85,11 +85,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       id: undefined,
       departureDestinationDisplay: 'Departure Display',
       destinationDestinationDisplay: 'Destination Display',
-      departureStopName: '',
+      departureStopName: 'Origin',
       departureDatetime: dayjs(),
       departureFlexibleStop: null,
       departureCancellation: false,
-      destinationStopName: '',
+      destinationStopName: 'Destination',
       destinationFlexibleStop: null,
       destinationCancellation: false,
       intermediateCalls: [],
@@ -488,22 +488,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         Departure
       </Typography>
       <Controller
-        name="departureDestinationDisplay"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              label="Destination display"
-              error={!!errors.departureDestinationDisplay}
-              helperText={errors.departureDestinationDisplay?.message}
-              required
-              fullWidth
-            />
-          );
-        }}
-      />
-      <Controller
         name="departureStopName"
         control={control}
         render={({ field }) => {
@@ -570,22 +554,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       <Typography variant="h6" component="h2">
         Destination
       </Typography>
-      <Controller
-        name="destinationDestinationDisplay"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              label="Destination display"
-              error={!!errors.destinationDestinationDisplay}
-              helperText={errors.destinationDestinationDisplay?.message}
-              required
-              fullWidth
-            />
-          );
-        }}
-      />
       <Controller
         name="destinationStopName"
         control={control}

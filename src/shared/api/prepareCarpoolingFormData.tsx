@@ -47,7 +47,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.departureStopName,
               cancellation: formData.departureCancellation,
-              destinationDisplay: formData.departureDestinationDisplay,
+              destinationDisplay: formData.departureStopName,
               aimedDepartureTime: formData.departureDatetime.toISOString(),
               expectedDepartureTime: formData.departureDatetime.toISOString(),
               departureBoardingActivity: 'boarding',
@@ -73,7 +73,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
               stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
               stopPointName: formData.destinationStopName,
               cancellation: formData.destinationCancellation,
-              destinationDisplay: formData.destinationDestinationDisplay,
+              destinationDisplay: formData.destinationStopName,
               aimedArrivalTime: formData.destinationDatetime.toISOString(),
               expectedArrivalTime: formData.destinationDatetime.toISOString(),
               latestExpectedArrivalTime: formData.destinationDatetime
