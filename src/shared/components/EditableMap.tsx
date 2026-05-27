@@ -43,6 +43,7 @@ export type EditableMapHandle = {
   addFeatures: (features: Feature[]) => void;
   drawFeature: () => void;
   removeFeature: (id: string) => void;
+  removeAllFeatures: () => void;
   zoomToFeature: (id: string) => void;
   zoomToAllFeatures: () => void;
 };
@@ -145,18 +146,20 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       ensureDrawTool().changeMode('draw_point');
     }, [ensureDrawTool]);
 
-    const removeFeature = useCallback(
-      (id: string) => {
-        const tool = drawToolRef.current;
-        if (!tool) return;
-        const newFeatures = { ...features };
+    const removeFeature = useCallback((id: string) => {
+      setFeatures(curr => {
+        const newFeatures = { ...curr };
         delete newFeatures[id];
-        setFeatures(newFeatures);
+        return newFeatures;
+      });
 
-        tool.delete([id]);
-      },
-      [features]
-    );
+      drawToolRef.current?.delete([id]);
+    }, []);
+
+    const removeAllFeatures = useCallback(() => {
+      setFeatures({});
+      drawToolRef.current?.deleteAll();
+    }, []);
 
     const featuresArrayToRecord = (features: Feature[]): Record<string, Feature> => {
       return features.reduce(
@@ -172,11 +175,12 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
 
     const addFeatures = (features: Feature[]) => {
       setFeatures(featuresArrayToRecord(features));
-      if (drawToolRef.current === null) {
-        const tool = ensureDrawTool();
-        tool.add(features[0]);
-        tool.add(features[1]);
-      }
+      // Authoritatively sync the draw tool to exactly these features so the
+      // stops are editable both on first load and when restored (e.g. reset
+      // while editing, after the map was cleared).
+      const tool = ensureDrawTool();
+      tool.deleteAll();
+      features.forEach(feature => tool.add(feature));
     };
 
     const onMapClick = useCallback(
@@ -244,6 +248,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       addFeatures,
       drawFeature,
       removeFeature,
+      removeAllFeatures,
       zoomToFeature: (id: string) => {
         const feature = features[id] as Feature<Point>;
 

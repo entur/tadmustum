@@ -711,7 +711,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         <Button
           variant="outlined"
           onClick={() => {
-            reset();
+            // When editing, restore the loaded trip exactly; when creating,
+            // reset() with no argument clears back to the blank defaults.
+            reset(initialState);
             clearErrors();
             onResetCallback();
           }}

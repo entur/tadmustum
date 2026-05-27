@@ -67,6 +67,7 @@ function CarPoolingTripView({ id }: { id?: string }) {
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}
           onRemoveFlexibleStop={id => editableMapRef.current?.removeFeature(id)}
+          onRemoveAllFlexibleStops={() => editableMapRef.current?.removeAllFeatures()}
           onZoomToFeature={(id: string) => editableMapRef.current?.zoomToFeature(id)}
           onZoomToAllFeatures={() => editableMapRef.current?.zoomToAllFeatures()}
           loadedFlexibleStop={(stops: Feature[]) => {
