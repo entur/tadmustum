@@ -107,7 +107,9 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     const mutateExtrajourney = useMutateExtrajourney();
     const navigate = useNavigate();
     const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
-      formData.id = currentTripId;
+      // Keep the form's id (the existing trip's id when editing, or the
+      // client-generated id for a new trip); fall back to a previously-saved id.
+      formData.id = formData.id ?? currentTripId;
       const result = await mutateExtrajourney(formData);
       if (result.error) {
         showSnackbar(result.error.message || 'Noe gikk galt under lagring.', 'error');

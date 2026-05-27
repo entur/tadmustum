@@ -19,7 +19,8 @@ import {
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import { LocationOn, PersonPin, Hail, SensorsOff, Cancel, Replay } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
 import { useOperators } from '../hooks/useOperators.tsx';
@@ -67,6 +68,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const { authorities } = useAuthorities();
   const operators = useOperators();
 
+  // New trips get a client-generated id so the booking URL (this app's
+  // /book-trip/{id} page) can be prefilled before the trip is saved; the
+  // backend upserts at the supplied id. When editing, reset(initialState)
+  // replaces both with the existing trip's values.
+  const newTripId = useMemo(() => uuidv4(), []);
+  const defaultBookingUrl = `${window.location.origin}/book-trip/${newTripId}`;
+
   const {
     handleSubmit,
     control,
@@ -83,7 +91,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       codespace: 'ENT', // TODO fix hardcoding
       authority: '',
       operator: '',
-      id: undefined,
+      id: newTripId,
       departureStopName: 'Origin',
       departureFlexibleStop: null,
       departureCancellation: false,
@@ -93,7 +101,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       intermediateCalls: [],
       tripCancellation: false,
       driverDeviationBudget: 15,
-      contactUrl: null,
+      contactUrl: defaultBookingUrl,
       totalCapacity: 5,
       onboardCount: 1,
     },
@@ -661,7 +669,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <TextField
               {...field}
               value={field.value ?? ''}
-              label="Contact URL"
+              label="Booking URL"
               error={!!errors.contactUrl}
               helperText={errors.contactUrl?.message}
               fullWidth

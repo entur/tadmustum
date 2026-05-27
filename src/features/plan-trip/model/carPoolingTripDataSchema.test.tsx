@@ -95,6 +95,15 @@ describe('carPoolingTripDataSchema', () => {
     ).rejects.toThrow(/Must be a valid URL/);
   });
 
+  it('accepts a localhost booking URL with a port', async () => {
+    await expect(
+      carPoolingTripDataSchema.validate({
+        ...validInput(),
+        contactUrl: 'http://localhost:5000/book-trip/uZY6L54a6UITdSSAhMaE',
+      })
+    ).resolves.toBeDefined();
+  });
+
   it("transforms '' to null for contactUrl, totalCapacity, and onboardCount", async () => {
     const result = await carPoolingTripDataSchema.validate({
       ...validInput(),
