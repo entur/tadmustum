@@ -27,6 +27,7 @@ export default function CarPoolingTrips() {
   const [error, setError] = useState<string | null>(null);
   const [showPastArrivals, setShowPastArrivals] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
+  const [showHiddenFields, setShowHiddenFields] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   const queryExtraJourneys = useQueryExtraJourney();
@@ -79,17 +80,17 @@ export default function CarPoolingTrips() {
 
   const columns: GridColDef[] = [
     {
-      field: 'id',
-      headerName: 'ID',
-      minWidth: 220,
-      flex: 1,
+      field: 'actions',
+      headerName: 'Actions',
+      minWidth: 180,
+      sortable: false,
+      filterable: false,
       renderCell: params => (
         <Box>
           <Button
             variant="contained"
             size="small"
             onClick={() => navigate(`/plan-trip/${params.row.id}`)}
-            style={{ marginLeft: 8 }}
           >
             Edit
           </Button>
@@ -100,10 +101,15 @@ export default function CarPoolingTrips() {
             style={{ marginLeft: 8 }}
           >
             Book Ride
-          </Button>{' '}
-          {params.row.id}
+          </Button>
         </Box>
       ),
+    },
+    {
+      field: 'id',
+      headerName: 'ID',
+      minWidth: 220,
+      flex: 1,
     },
     {
       field: 'cancellation',
@@ -124,23 +130,8 @@ export default function CarPoolingTrips() {
         if (params.value === 'partially_cancelled') {
           return <Chip label="Partially cancelled" size="small" color="warning" />;
         }
-        return null;
+        return <Chip label="Active" size="small" color="success" />;
       },
-    },
-    {
-      field: 'departureStopName',
-      headerName: 'Departure stop name',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].stopPointName,
-    },
-    {
-      field: 'departureTimeName',
-      headerName: 'Departure time',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
-      valueFormatter: (value: string) => formatMinuteResolution(value),
     },
     {
       field: 'stopCount',
@@ -160,6 +151,21 @@ export default function CarPoolingTrips() {
           </Typography>
         </Box>
       ),
+    },
+    {
+      field: 'departureStopName',
+      headerName: 'Departure stop name',
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].stopPointName,
+    },
+    {
+      field: 'departureTimeName',
+      headerName: 'Departure time',
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
+      valueFormatter: (value: string) => formatMinuteResolution(value),
     },
     {
       field: 'arrivalStopName',
@@ -232,6 +238,15 @@ export default function CarPoolingTrips() {
           }
           label="Show expired trips"
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showHiddenFields}
+              onChange={event => setShowHiddenFields(event.target.checked)}
+            />
+          }
+          label="Show hidden fields"
+        />
         <Typography variant="body2" color="text.secondary">
           Showing {rows?.length ?? 0} of {plannedTrips?.length ?? 0} trips
         </Typography>
@@ -241,6 +256,11 @@ export default function CarPoolingTrips() {
         columns={columns}
         initialState={{
           sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
+        }}
+        columnVisibilityModel={{
+          id: showHiddenFields,
+          latestExpectedArrivalTime: showHiddenFields,
+          expiresAtEpochMs: showHiddenFields,
         }}
         getRowClassName={params => {
           const journey = (params.row as Extrajourney).estimatedVehicleJourney;
