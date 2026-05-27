@@ -86,7 +86,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       departureDestinationDisplay: 'Departure Display',
       destinationDestinationDisplay: 'Destination Display',
       departureStopName: 'Origin',
-      departureDatetime: dayjs(),
       departureFlexibleStop: null,
       departureCancellation: false,
       destinationStopName: 'Destination',
@@ -94,14 +93,15 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       destinationCancellation: false,
       intermediateCalls: [],
       tripCancellation: false,
-      driverDeviationBudget: 5,
+      driverDeviationBudget: 15,
       contactUrl: null,
-      totalCapacity: null,
-      onboardCount: null,
+      totalCapacity: 5,
+      onboardCount: 1,
     },
   });
 
   const authority = watch('authority');
+  const operator = watch('operator');
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
@@ -117,6 +117,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   useEffect(() => {
     if (authorities.length && !authority) {
       setValue('authority', authorities[0].id);
+    }
+
+    if (operators.length && !operator) {
+      const enturOperator = operators.find(o => o.name.toLowerCase().includes('entur'));
+      if (enturOperator) {
+        setValue('operator', enturOperator.id);
+      }
     }
 
     if (mapDepartureFlexibleStop) {
@@ -161,6 +168,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     reset,
     authorities,
     authority,
+    operators,
+    operator,
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     setValue,
@@ -511,7 +520,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <DateTimePicker
               {...field}
               ampm={false}
-              label="Select departure date"
+              label="Select departure time"
               value={field.value || null}
               onChange={value => field.onChange(value)}
               slotProps={{
@@ -578,7 +587,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <DateTimePicker
               {...field}
               ampm={false}
-              label="Select arrival date"
+              label="Select arrival time"
               value={field.value || null}
               onChange={value => field.onChange(value)}
               slotProps={{
