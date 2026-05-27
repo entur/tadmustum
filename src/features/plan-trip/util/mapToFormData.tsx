@@ -22,8 +22,6 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,
     estimatedVehicleJourneyCode: journey.estimatedVehicleJourney.estimatedVehicleJourneyCode,
-    departureDestinationDisplay: firstCall.destinationDisplay,
-    destinationDestinationDisplay: lastCall.destinationDisplay,
     departureStopName: firstCall.stopPointName,
     departureDatetime: dayjs(firstCall.aimedDepartureTime),
     departureFlexibleStop: flexAreaToPosition(

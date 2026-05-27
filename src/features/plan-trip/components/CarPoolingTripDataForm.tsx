@@ -7,6 +7,7 @@ import {
   FormControl,
   FormHelperText,
   IconButton,
+  InputLabel,
   MenuItem,
   Select,
   Snackbar,
@@ -83,8 +84,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       authority: '',
       operator: '',
       id: undefined,
-      departureDestinationDisplay: 'Departure Display',
-      destinationDestinationDisplay: 'Destination Display',
       departureStopName: 'Origin',
       departureFlexibleStop: null,
       departureCancellation: false,
@@ -334,14 +333,17 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           Trip data
         </Typography>
         {tripCancellation && <Chip label="Cancelled" size="small" color="error" />}
-        <IconButton
-          size="small"
-          onClick={() => setValue('tripCancellation', !tripCancellation, { shouldDirty: true })}
-          aria-label={tripCancellation ? 'Restore trip' : 'Cancel trip'}
-          title={tripCancellation ? 'Restore trip' : 'Cancel trip'}
-        >
-          {tripCancellation ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
-        </IconButton>
+        {/* Cancellation is only available when editing an existing trip, not while creating one. */}
+        {tripData && (
+          <IconButton
+            size="small"
+            onClick={() => setValue('tripCancellation', !tripCancellation, { shouldDirty: true })}
+            aria-label={tripCancellation ? 'Restore trip' : 'Cancel trip'}
+            title={tripCancellation ? 'Restore trip' : 'Cancel trip'}
+          >
+            {tripCancellation ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
+          </IconButton>
+        )}
       </Box>
 
       {/* All Stops Display */}
@@ -445,13 +447,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           <Divider sx={{ mt: 2 }} />
         </Box>
       )}
-      <FormControl fullWidth error={!!errors.authority} margin="normal">
+      <FormControl fullWidth required error={!!errors.authority} margin="normal">
+        <InputLabel id="authority-label">Authority</InputLabel>
         <Controller
           name="authority"
           control={control}
           render={({ field }) => {
             return (
-              <Select {...field} label="Select an authority">
+              <Select {...field} labelId="authority-label" label="Authority">
                 <MenuItem value="" disabled>
                   <em>Authority</em>
                 </MenuItem>
@@ -469,13 +472,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         />
         <FormHelperText>{errors.authority?.message}</FormHelperText>
       </FormControl>
-      <FormControl fullWidth error={!!errors.operator} margin="normal">
+      <FormControl fullWidth required error={!!errors.operator} margin="normal">
+        <InputLabel id="operator-label">Operator</InputLabel>
         <Controller
           name="operator"
           control={control}
           render={({ field }) => {
             return (
-              <Select {...field} label="Select an operator">
+              <Select {...field} labelId="operator-label" label="Operator">
                 <MenuItem value="" disabled>
                   <em>Operator</em>
                 </MenuItem>
@@ -528,6 +532,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   error: !!error,
                   helperText: error?.message,
                   fullWidth: true,
+                  required: true,
                 },
               }}
             />
@@ -595,6 +600,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   error: !!error,
                   helperText: error?.message,
                   fullWidth: true,
+                  required: true,
                 },
               }}
             />
@@ -640,6 +646,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               label="Driver deviation budget in minutes"
               error={!!errors.driverDeviationBudget}
               helperText={errors.driverDeviationBudget?.message}
+              required
               fullWidth
             />
           );
@@ -712,7 +719,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           Reset
         </Button>
         <Button variant="outlined" onClick={onViewTripCallback}>
-          View
+          Zoom
         </Button>
       </Box>
     </Box>

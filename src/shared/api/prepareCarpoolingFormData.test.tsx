@@ -13,8 +13,6 @@ const baseForm = (
   codespace: 'ENT',
   authority: 'ENT:Authority:ENT',
   operator: 'ENT:Operator:1',
-  departureDestinationDisplay: 'Oslo',
-  destinationDestinationDisplay: 'Bergen',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
   departureFlexibleStop: [10.7522, 59.9139],
@@ -42,7 +40,7 @@ describe('prepareCarpoolingFormData', () => {
     expect(calls[0]).toMatchObject({
       order: 1,
       stopPointName: 'Oslo S',
-      destinationDisplay: 'Oslo',
+      destinationDisplay: 'Oslo S',
       aimedDepartureTime: '2026-06-01T08:00:00.000Z',
       expectedDepartureTime: '2026-06-01T08:00:00.000Z',
       departureBoardingActivity: 'boarding',
@@ -51,7 +49,7 @@ describe('prepareCarpoolingFormData', () => {
     expect(calls[1]).toMatchObject({
       order: 2,
       stopPointName: 'Bergen stasjon',
-      destinationDisplay: 'Bergen',
+      destinationDisplay: 'Bergen stasjon',
       aimedArrivalTime: '2026-06-01T15:00:00.000Z',
       expectedArrivalTime: '2026-06-01T15:00:00.000Z',
       arrivalBoardingActivity: 'alighting',
