@@ -2,6 +2,14 @@ import { useCallback } from 'react';
 import { useAuth as useOidcAuth } from 'react-oidc-context';
 import { useConfig } from '../../contexts/ConfigContext.tsx';
 
+/**
+ * Session storage key holding the in-app path to navigate to once the OIDC
+ * login round-trip completes. We cannot use the destination path as the OIDC
+ * redirect_uri because the provider only whitelists the registered callback
+ * URL (the app root), so the destination is carried separately.
+ */
+export const POST_LOGIN_REDIRECT_KEY = 'postLoginRedirect';
+
 export interface Auth {
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -11,7 +19,8 @@ export interface Auth {
   roleAssignments?: string[] | null;
   getAccessToken: () => Promise<string>;
   logout: ({ returnTo }: { returnTo?: string }) => Promise<void>;
-  login: (redirectUri?: string) => Promise<void>;
+  /** Starts the OIDC login flow. `returnUrl` is the in-app path to return to afterwards. */
+  login: (returnUrl?: string) => Promise<void>;
 }
 
 export const useAuth = (): Auth => {
@@ -40,7 +49,14 @@ export const useAuth = (): Auth => {
   );
 
   const login = useCallback(
-    (redirectUri?: string) => signinRedirect({ redirect_uri: redirectUri }),
+    (returnUrl?: string) => {
+      if (returnUrl) {
+        sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, returnUrl);
+      }
+      // Always use the registered redirect_uri configured on the AuthProvider;
+      // passing an arbitrary current URL would be rejected as a callback mismatch.
+      return signinRedirect();
+    },
     [signinRedirect]
   );
 

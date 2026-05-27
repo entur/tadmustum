@@ -7,6 +7,7 @@ import {
   FormControl,
   FormHelperText,
   IconButton,
+  InputLabel,
   MenuItem,
   Select,
   Snackbar,
@@ -18,7 +19,8 @@ import {
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import { LocationOn, PersonPin, Hail, SensorsOff, Cancel, Replay } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
 import { useOperators } from '../hooks/useOperators.tsx';
@@ -66,6 +68,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const { authorities } = useAuthorities();
   const operators = useOperators();
 
+  // New trips get a client-generated id so the booking URL (this app's
+  // /book-trip/{id} page) can be prefilled before the trip is saved; the
+  // backend upserts at the supplied id. When editing, reset(initialState)
+  // replaces both with the existing trip's values.
+  const newTripId = useMemo(() => uuidv4(), []);
+  const defaultBookingUrl = `${window.location.origin}/book-trip/${newTripId}`;
+
   const {
     handleSubmit,
     control,
@@ -82,26 +91,24 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       codespace: 'ENT', // TODO fix hardcoding
       authority: '',
       operator: '',
-      id: undefined,
-      departureDestinationDisplay: 'Departure Display',
-      destinationDestinationDisplay: 'Destination Display',
-      departureStopName: '',
-      departureDatetime: dayjs(),
+      id: newTripId,
+      departureStopName: 'Origin',
       departureFlexibleStop: null,
       departureCancellation: false,
-      destinationStopName: '',
+      destinationStopName: 'Destination',
       destinationFlexibleStop: null,
       destinationCancellation: false,
       intermediateCalls: [],
       tripCancellation: false,
-      driverDeviationBudget: 5,
-      contactUrl: null,
-      totalCapacity: null,
-      onboardCount: null,
+      driverDeviationBudget: 15,
+      contactUrl: defaultBookingUrl,
+      totalCapacity: 5,
+      onboardCount: 1,
     },
   });
 
   const authority = watch('authority');
+  const operator = watch('operator');
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
@@ -117,6 +124,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   useEffect(() => {
     if (authorities.length && !authority) {
       setValue('authority', authorities[0].id);
+    }
+
+    if (operators.length && !operator) {
+      const enturOperator = operators.find(o => o.name.toLowerCase().includes('entur'));
+      if (enturOperator) {
+        setValue('operator', enturOperator.id);
+      }
     }
 
     if (mapDepartureFlexibleStop) {
@@ -161,6 +175,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     reset,
     authorities,
     authority,
+    operators,
+    operator,
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     setValue,
@@ -325,14 +341,17 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           Trip data
         </Typography>
         {tripCancellation && <Chip label="Cancelled" size="small" color="error" />}
-        <IconButton
-          size="small"
-          onClick={() => setValue('tripCancellation', !tripCancellation, { shouldDirty: true })}
-          aria-label={tripCancellation ? 'Restore trip' : 'Cancel trip'}
-          title={tripCancellation ? 'Restore trip' : 'Cancel trip'}
-        >
-          {tripCancellation ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
-        </IconButton>
+        {/* Cancellation is only available when editing an existing trip, not while creating one. */}
+        {tripData && (
+          <IconButton
+            size="small"
+            onClick={() => setValue('tripCancellation', !tripCancellation, { shouldDirty: true })}
+            aria-label={tripCancellation ? 'Restore trip' : 'Cancel trip'}
+            title={tripCancellation ? 'Restore trip' : 'Cancel trip'}
+          >
+            {tripCancellation ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
+          </IconButton>
+        )}
       </Box>
 
       {/* All Stops Display */}
@@ -436,13 +455,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           <Divider sx={{ mt: 2 }} />
         </Box>
       )}
-      <FormControl fullWidth error={!!errors.authority} margin="normal">
+      <FormControl fullWidth required error={!!errors.authority} margin="normal">
+        <InputLabel id="authority-label">Authority</InputLabel>
         <Controller
           name="authority"
           control={control}
           render={({ field }) => {
             return (
-              <Select {...field} label="Select an authority">
+              <Select {...field} labelId="authority-label" label="Authority">
                 <MenuItem value="" disabled>
                   <em>Authority</em>
                 </MenuItem>
@@ -460,13 +480,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         />
         <FormHelperText>{errors.authority?.message}</FormHelperText>
       </FormControl>
-      <FormControl fullWidth error={!!errors.operator} margin="normal">
+      <FormControl fullWidth required error={!!errors.operator} margin="normal">
+        <InputLabel id="operator-label">Operator</InputLabel>
         <Controller
           name="operator"
           control={control}
           render={({ field }) => {
             return (
-              <Select {...field} label="Select an operator">
+              <Select {...field} labelId="operator-label" label="Operator">
                 <MenuItem value="" disabled>
                   <em>Operator</em>
                 </MenuItem>
@@ -487,22 +508,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       <Typography variant="h6" component="h2">
         Departure
       </Typography>
-      <Controller
-        name="departureDestinationDisplay"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              label="Destination display"
-              error={!!errors.departureDestinationDisplay}
-              helperText={errors.departureDestinationDisplay?.message}
-              required
-              fullWidth
-            />
-          );
-        }}
-      />
       <Controller
         name="departureStopName"
         control={control}
@@ -527,7 +532,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <DateTimePicker
               {...field}
               ampm={false}
-              label="Select departure date"
+              label="Select departure time"
               value={field.value || null}
               onChange={value => field.onChange(value)}
               slotProps={{
@@ -535,6 +540,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   error: !!error,
                   helperText: error?.message,
                   fullWidth: true,
+                  required: true,
                 },
               }}
             />
@@ -571,22 +577,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         Destination
       </Typography>
       <Controller
-        name="destinationDestinationDisplay"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              label="Destination display"
-              error={!!errors.destinationDestinationDisplay}
-              helperText={errors.destinationDestinationDisplay?.message}
-              required
-              fullWidth
-            />
-          );
-        }}
-      />
-      <Controller
         name="destinationStopName"
         control={control}
         render={({ field }) => {
@@ -610,7 +600,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <DateTimePicker
               {...field}
               ampm={false}
-              label="Select arrival date"
+              label="Select arrival time"
               value={field.value || null}
               onChange={value => field.onChange(value)}
               slotProps={{
@@ -618,6 +608,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   error: !!error,
                   helperText: error?.message,
                   fullWidth: true,
+                  required: true,
                 },
               }}
             />
@@ -663,6 +654,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               label="Driver deviation budget in minutes"
               error={!!errors.driverDeviationBudget}
               helperText={errors.driverDeviationBudget?.message}
+              required
               fullWidth
             />
           );
@@ -677,7 +669,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <TextField
               {...field}
               value={field.value ?? ''}
-              label="Contact URL"
+              label="Booking URL"
               error={!!errors.contactUrl}
               helperText={errors.contactUrl?.message}
               fullWidth
@@ -727,7 +719,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         <Button
           variant="outlined"
           onClick={() => {
-            reset();
+            // When editing, restore the loaded trip exactly; when creating,
+            // reset() with no argument clears back to the blank defaults.
+            reset(initialState);
             clearErrors();
             onResetCallback();
           }}
@@ -735,7 +729,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           Reset
         </Button>
         <Button variant="outlined" onClick={onViewTripCallback}>
-          View
+          Zoom
         </Button>
       </Box>
     </Box>

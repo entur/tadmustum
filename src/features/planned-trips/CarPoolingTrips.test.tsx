@@ -60,8 +60,25 @@ describe('CarPoolingTrips', () => {
     expect(within(row).getByText('Bergen stasjon')).toBeInTheDocument();
     expect(within(row).getByText('2026-06-01 08:00')).toBeInTheDocument(); // departure
     expect(within(row).getByText('2026-06-01 15:00')).toBeInTheDocument(); // arrival
-    expect(within(row).getByText('2026-06-01 15:30')).toBeInTheDocument(); // latest expected
     expect(within(row).getByText('2')).toBeInTheDocument(); // stop count
+  });
+
+  it('hides ID, latest expected arrival, and expires-at until "Show hidden fields" is toggled', async () => {
+    queryExtraJourneys.mockResolvedValue({ data: [trip()] });
+
+    renderInRouter();
+
+    await screen.findByRole('row', { name: /Oslo S/ });
+
+    // Hidden by default.
+    expect(screen.queryByText('2026-06-01 15:30')).not.toBeInTheDocument(); // latest expected
+    expect(screen.queryByText('ENT:ServiceJourney:1')).not.toBeInTheDocument(); // ID
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show hidden fields/ }));
+
+    // Revealed once toggled on.
+    expect(await screen.findByText('2026-06-01 15:30')).toBeInTheDocument();
+    expect(screen.getByText('ENT:ServiceJourney:1')).toBeInTheDocument();
   });
 
   it('filters out trips whose latest expected arrival is in the past unless toggled', async () => {

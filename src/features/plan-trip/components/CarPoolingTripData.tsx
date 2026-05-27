@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { type AlertProps, Box, type SnackbarCloseReason } from '@mui/material';
 import type { Feature } from 'geojson';
+import { useNavigate } from 'react-router-dom';
 import CarPoolingTripDataForm from './CarPoolingTripDataForm.tsx';
 import { useMutateExtrajourney } from '../hooks/useMutateExtrajourney.tsx';
 import { useStopsController } from '../hooks/useStopsController.tsx';
@@ -37,6 +38,7 @@ export interface CarPoolingTripDataProps {
   onZoomToFeature: (id: string) => void;
   onZoomToAllFeatures: () => void;
   onRemoveFlexibleStop: (id: string) => void;
+  onRemoveAllFlexibleStops: () => void;
   loadedFlexibleStop: (stops: Feature[]) => void;
   onDepartureStopChange: (id: string | null) => void;
   onArrivalStopChange: (id: string | null) => void;
@@ -52,6 +54,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     const {
       onAddFlexibleStop,
       onRemoveFlexibleStop,
+      onRemoveAllFlexibleStops,
       onZoomToFeature,
       onZoomToAllFeatures,
       tripId,
@@ -102,14 +105,17 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     } = stopsController;
 
     const mutateExtrajourney = useMutateExtrajourney();
+    const navigate = useNavigate();
     const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
-      formData.id = currentTripId;
+      // Keep the form's id (the existing trip's id when editing, or the
+      // client-generated id for a new trip); fall back to a previously-saved id.
+      formData.id = formData.id ?? currentTripId;
       const result = await mutateExtrajourney(formData);
       if (result.error) {
         showSnackbar(result.error.message || 'Noe gikk galt under lagring.', 'error');
       } else {
-        showSnackbar('Turen ble lagret!', 'success');
         setCurrentTripId(result.data);
+        navigate('/trips', { state: { savedMessage: 'Turen ble lagret!' } });
       }
     };
     const handleZoomToFeature = useCallback(
@@ -118,6 +124,45 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       },
       [onZoomToFeature]
     );
+
+    // Load every flexible stop from a journey's estimated calls onto the map and
+    // mark the first/last as departure/arrival.
+    const loadStopsFromJourney = useCallback(
+      (journey: Extrajourney) => {
+        const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
+        const allFeatures: Feature[] = [];
+
+        calls.forEach(call => {
+          const feature = loadFeatureFromFlexArea(
+            call.departureStopAssignment?.expectedFlexibleArea
+          );
+          if (feature !== null) {
+            allFeatures.push(feature);
+          }
+        });
+
+        if (allFeatures.length >= 2) {
+          initializeStops(allFeatures[0], allFeatures[allFeatures.length - 1]);
+          loadedFlexibleStop(allFeatures);
+          // Small delay so the map is ready before fitting bounds.
+          setTimeout(() => {
+            onZoomToAllFeatures();
+          }, 100);
+        }
+      },
+      [initializeStops, loadedFlexibleStop, onZoomToAllFeatures]
+    );
+
+    // When editing, Reset restores the originally-loaded trip's stops; when
+    // creating, it wipes every drawn feature (including intermediate stops,
+    // which resetStops doesn't track) along with the controller state.
+    const handleResetCallback = useCallback(() => {
+      onRemoveAllFlexibleStops();
+      resetStops();
+      if (tripData) {
+        loadStopsFromJourney(tripData);
+      }
+    }, [onRemoveAllFlexibleStops, resetStops, tripData, loadStopsFromJourney]);
 
     const queryOneExtraJourney = useQueryExtraJourney();
 
@@ -132,30 +177,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
               const state = mapToFormData(journey);
               setInitialState(state);
               setTripData(journey);
-
-              // Load all flexible stops from all estimated calls
-              const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
-              const allFeatures: Feature[] = [];
-
-              calls.forEach(call => {
-                const flexArea = call.departureStopAssignment?.expectedFlexibleArea;
-                const feature = loadFeatureFromFlexArea(flexArea);
-                if (feature !== null) {
-                  allFeatures.push(feature);
-                }
-              });
-
-              if (allFeatures.length >= 2) {
-                initializeStops(allFeatures[0], allFeatures[allFeatures.length - 1]);
-
-                // Load all features to the map
-                loadedFlexibleStop(allFeatures);
-
-                // Zoom to fit all features with a small delay to ensure map is ready
-                setTimeout(() => {
-                  onZoomToAllFeatures();
-                }, 100);
-              }
+              loadStopsFromJourney(journey);
             }
           })
           .catch(error => {
@@ -164,14 +186,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       };
       setCurrentTripId(tripId);
       loadInitialState(tripId);
-    }, [
-      handleZoomToFeature,
-      initializeStops,
-      loadedFlexibleStop,
-      onZoomToAllFeatures,
-      queryOneExtraJourney,
-      tripId,
-    ]);
+    }, [loadStopsFromJourney, queryOneExtraJourney, tripId]);
 
     useImperativeHandle(
       ref,
@@ -190,7 +205,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
           onRemoveDepartureStopClick={removeDepartureStop}
           onAddDestinationtopClick={startAddArrivalStop}
           onRemoveDestinationStopClick={removeArrivalStop}
-          onResetCallback={resetStops}
+          onResetCallback={handleResetCallback}
           onSubmitCallback={handleSubmitCallback}
           onViewTripCallback={onZoomToAllFeatures}
           onZoomToFeature={handleZoomToFeature}

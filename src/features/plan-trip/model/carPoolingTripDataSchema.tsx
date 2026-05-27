@@ -34,12 +34,6 @@ export const carPoolingTripDataSchema = Yup.object({
   codespace: Yup.string().required().length(3),
   authority: Yup.string().required(),
   operator: Yup.string().required(),
-  departureDestinationDisplay: Yup.string()
-    .min(3, 'Departure destination display must be at least 3 characters')
-    .required(),
-  destinationDestinationDisplay: Yup.string()
-    .min(3, 'Destination destination display must be at least 3 characters')
-    .required(),
   departureStopName: Yup.string()
     .min(3, 'Departure stop name must be at least 3 characters')
     .required(),
@@ -60,10 +54,20 @@ export const carPoolingTripDataSchema = Yup.object({
     .min(0, 'Must be zero or a positive integer')
     .required(),
   contactUrl: Yup.string()
-    .url('Must be a valid URL')
     .nullable()
     .defined()
-    .transform((value, original) => (original === '' ? null : value)),
+    .transform((value, original) => (original === '' ? null : value))
+    // Yup's built-in .url() rejects hosts without a dot (e.g. localhost), so
+    // validate with the native URL parser, which accepts localhost and ports.
+    .test('is-url', 'Must be a valid URL', value => {
+      if (value === null || value === undefined || value === '') return true;
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
   totalCapacity: Yup.number()
     .typeError('Must be a number')
     .integer('Must be an integer')

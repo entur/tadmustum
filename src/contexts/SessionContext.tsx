@@ -45,7 +45,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuthenticated, isSessionExpired]);
 
   const relogin = useCallback(async () => {
-    await login(window.location.href);
+    await login(window.location.pathname + window.location.search);
   }, [login]);
 
   return (

@@ -1,4 +1,7 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
+import { useAuth } from './shared/auth';
+import { POST_LOGIN_REDIRECT_KEY } from './shared/auth/authUtils.ts';
 import Header from './shared/components/header/Header.tsx';
 import Home from './features/landing-page/Home.tsx';
 import { SearchProvider } from './shared/components/search';
@@ -20,6 +23,26 @@ import PassengerTripBooking from './features/passenger-booking/PassengerTripBook
 if (import.meta.env.DEV) {
   loadDevMessages();
   loadErrorMessages();
+}
+
+/**
+ * After the OIDC login round-trip the user lands on the registered callback URL
+ * (the app root). This restores the page they originally tried to reach.
+ */
+function PostLoginRedirect() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const target = sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+    if (target) {
+      sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+      navigate(target, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  return null;
 }
 
 export default function App() {
@@ -44,6 +67,7 @@ export default function App() {
                 />
                 <Box className="app-root">
                   <Box className="app-content">
+                    <PostLoginRedirect />
                     <Routes>
                       <Route path="/" element={<Home />} />
                       <Route

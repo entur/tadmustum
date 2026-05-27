@@ -3,8 +3,17 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import Button from '@mui/material/Button';
-import { useNavigate } from 'react-router-dom';
-import { Box, Checkbox, Chip, FormControlLabel, Stack, Typography } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Alert,
+  Box,
+  Checkbox,
+  Chip,
+  FormControlLabel,
+  Snackbar,
+  Stack,
+  Typography,
+} from '@mui/material';
 import dayjs from 'dayjs';
 
 const formatMinuteResolution = (value: string | null | undefined) =>
@@ -12,13 +21,25 @@ const formatMinuteResolution = (value: string | null | undefined) =>
 
 export default function CarPoolingTrips() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPastArrivals, setShowPastArrivals] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
+  const [showHiddenFields, setShowHiddenFields] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   const queryExtraJourneys = useQueryExtraJourney();
+
+  useEffect(() => {
+    const message = (location.state as { savedMessage?: string } | null)?.savedMessage;
+    if (message) {
+      setSavedMessage(message);
+      // Drop the state so the snackbar doesn't re-trigger on back/forward or refresh.
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
     queryExtraJourneys('ENT', 'ENT:Authority:ENT', true)
@@ -59,17 +80,17 @@ export default function CarPoolingTrips() {
 
   const columns: GridColDef[] = [
     {
-      field: 'id',
-      headerName: 'ID',
-      minWidth: 220,
-      flex: 1,
+      field: 'actions',
+      headerName: 'Actions',
+      minWidth: 180,
+      sortable: false,
+      filterable: false,
       renderCell: params => (
         <Box>
           <Button
             variant="contained"
             size="small"
             onClick={() => navigate(`/plan-trip/${params.row.id}`)}
-            style={{ marginLeft: 8 }}
           >
             Edit
           </Button>
@@ -80,10 +101,15 @@ export default function CarPoolingTrips() {
             style={{ marginLeft: 8 }}
           >
             Book Ride
-          </Button>{' '}
-          {params.row.id}
+          </Button>
         </Box>
       ),
+    },
+    {
+      field: 'id',
+      headerName: 'ID',
+      minWidth: 220,
+      flex: 1,
     },
     {
       field: 'cancellation',
@@ -104,23 +130,8 @@ export default function CarPoolingTrips() {
         if (params.value === 'partially_cancelled') {
           return <Chip label="Partially cancelled" size="small" color="warning" />;
         }
-        return null;
+        return <Chip label="Active" size="small" color="success" />;
       },
-    },
-    {
-      field: 'departureStopName',
-      headerName: 'Departure stop name',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].stopPointName,
-    },
-    {
-      field: 'departureTimeName',
-      headerName: 'Departure time',
-      flex: 1,
-      valueGetter: (_value: string, row: Extrajourney) =>
-        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
-      valueFormatter: (value: string) => formatMinuteResolution(value),
     },
     {
       field: 'stopCount',
@@ -140,6 +151,21 @@ export default function CarPoolingTrips() {
           </Typography>
         </Box>
       ),
+    },
+    {
+      field: 'departureStopName',
+      headerName: 'Departure stop name',
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].stopPointName,
+    },
+    {
+      field: 'departureTimeName',
+      headerName: 'Departure time',
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) =>
+        row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
+      valueFormatter: (value: string) => formatMinuteResolution(value),
     },
     {
       field: 'arrivalStopName',
@@ -192,7 +218,7 @@ export default function CarPoolingTrips() {
   ];
 
   return (
-    <div>
+    <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', p: { xs: 1, sm: 2 } }}>
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
         <FormControlLabel
           control={
@@ -212,6 +238,15 @@ export default function CarPoolingTrips() {
           }
           label="Show expired trips"
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showHiddenFields}
+              onChange={event => setShowHiddenFields(event.target.checked)}
+            />
+          }
+          label="Show hidden fields"
+        />
         <Typography variant="body2" color="text.secondary">
           Showing {rows?.length ?? 0} of {plannedTrips?.length ?? 0} trips
         </Typography>
@@ -219,7 +254,17 @@ export default function CarPoolingTrips() {
       <DataGrid
         rows={rows}
         columns={columns}
+        columnVisibilityModel={{
+          id: showHiddenFields,
+          latestExpectedArrivalTime: showHiddenFields,
+          expiresAtEpochMs: showHiddenFields,
+        }}
+        disableColumnMenu
+        disableRowSelectionOnClick
+        rowHeight={56}
+        pageSizeOptions={[10, 25, 50]}
         initialState={{
+          pagination: { paginationModel: { pageSize: 10 } },
           sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
         }}
         getRowClassName={params => {
@@ -230,12 +275,60 @@ export default function CarPoolingTrips() {
           return '';
         }}
         sx={{
+          border: 0,
+          borderRadius: 2,
+          boxShadow: 1,
+          bgcolor: 'background.paper',
+          overflow: 'hidden',
+          '& .MuiDataGrid-columnHeaders': {
+            bgcolor: 'rgba(0, 0, 0, 0.04)',
+          },
+          '& .MuiDataGrid-columnHeaderTitle': {
+            fontWeight: 600,
+          },
+          '& .MuiDataGrid-cell': {
+            display: 'flex',
+            alignItems: 'center',
+          },
+          '& .MuiDataGrid-row:nth-of-type(even)': {
+            bgcolor: 'rgba(0, 0, 0, 0.02)',
+          },
+          // Rows aren't clickable, so suppress the default (themed) hover highlight
+          // while keeping the zebra stripe steady.
+          '& .MuiDataGrid-row:hover': {
+            bgcolor: 'transparent',
+          },
+          '& .MuiDataGrid-row:nth-of-type(even):hover': {
+            bgcolor: 'rgba(0, 0, 0, 0.02)',
+          },
+          '& .MuiDataGrid-row.Mui-selected, & .MuiDataGrid-row.Mui-selected:hover': {
+            bgcolor: 'transparent',
+          },
+          '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within':
+            {
+              outline: 'none',
+            },
           '& .row-cancelled': {
             textDecoration: 'line-through',
             color: 'text.disabled',
           },
         }}
       />
-    </div>
+      <Snackbar
+        open={!!savedMessage}
+        autoHideDuration={4000}
+        onClose={() => setSavedMessage(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSavedMessage(null)}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {savedMessage}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }

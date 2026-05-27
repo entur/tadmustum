@@ -6,8 +6,6 @@ const validInput = () => ({
   codespace: 'ENT',
   authority: 'ENT:Authority:ENT',
   operator: 'ENT:Operator:1',
-  departureDestinationDisplay: 'Oslo',
-  destinationDestinationDisplay: 'Bergen',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
   departureFlexibleStop: [10.7522, 59.9139],
@@ -38,16 +36,14 @@ describe('carPoolingTripDataSchema', () => {
     ).rejects.toThrow();
   });
 
-  it.each([
-    'departureDestinationDisplay',
-    'destinationDestinationDisplay',
-    'departureStopName',
-    'destinationStopName',
-  ])('requires %s to be at least 3 characters', async field => {
-    await expect(
-      carPoolingTripDataSchema.validate({ ...validInput(), [field]: 'ab' })
-    ).rejects.toThrow(/at least 3 characters/);
-  });
+  it.each(['departureStopName', 'destinationStopName'])(
+    'requires %s to be at least 3 characters',
+    async field => {
+      await expect(
+        carPoolingTripDataSchema.validate({ ...validInput(), [field]: 'ab' })
+      ).rejects.toThrow(/at least 3 characters/);
+    }
+  );
 
   it.each(['authority', 'operator'])('requires %s', async field => {
     const input = { ...validInput(), [field]: undefined };
@@ -97,6 +93,15 @@ describe('carPoolingTripDataSchema', () => {
     await expect(
       carPoolingTripDataSchema.validate({ ...validInput(), contactUrl: 'not a url' })
     ).rejects.toThrow(/Must be a valid URL/);
+  });
+
+  it('accepts a localhost booking URL with a port', async () => {
+    await expect(
+      carPoolingTripDataSchema.validate({
+        ...validInput(),
+        contactUrl: 'http://localhost:5000/book-trip/uZY6L54a6UITdSSAhMaE',
+      })
+    ).resolves.toBeDefined();
   });
 
   it("transforms '' to null for contactUrl, totalCapacity, and onboardCount", async () => {
