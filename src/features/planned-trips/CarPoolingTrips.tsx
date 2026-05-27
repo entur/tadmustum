@@ -218,7 +218,7 @@ export default function CarPoolingTrips() {
   ];
 
   return (
-    <div>
+    <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', p: { xs: 1, sm: 2 } }}>
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
         <FormControlLabel
           control={
@@ -254,13 +254,18 @@ export default function CarPoolingTrips() {
       <DataGrid
         rows={rows}
         columns={columns}
-        initialState={{
-          sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
-        }}
         columnVisibilityModel={{
           id: showHiddenFields,
           latestExpectedArrivalTime: showHiddenFields,
           expiresAtEpochMs: showHiddenFields,
+        }}
+        disableColumnMenu
+        disableRowSelectionOnClick
+        rowHeight={56}
+        pageSizeOptions={[10, 25, 50]}
+        initialState={{
+          pagination: { paginationModel: { pageSize: 10 } },
+          sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
         }}
         getRowClassName={params => {
           const journey = (params.row as Extrajourney).estimatedVehicleJourney;
@@ -270,6 +275,39 @@ export default function CarPoolingTrips() {
           return '';
         }}
         sx={{
+          border: 0,
+          borderRadius: 2,
+          boxShadow: 1,
+          bgcolor: 'background.paper',
+          overflow: 'hidden',
+          '& .MuiDataGrid-columnHeaders': {
+            bgcolor: 'rgba(0, 0, 0, 0.04)',
+          },
+          '& .MuiDataGrid-columnHeaderTitle': {
+            fontWeight: 600,
+          },
+          '& .MuiDataGrid-cell': {
+            display: 'flex',
+            alignItems: 'center',
+          },
+          '& .MuiDataGrid-row:nth-of-type(even)': {
+            bgcolor: 'rgba(0, 0, 0, 0.02)',
+          },
+          // Rows aren't clickable, so suppress the default (themed) hover highlight
+          // while keeping the zebra stripe steady.
+          '& .MuiDataGrid-row:hover': {
+            bgcolor: 'transparent',
+          },
+          '& .MuiDataGrid-row:nth-of-type(even):hover': {
+            bgcolor: 'rgba(0, 0, 0, 0.02)',
+          },
+          '& .MuiDataGrid-row.Mui-selected, & .MuiDataGrid-row.Mui-selected:hover': {
+            bgcolor: 'transparent',
+          },
+          '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within':
+            {
+              outline: 'none',
+            },
           '& .row-cancelled': {
             textDecoration: 'line-through',
             color: 'text.disabled',
@@ -291,6 +329,6 @@ export default function CarPoolingTrips() {
           {savedMessage}
         </Alert>
       </Snackbar>
-    </div>
+    </Box>
   );
 }
