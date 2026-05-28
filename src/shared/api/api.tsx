@@ -297,7 +297,13 @@ const queryExtraJourney =
   };
 
 const bookPassengerRide =
-  (uri: string, auth: AuthState, originalTrip: Extrajourney, bookingData: PassengerBookingData) =>
+  (
+    uri: string,
+    auth: AuthState,
+    originalTrip: Extrajourney,
+    bookingData: PassengerBookingData,
+    authority: string
+  ) =>
   async (): Promise<{ data?: string; error?: AppError }> => {
     if (!auth.user?.access_token) {
       throw new Error('Access token is missing');
@@ -315,7 +321,7 @@ const bookPassengerRide =
     `;
 
     try {
-      const variables = prepareBookingData(originalTrip, bookingData);
+      const variables = prepareBookingData(originalTrip, bookingData, authority);
 
       const result = await client.mutate({
         mutation,
@@ -362,12 +368,17 @@ const api = (config: Config, auth?: AuthState) => {
         authority,
         showCompletedTrips
       ),
-    bookPassengerRide: (originalTrip: Extrajourney, bookingData: PassengerBookingData) =>
+    bookPassengerRide: (
+      originalTrip: Extrajourney,
+      bookingData: PassengerBookingData,
+      authority: string
+    ) =>
       bookPassengerRide(
         config['carpool-messages-api'] as string,
         auth as AuthState,
         originalTrip,
-        bookingData
+        bookingData,
+        authority
       ),
     getStreetRoute: getStreetRoute(config['journey-planner-api'] as string),
   };

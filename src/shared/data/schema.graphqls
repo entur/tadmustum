@@ -49,9 +49,8 @@ type Codespace {
 }
 
 enum Permission {
-  MESSAGES
-  CANCELLATIONS
-  EXTRAJOURNEYS
+  VIEW_CARPOOLING_DATA
+  ADMIN_CARPOOLING_DATA
 }
 
 type Mutation {

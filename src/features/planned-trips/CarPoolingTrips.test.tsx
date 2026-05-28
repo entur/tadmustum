@@ -11,11 +11,21 @@ vi.mock('./hooks/useQueryExtraJourney.tsx', () => ({
   useQueryExtraJourney: () => queryExtraJourneys,
 }));
 
+// useAuthorities drives the fan-out across allowed codespaces; the test pretends
+// the user only has access to ENT so the existing single-tenant assertions hold.
+vi.mock('../../shared/hooks/useAuthorities.tsx', () => ({
+  useAuthorities: () => ({
+    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
+    allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
+  }),
+}));
+
 const trip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
   ({
     id: 'ENT:ServiceJourney:1',
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
+      lineRef: 'ENT:CarPooling:trip-1',
       expiresAtEpochMs: new Date('2099-01-01').valueOf(),
       estimatedCalls: {
         estimatedCall: [

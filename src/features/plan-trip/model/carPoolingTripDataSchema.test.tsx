@@ -3,7 +3,6 @@ import dayjs from 'dayjs';
 import { carPoolingTripDataSchema } from './carPoolingTripDataSchema';
 
 const validInput = () => ({
-  codespace: 'ENT',
   authority: 'ENT:Authority:ENT',
   operator: 'ENT:Operator:1',
   departureStopName: 'Oslo S',
@@ -25,15 +24,6 @@ const validInput = () => ({
 describe('carPoolingTripDataSchema', () => {
   it('accepts a fully-populated valid input', async () => {
     await expect(carPoolingTripDataSchema.validate(validInput())).resolves.toBeDefined();
-  });
-
-  it('requires codespace to be exactly 3 characters', async () => {
-    await expect(
-      carPoolingTripDataSchema.validate({ ...validInput(), codespace: 'EN' })
-    ).rejects.toThrow();
-    await expect(
-      carPoolingTripDataSchema.validate({ ...validInput(), codespace: 'ENTX' })
-    ).rejects.toThrow();
   });
 
   it.each(['departureStopName', 'destinationStopName'])(

@@ -10,14 +10,13 @@ const flexAreaToPosition = (flexArea: ExpectedFlexibleArea | undefined): Positio
   return feature ? feature.geometry.coordinates : null;
 };
 
-const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
+const mapToFormData = (journey: Extrajourney, authority: string): CarPoolingTripDataFormData => {
   const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
   const firstCall = calls[0];
   const lastCall = calls[calls.length - 1];
 
   return {
-    codespace: 'ENT',
-    authority: 'ENT:Authority:ENT',
+    authority,
     operator: journey.estimatedVehicleJourney.operatorRef,
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,

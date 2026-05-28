@@ -10,7 +10,6 @@ vi.mock('uuid', () => ({
 const baseForm = (
   overrides: Partial<CarPoolingTripDataFormData> = {}
 ): CarPoolingTripDataFormData => ({
-  codespace: 'ENT',
   authority: 'ENT:Authority:ENT',
   operator: 'ENT:Operator:1',
   departureStopName: 'Oslo S',

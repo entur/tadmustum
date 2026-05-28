@@ -65,15 +65,20 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     drawingStopsAllowed,
     tripData,
   } = props;
-  const { authorities } = useAuthorities();
+  // The form drives mutations (createOrUpdateExtrajourney), so restrict the
+  // authority dropdown to codespaces where the user actually has write rights.
+  // Without this filter, a view-only user would see authorities they can't
+  // submit to and only learn of the rejection on a 403 from the server.
+  const { adminAuthorities: authorities } = useAuthorities();
   const operators = useOperators();
 
   // New trips get a client-generated id so the booking URL (this app's
-  // /book-trip/{id} page) can be prefilled before the trip is saved; the
-  // backend upserts at the supplied id. When editing, reset(initialState)
-  // replaces both with the existing trip's values.
+  // /book-trip/{codespace}/{id} page) can be prefilled before the trip is
+  // saved; the backend upserts at the supplied id. The codespace isn't known
+  // until the authority is selected, so the URL is filled in by the effect
+  // below once that happens. When editing, reset(initialState) replaces both
+  // with the existing trip's values.
   const newTripId = useMemo(() => uuidv4(), []);
-  const defaultBookingUrl = `${window.location.origin}/book-trip/${newTripId}`;
 
   const {
     handleSubmit,
@@ -88,7 +93,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     resolver: yupResolver(carPoolingTripDataSchema) as Resolver<CarPoolingTripDataFormData>,
     mode: 'onBlur', // or "onChange", depending on UX preference
     defaultValues: {
-      codespace: 'ENT', // TODO fix hardcoding
       authority: '',
       operator: '',
       id: newTripId,
@@ -101,13 +105,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       intermediateCalls: [],
       tripCancellation: false,
       driverDeviationBudget: 15,
-      contactUrl: defaultBookingUrl,
+      contactUrl: null,
       totalCapacity: 5,
       onboardCount: 1,
     },
   });
 
   const authority = watch('authority');
+  const contactUrl = watch('contactUrl');
   const operator = watch('operator');
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
@@ -123,7 +128,19 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
 
   useEffect(() => {
     if (authorities.length && !authority) {
-      setValue('authority', authorities[0].id);
+      // Prefer an ENT-prefixed authority when several are available; otherwise
+      // just take the first. New trips default to whichever codespace the user
+      // is most likely to act in.
+      const enturAuthority = authorities.find(a => a.id.startsWith('ENT:'));
+      setValue('authority', (enturAuthority ?? authorities[0]).id);
+    }
+
+    // Fill in the default booking URL once the authority (and therefore the
+    // codespace) is known. Skip if the user has already entered something — we
+    // never want to clobber a manual edit or an edited trip's existing URL.
+    if (authority && !contactUrl) {
+      const codespace = authority.split(':')[0];
+      setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${newTripId}`);
     }
 
     if (operators.length && !operator) {
@@ -175,6 +192,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     reset,
     authorities,
     authority,
+    contactUrl,
+    newTripId,
     operators,
     operator,
     mapDepartureFlexibleStop,
@@ -455,31 +474,35 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           <Divider sx={{ mt: 2 }} />
         </Box>
       )}
-      <FormControl fullWidth required error={!!errors.authority} margin="normal">
-        <InputLabel id="authority-label">Authority</InputLabel>
-        <Controller
-          name="authority"
-          control={control}
-          render={({ field }) => {
-            return (
-              <Select {...field} labelId="authority-label" label="Authority">
-                <MenuItem value="" disabled>
-                  <em>Authority</em>
-                </MenuItem>
-                {field.value && !authorities.some(a => a.id === field.value) && (
-                  <MenuItem value={field.value}>{field.value}</MenuItem>
-                )}
-                {authorities.map(authority => (
-                  <MenuItem key={authority.id} value={authority.id}>
-                    {authority.name}
+      {/* Most users have access to a single authority, so showing a single-option
+          dropdown is just noise. When there is more than one we render the picker. */}
+      {authorities.length > 1 && (
+        <FormControl fullWidth required error={!!errors.authority} margin="normal">
+          <InputLabel id="authority-label">Authority</InputLabel>
+          <Controller
+            name="authority"
+            control={control}
+            render={({ field }) => {
+              return (
+                <Select {...field} labelId="authority-label" label="Authority">
+                  <MenuItem value="" disabled>
+                    <em>Authority</em>
                   </MenuItem>
-                ))}
-              </Select>
-            );
-          }}
-        />
-        <FormHelperText>{errors.authority?.message}</FormHelperText>
-      </FormControl>
+                  {field.value && !authorities.some(a => a.id === field.value) && (
+                    <MenuItem value={field.value}>{field.value}</MenuItem>
+                  )}
+                  {authorities.map(authority => (
+                    <MenuItem key={authority.id} value={authority.id}>
+                      {authority.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              );
+            }}
+          />
+          <FormHelperText>{errors.authority?.message}</FormHelperText>
+        </FormControl>
+      )}
       <FormControl fullWidth required error={!!errors.operator} margin="normal">
         <InputLabel id="operator-label">Operator</InputLabel>
         <Controller

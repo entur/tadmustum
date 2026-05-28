@@ -16,6 +16,16 @@ vi.mock('../hooks/useMutateExtrajourney', () => ({
   useMutateExtrajourney: () => vi.fn(),
 }));
 
+// useAuthorities pairs codespaces to NeTEx authority ids; the component waits
+// for the matching authority before issuing the trip query, so the test needs
+// to supply one. Real lookups go through OIDC + GraphQL.
+vi.mock('../../../shared/hooks/useAuthorities', () => ({
+  useAuthorities: () => ({
+    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
+    allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
+  }),
+}));
+
 // Stub the heavy form (MUI fields, date pickers, schema). The reset behaviour
 // lives in CarPoolingTripData, so we only need a way to fire onResetCallback
 // and observe whether a trip was loaded.
@@ -36,7 +46,6 @@ const TRIP_ID = 'ENT:ServiceJourney:42';
 // through the real SIRI mapper so the flexible areas decode back into features.
 const journeyFixture = (): Extrajourney => {
   const form: CarPoolingTripDataFormData = {
-    codespace: 'ENT',
     authority: 'ENT:Authority:ENT',
     operator: 'ENT:Operator:1',
     id: TRIP_ID,
@@ -78,7 +87,7 @@ describe('CarPoolingTripData reset behaviour', () => {
     queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" {...props} />);
 
     // Initial load draws the trip's stops onto the map.
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));

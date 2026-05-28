@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
+import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
 import Button from '@mui/material/Button';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -29,8 +30,10 @@ export default function CarPoolingTrips() {
   const [showExpired, setShowExpired] = useState(false);
   const [showHiddenFields, setShowHiddenFields] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [failedCodespaces, setFailedCodespaces] = useState<string[]>([]);
 
   const queryExtraJourneys = useQueryExtraJourney();
+  const { authorities } = useAuthorities();
 
   useEffect(() => {
     const message = (location.state as { savedMessage?: string } | null)?.savedMessage;
@@ -42,16 +45,36 @@ export default function CarPoolingTrips() {
   }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
-    queryExtraJourneys('ENT', 'ENT:Authority:ENT', true)
-      .then(response => {
-        setPlannedTrips(response.data);
+    if (!authorities.length) return;
+    // Fan out across every authority the user has access to and merge the
+    // results. Each trip carries its own codespace in its lineRef, so callers
+    // (edit/book navigation) can identify which tenant a row belongs to.
+    // Track per-codespace failures so we can surface a non-fatal warning rather
+    // than silently returning fewer trips than the user expects.
+    Promise.all(
+      authorities.map(authority =>
+        queryExtraJourneys(authority.id.split(':')[0], authority.id, true)
+      )
+    )
+      .then(responses => {
+        const merged: Extrajourney[] = [];
+        const failed: string[] = [];
+        responses.forEach((response, index) => {
+          if (response.data) {
+            merged.push(...response.data);
+          } else if (response.error) {
+            failed.push(authorities[index].id.split(':')[0]);
+          }
+        });
+        setPlannedTrips(merged);
+        setFailedCodespaces(failed);
         setLoading(false);
       })
-      .catch(error => {
-        setError(error);
+      .catch(err => {
+        setError(err);
         setLoading(false);
       });
-  }, [queryExtraJourneys]);
+  }, [authorities, queryExtraJourneys]);
 
   const rows = useMemo(() => {
     if (!plannedTrips) return plannedTrips;
@@ -85,25 +108,31 @@ export default function CarPoolingTrips() {
       minWidth: 180,
       sortable: false,
       filterable: false,
-      renderCell: params => (
-        <Box>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => navigate(`/plan-trip/${params.row.id}`)}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => navigate(`/book-trip/${params.row.id}`)}
-            style={{ marginLeft: 8 }}
-          >
-            Book Ride
-          </Button>
-        </Box>
-      ),
+      renderCell: params => {
+        // Codespace is encoded in the trip's lineRef as `<CODESPACE>:CarPooling:<uuid>`.
+        // It identifies which Firestore partition the trip lives in, so it must
+        // be in the URL for the edit/book pages to know which tenant to query.
+        const codespace = params.row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
+        return (
+          <Box>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => navigate(`/plan-trip/${codespace}/${params.row.id}`)}
+            >
+              Edit
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => navigate(`/book-trip/${codespace}/${params.row.id}`)}
+              style={{ marginLeft: 8 }}
+            >
+              Book Ride
+            </Button>
+          </Box>
+        );
+      },
     },
     {
       field: 'id',
@@ -219,6 +248,12 @@ export default function CarPoolingTrips() {
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', p: { xs: 1, sm: 2 } }}>
+      {failedCodespaces.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Could not load trips from: {failedCodespaces.join(', ')}. The list below may be
+          incomplete.
+        </Alert>
+      )}
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
         <FormControlLabel
           control={

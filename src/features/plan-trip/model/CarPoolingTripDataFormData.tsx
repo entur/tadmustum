@@ -3,7 +3,6 @@ import type { Position } from 'geojson';
 import type { EstimatedCall } from '../../../shared/model/EstimatedCall.tsx';
 
 export type CarPoolingTripDataFormData = {
-  codespace: string;
   authority: string;
   operator: string;
   id?: string;

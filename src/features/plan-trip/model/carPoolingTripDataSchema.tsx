@@ -31,7 +31,6 @@ const positionSchema = Yup.mixed<Position>()
 const dateSchema = Yup.mixed<Dayjs>().dayjs('Not a valid date');
 
 export const carPoolingTripDataSchema = Yup.object({
-  codespace: Yup.string().required().length(3),
   authority: Yup.string().required(),
   operator: Yup.string().required(),
   departureStopName: Yup.string()
