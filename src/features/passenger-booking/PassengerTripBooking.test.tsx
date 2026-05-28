@@ -142,12 +142,37 @@ describe('PassengerTripBooking', () => {
   it('pre-populates pickup and dropoff from URL query parameters', async () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
-    renderAt('/book-trip/ENT:ServiceJourney:1?pickup=59.9139,10.7522&dropoff=60.3913,5.3221');
+    renderAt(
+      '/book-trip/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
+    );
 
     await screen.findByText('Carpooling trip ENT:Authority:ENT');
 
     expect(screen.getByDisplayValue('59.913900, 10.752200')).toBeInTheDocument();
     expect(screen.getByDisplayValue('60.391300, 5.322100')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Book Ride' })).toBeEnabled();
+  });
+
+  it('labels the coordinate text fields as "Pickup Coordinates" and "Dropoff Coordinates"', async () => {
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
+
+    renderAt();
+
+    expect(await screen.findByLabelText('Your Pickup Coordinates')).toBeInTheDocument();
+    expect(screen.getByLabelText('Your Dropoff Coordinates')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Your Origin Location')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Your Destination Location')).not.toBeInTheDocument();
+  });
+
+  it('does not surface a pre-selection notice when coordinates are present in the URL', async () => {
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
+
+    renderAt(
+      '/book-trip/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
+    );
+
+    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+
+    expect(screen.queryByText(/pre-selected from the shared URL/i)).not.toBeInTheDocument();
   });
 });

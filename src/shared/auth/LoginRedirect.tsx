@@ -9,7 +9,10 @@ const LoginRedirect = () => {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      login(returnUrl);
+      // Replace history so pressing back from the OIDC login page skips this
+      // protected route — otherwise it would re-trigger the redirect and trap
+      // the user on the login page.
+      login(returnUrl, { replace: true });
     }
   }, [isLoading, isAuthenticated, login, returnUrl]);
 

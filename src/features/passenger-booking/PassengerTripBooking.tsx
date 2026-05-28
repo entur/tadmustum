@@ -74,20 +74,26 @@ export default function PassengerTripBooking() {
     return undefined;
   };
 
-  // Update URL parameters when coordinates change
+  // Update URL parameters when coordinates change. Parameter names and value
+  // format (`lat,lng` with 6-decimal precision) match what OpenTripPlanner's
+  // carpooling module appends to the booking URL so the same link round-trips
+  // between OTP-generated and app-shared URLs.
+  const formatCoordinate = (coords: [number, number]) =>
+    `${coords[1].toFixed(6)},${coords[0].toFixed(6)}`;
+
   const updateURLParams = (pickup?: [number, number], dropoff?: [number, number]) => {
     const newParams = new URLSearchParams(searchParams);
 
     if (pickup) {
-      newParams.set('pickup', `${pickup[1]},${pickup[0]}`); // Store as lat,lng in URL
+      newParams.set('from_coordinate', formatCoordinate(pickup));
     } else {
-      newParams.delete('pickup');
+      newParams.delete('from_coordinate');
     }
 
     if (dropoff) {
-      newParams.set('dropoff', `${dropoff[1]},${dropoff[0]}`); // Store as lat,lng in URL
+      newParams.set('to_coordinate', formatCoordinate(dropoff));
     } else {
-      newParams.delete('dropoff');
+      newParams.delete('to_coordinate');
     }
 
     setSearchParams(newParams, { replace: true });
@@ -113,8 +119,8 @@ export default function PassengerTripBooking() {
 
   // Initialize form with URL parameters
   useEffect(() => {
-    const pickupParam = searchParams.get('pickup');
-    const dropoffParam = searchParams.get('dropoff');
+    const pickupParam = searchParams.get('from_coordinate');
+    const dropoffParam = searchParams.get('to_coordinate');
 
     const pickupCoords = parseCoordinatesFromURL(pickupParam);
     const dropoffCoords = parseCoordinatesFromURL(dropoffParam);
@@ -446,7 +452,7 @@ export default function PassengerTripBooking() {
               <Stack spacing={3}>
                 <TextField
                   fullWidth
-                  label="Your Origin Location"
+                  label="Your Pickup Coordinates"
                   placeholder="Enter pickup address or location"
                   value={bookingData.origin}
                   onChange={handleInputChange('origin')}
@@ -455,7 +461,7 @@ export default function PassengerTripBooking() {
 
                 <TextField
                   fullWidth
-                  label="Your Destination Location"
+                  label="Your Dropoff Coordinates"
                   placeholder="Enter drop-off address or location"
                   value={bookingData.destination}
                   onChange={handleInputChange('destination')}
@@ -582,13 +588,6 @@ export default function PassengerTripBooking() {
                 View the trip route and click the buttons below to select your pickup and drop-off
                 locations on the map.
               </Typography>
-              {(searchParams.has('pickup') || searchParams.has('dropoff')) && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    📍 Locations have been pre-selected from the shared URL
-                  </Typography>
-                </Alert>
-              )}
               <PassengerBookingMap
                 trip={trip}
                 onPickupLocationSelect={handlePickupLocationSelect}
