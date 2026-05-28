@@ -578,16 +578,16 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
-      <Button
-        variant="contained"
-        disabled={!!departureFlexibleStop || !drawingStopsAllowed}
-        onClick={() => onAddDeparturestopClick()}
-      >
-        Add stop
-      </Button>
-      <Box display="flex" gap={1}>
+      <Box display="flex" gap={1} flexWrap="wrap">
         <Button
           variant="contained"
+          disabled={!!departureFlexibleStop || !drawingStopsAllowed}
+          onClick={() => onAddDeparturestopClick()}
+        >
+          Add stop
+        </Button>
+        <Button
+          variant="outlined"
           onClick={onRemoveDepartureStopClick}
           disabled={!departureFlexibleStop}
         >
@@ -596,7 +596,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         {mapDepartureFlexibleStop?.id && (
           <IconButton
             disabled={!departureFlexibleStop}
-            aria-label="Zoom to destination stop"
+            aria-label="Zoom to departure stop"
             onClick={() => onZoomToFeature(mapDepartureFlexibleStop.id as string)}
           >
             <GpsFixedIcon />
@@ -646,16 +646,16 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
-      <Button
-        variant="contained"
-        disabled={!!destinationFlexibleStop || !drawingStopsAllowed}
-        onClick={() => onAddDestinationtopClick()}
-      >
-        Add stop
-      </Button>
-      <Box display="flex" gap={1}>
+      <Box display="flex" gap={1} flexWrap="wrap">
         <Button
           variant="contained"
+          disabled={!!destinationFlexibleStop || !drawingStopsAllowed}
+          onClick={() => onAddDestinationtopClick()}
+        >
+          Add stop
+        </Button>
+        <Button
+          variant="outlined"
           onClick={onRemoveDestinationStopClick}
           disabled={!destinationFlexibleStop}
         >
@@ -673,6 +673,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       </Box>
 
       <Divider />
+      <Typography variant="h6" component="h2">
+        Trip details
+      </Typography>
 
       <Controller
         name="driverDeviationBudget"
@@ -709,39 +712,41 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }}
       />
 
-      <Controller
-        name="totalCapacity"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              value={field.value ?? ''}
-              label="Total Capacity"
-              error={!!errors.totalCapacity}
-              helperText={errors.totalCapacity?.message}
-              fullWidth
-            />
-          );
-        }}
-      />
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Controller
+          name="totalCapacity"
+          control={control}
+          render={({ field }) => {
+            return (
+              <TextField
+                {...field}
+                value={field.value ?? ''}
+                label="Total capacity"
+                error={!!errors.totalCapacity}
+                helperText={errors.totalCapacity?.message}
+                sx={{ flex: 1, minWidth: 160 }}
+              />
+            );
+          }}
+        />
 
-      <Controller
-        name="onboardCount"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              value={field.value ?? ''}
-              label="Number of people in the vehicle"
-              error={!!errors.onboardCount}
-              helperText={errors.onboardCount?.message}
-              fullWidth
-            />
-          );
-        }}
-      />
+        <Controller
+          name="onboardCount"
+          control={control}
+          render={({ field }) => {
+            return (
+              <TextField
+                {...field}
+                value={field.value ?? ''}
+                label="Number of people in the vehicle"
+                error={!!errors.onboardCount}
+                helperText={errors.onboardCount?.message}
+                sx={{ flex: 1, minWidth: 160 }}
+              />
+            );
+          }}
+        />
+      </Box>
 
       {noAdminAccess && (
         <Alert severity="info">
