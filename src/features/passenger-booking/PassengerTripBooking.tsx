@@ -26,6 +26,7 @@ import type { Extrajourney } from '../../shared/model/Extrajourney';
 import { useQueryExtraJourney } from '../plan-trip/hooks/useQueryOneExtraJourney';
 import PassengerBookingMap from './components/PassengerBookingMap';
 import { useBookPassengerRide } from './hooks/useBookPassengerRide';
+import { useAuthorities } from '../../shared/hooks/useAuthorities';
 
 interface PassengerBookingFormData {
   origin: string;
@@ -39,7 +40,19 @@ interface PassengerBookingFormData {
 }
 
 export default function PassengerTripBooking() {
-  const { tripId } = useParams<{ tripId: string }>();
+  const { codespace, tripId } = useParams<{ codespace: string; tripId: string }>();
+  const { authorities, allowedCodespaces } = useAuthorities();
+  const tripAuthority = codespace
+    ? authorities.find(a => a.id.startsWith(`${codespace}:`))
+    : undefined;
+  // Booking writes the trip back, so requires adminCarpoolingData on the
+  // codespace — surface that as a disabled button rather than letting the
+  // user fill in the form and hit a 403 on submit.
+  const canBook =
+    !!codespace &&
+    !!allowedCodespaces
+      .find(c => c.id === codespace)
+      ?.permissions.includes('ADMIN_CARPOOLING_DATA');
   const [searchParams, setSearchParams] = useSearchParams();
   const [trip, setTrip] = useState<Extrajourney | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,9 +113,9 @@ export default function PassengerTripBooking() {
   };
 
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || !codespace || !tripAuthority) return;
 
-    queryExtraJourney('ENT', 'ENT:Authority:ENT', tripId)
+    queryExtraJourney(codespace, tripAuthority.id, tripId)
       .then(response => {
         if (response.error) {
           setError('Failed to load trip details');
@@ -115,7 +128,7 @@ export default function PassengerTripBooking() {
         setError('Failed to load trip details');
         setLoading(false);
       });
-  }, [tripId, queryExtraJourney]);
+  }, [codespace, tripAuthority, tripId, queryExtraJourney]);
 
   // Initialize form with URL parameters
   useEffect(() => {
@@ -213,6 +226,11 @@ export default function PassengerTripBooking() {
       return;
     }
 
+    if (!tripAuthority) {
+      setBookingError('Could not resolve the authority for this trip');
+      return;
+    }
+
     setIsBookingInProgress(true);
     setBookingError(null);
 
@@ -227,7 +245,7 @@ export default function PassengerTripBooking() {
         passengerDeviationBudget: bookingData.passengerDeviationBudget,
       };
 
-      const result = await bookPassengerRide(trip, bookingPayload);
+      const result = await bookPassengerRide(trip, bookingPayload, tripAuthority.id);
 
       if (result.error) {
         setBookingError(result.error.message);
@@ -536,6 +554,14 @@ export default function PassengerTripBooking() {
                   </Alert>
                 )}
 
+                {!canBook && (
+                  <Alert severity="info">
+                    <Typography variant="body2">
+                      You don&apos;t have permission to book rides in this codespace.
+                    </Typography>
+                  </Alert>
+                )}
+
                 <Box display="flex" gap={2} flexWrap="wrap">
                   <Button
                     variant="outlined"
@@ -548,6 +574,7 @@ export default function PassengerTripBooking() {
                     variant="contained"
                     onClick={handleBookRide}
                     disabled={
+                      !canBook ||
                       !bookingData.pickupCoordinates ||
                       !bookingData.dropoffCoordinates ||
                       isBookingConfirmed ||

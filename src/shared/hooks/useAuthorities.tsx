@@ -9,21 +9,16 @@ type CodespaceAuthority = {
   name: string;
 };
 
-const Permission = {
-  MESSAGES: 'MESSAGES',
-  CANCELLATIONS: 'CANCELLATIONS',
-  EXTRAJOURNEYS: 'EXTRAJOURNEYS',
-} as const;
-
-type Permission = keyof typeof Permission;
+type Permission = 'VIEW_CARPOOLING_DATA' | 'ADMIN_CARPOOLING_DATA';
 
 type Codespace = {
   id: string;
-  permissions: [Permission];
+  permissions: Permission[];
 };
 
 export const useAuthorities: () => {
   authorities: CodespaceAuthority[];
+  adminAuthorities: CodespaceAuthority[];
   allowedCodespaces: Codespace[];
 } = () => {
   const auth = useAuth();
@@ -76,5 +71,15 @@ export const useAuthorities: () => {
     fetchAuthorities().then();
   }, [auth, config, triggerNoAccess]);
 
-  return { authorities: codespaceAuthorities, allowedCodespaces };
+  // Codespaces with write permission. Use this for surfaces that lead to a
+  // mutation (creating a trip, booking a ride) so the user doesn't see options
+  // that would only fail on submit with a 403 from the server.
+  const adminCodespaceIds = new Set(
+    allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
+  );
+  const adminAuthorities = codespaceAuthorities.filter(a =>
+    adminCodespaceIds.has(a.id.split(':')[0])
+  );
+
+  return { authorities: codespaceAuthorities, adminAuthorities, allowedCodespaces };
 };

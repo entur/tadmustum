@@ -16,6 +16,15 @@ vi.mock('./hooks/useBookPassengerRide', () => ({
   useBookPassengerRide: () => bookPassengerRide,
 }));
 
+// The component looks up the trip's authority via the codespace from the URL.
+// Provide a matching entry so the trip query and booking submission proceed.
+vi.mock('../../shared/hooks/useAuthorities', () => ({
+  useAuthorities: () => ({
+    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
+    allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
+  }),
+}));
+
 // Stub the map: replace it with two buttons that invoke the location-select callbacks.
 // This keeps the test off of maplibre/GL while still exercising the props contract.
 vi.mock('./components/PassengerBookingMap', () => ({
@@ -62,8 +71,8 @@ const trip: Extrajourney = {
   },
 } as unknown as Extrajourney;
 
-const renderAt = (path = '/book-trip/ENT:ServiceJourney:1') =>
-  renderWithRouter(<PassengerTripBooking />, { path, route: '/book-trip/:tripId' });
+const renderAt = (path = '/book-trip/ENT/ENT:ServiceJourney:1') =>
+  renderWithRouter(<PassengerTripBooking />, { path, route: '/book-trip/:codespace/:tripId' });
 
 describe('PassengerTripBooking', () => {
   it('shows a loading state while the trip query is pending', () => {
@@ -111,8 +120,9 @@ describe('PassengerTripBooking', () => {
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
 
     await waitFor(() => expect(bookPassengerRide).toHaveBeenCalledTimes(1));
-    const [submittedTrip, payload] = bookPassengerRide.mock.calls[0];
+    const [submittedTrip, payload, submittedAuthority] = bookPassengerRide.mock.calls[0];
     expect(submittedTrip).toBe(trip);
+    expect(submittedAuthority).toBe('ENT:Authority:ENT');
     expect(payload).toMatchObject({
       tripId: 'ENT:ServiceJourney:1',
       pickupCoordinates: [10.7522, 59.9139],
@@ -143,7 +153,7 @@ describe('PassengerTripBooking', () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
     renderAt(
-      '/book-trip/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
+      '/book-trip/ENT/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
     );
 
     await screen.findByText('Carpooling trip ENT:Authority:ENT');
@@ -168,7 +178,7 @@ describe('PassengerTripBooking', () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
     renderAt(
-      '/book-trip/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
+      '/book-trip/ENT/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
     );
 
     await screen.findByText('Carpooling trip ENT:Authority:ENT');

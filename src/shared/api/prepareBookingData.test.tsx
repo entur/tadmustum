@@ -14,6 +14,7 @@ const baseTrip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
     id: 'ENT:ServiceJourney:1',
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
+      lineRef: 'ENT:CarPooling:trip-1',
       publishedLineName: 'Carpooling trip',
       estimatedCalls: {
         estimatedCall: [
@@ -55,7 +56,9 @@ describe('prepareBookingData', () => {
     const trip = baseTrip();
     delete (trip as { id?: string }).id;
 
-    expect(() => prepareBookingData(trip, baseBooking())).toThrow(/must have an ID/);
+    expect(() => prepareBookingData(trip, baseBooking(), 'ENT:Authority:ENT')).toThrow(
+      /must have an ID/
+    );
   });
 
   it('throws when the original trip has fewer than 2 stops', () => {
@@ -63,17 +66,19 @@ describe('prepareBookingData', () => {
     trip.estimatedVehicleJourney.estimatedCalls.estimatedCall =
       trip.estimatedVehicleJourney.estimatedCalls.estimatedCall.slice(0, 1);
 
-    expect(() => prepareBookingData(trip, baseBooking())).toThrow(/at least 2 stops/);
+    expect(() => prepareBookingData(trip, baseBooking(), 'ENT:Authority:ENT')).toThrow(
+      /at least 2 stops/
+    );
   });
 
   it('preserves the original trip id', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking());
+    const result = prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
     expect(result.input.id).toBe('ENT:ServiceJourney:1');
   });
 
   it('inserts pickup and dropoff between the original first and last stops and reorders them', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking());
+    const result = prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls).toHaveLength(4);
@@ -88,7 +93,7 @@ describe('prepareBookingData', () => {
   });
 
   it('formats pickup and dropoff stop names with lat,lng to 4 decimals', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking());
+    const result = prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].stopPointName).toBe('Passenger Pickup (59.9139, 10.7522)');
@@ -97,7 +102,7 @@ describe('prepareBookingData', () => {
 
   it('places pickup at 1/3 and dropoff at 2/3 of the journey when times are not provided', () => {
     // Journey is 09:00 -> 15:00 = 6h. 1/3 = 11:00, 2/3 = 13:00.
-    const result = prepareBookingData(baseTrip(), baseBooking());
+    const result = prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].aimedDepartureTime).toBe('2026-06-01T11:00:00.000Z');
@@ -112,7 +117,8 @@ describe('prepareBookingData', () => {
       baseBooking({
         pickupTime: '2026-06-01T10:15:00.000Z',
         dropoffTime: '2026-06-01T14:45:00.000Z',
-      })
+      }),
+      'ENT:Authority:ENT'
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -121,7 +127,11 @@ describe('prepareBookingData', () => {
   });
 
   it('adds passengerDeviationBudget to derive latestExpectedArrivalTime', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking({ passengerDeviationBudget: 15 }));
+    const result = prepareBookingData(
+      baseTrip(),
+      baseBooking({ passengerDeviationBudget: 15 }),
+      'ENT:Authority:ENT'
+    );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].latestExpectedArrivalTime).toBe('2026-06-01T11:15:00.000Z');
@@ -131,7 +141,8 @@ describe('prepareBookingData', () => {
   it('omits latestExpectedArrivalTime when passengerDeviationBudget is not provided', () => {
     const result = prepareBookingData(
       baseTrip(),
-      baseBooking({ passengerDeviationBudget: undefined })
+      baseBooking({ passengerDeviationBudget: undefined }),
+      'ENT:Authority:ENT'
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -140,14 +151,18 @@ describe('prepareBookingData', () => {
   });
 
   it('increments the onboard count by the number of passengers at pickup', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking({ numberOfPassengers: 3 }));
+    const result = prepareBookingData(
+      baseTrip(),
+      baseBooking({ numberOfPassengers: 3 }),
+      'ENT:Authority:ENT'
+    );
 
     const pickup = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall[1];
     expect(pickup.expectedDepartureOccupancy?.[0].onboardCount).toBe(4); // 1 (existing) + 3
   });
 
   it('inherits totalCapacity from the original first stop', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking());
+    const result = prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
     const pickup = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall[1];
     const dropoff = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall[2];
@@ -156,7 +171,7 @@ describe('prepareBookingData', () => {
   });
 
   it('inherits destinationDisplay from the original last stop', () => {
-    const result = prepareBookingData(baseTrip(), baseBooking());
+    const result = prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].destinationDisplay).toBe('Bergen');

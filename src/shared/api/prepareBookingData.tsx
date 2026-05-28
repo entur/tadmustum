@@ -15,7 +15,8 @@ export interface PassengerBookingData {
 
 export function prepareBookingData(
   originalTrip: Extrajourney,
-  bookingData: PassengerBookingData
+  bookingData: PassengerBookingData,
+  authority: string
 ): {
   codespace: string;
   authority: string;
@@ -23,6 +24,13 @@ export function prepareBookingData(
 } {
   if (!originalTrip.id) {
     throw new Error('Original trip must have an ID');
+  }
+
+  // Codespace is the prefix of the trip's lineRef (`<CODESPACE>:CarPooling:<uuid>`).
+  // It must match the supplied authority — nunamnir enforces this server-side.
+  const codespace = originalTrip.estimatedVehicleJourney.lineRef?.split(':')[0];
+  if (!codespace) {
+    throw new Error('Original trip is missing a lineRef; cannot determine codespace');
   }
 
   const originalCalls = originalTrip.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -49,7 +57,7 @@ export function prepareBookingData(
   // Create pickup stop (point location, not flexible area)
   const pickupStop: EstimatedCall = {
     order: 2, // Between first (1) and last stop
-    stopPointRef: `ENT:PickupPoint:${uuidv4()}`,
+    stopPointRef: `${codespace}:PickupPoint:${uuidv4()}`,
     stopPointName: `Passenger Pickup (${bookingData.pickupCoordinates[1].toFixed(4)}, ${bookingData.pickupCoordinates[0].toFixed(4)})`,
     destinationDisplay: lastCall.destinationDisplay,
     aimedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
@@ -84,7 +92,7 @@ export function prepareBookingData(
   // Create dropoff stop (point location, not flexible area)
   const dropoffStop: EstimatedCall = {
     order: 3, // After pickup but before final destination
-    stopPointRef: `ENT:DropoffPoint:${uuidv4()}`,
+    stopPointRef: `${codespace}:DropoffPoint:${uuidv4()}`,
     stopPointName: `Passenger Dropoff (${bookingData.dropoffCoordinates[1].toFixed(4)}, ${bookingData.dropoffCoordinates[0].toFixed(4)})`,
     destinationDisplay: lastCall.destinationDisplay,
     aimedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
@@ -142,8 +150,8 @@ export function prepareBookingData(
   };
 
   return {
-    codespace: 'ENT', // Using the same codespace as original trip creation
-    authority: 'ENT:Authority:ENT', // Using the same authority as original trip creation
+    codespace,
+    authority,
     input: updatedTrip,
   };
 }

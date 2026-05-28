@@ -20,6 +20,7 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
 import mapToFormData from '../util/mapToFormData.tsx';
+import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -34,6 +35,7 @@ interface SnackbarState {
 }
 export interface CarPoolingTripDataProps {
   tripId?: string;
+  codespace?: string;
   onAddFlexibleStop: () => void;
   onZoomToFeature: (id: string) => void;
   onZoomToAllFeatures: () => void;
@@ -58,10 +60,12 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       onZoomToFeature,
       onZoomToAllFeatures,
       tripId,
+      codespace,
       loadedFlexibleStop,
       onDepartureStopChange,
       onArrivalStopChange,
     } = stops;
+    const { authorities } = useAuthorities();
     const [snackbar, setSnackbar] = useState<SnackbarState>({
       open: false,
       message: '',
@@ -168,13 +172,17 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
 
     useEffect(() => {
       const loadInitialState = (id?: string) => {
-        if (initializing.current || !id) return;
+        if (initializing.current || !id || !codespace) return;
+        // Wait for the authority list before issuing the query — we need the
+        // authority id matching the codespace from the URL, not a fabricated one.
+        const authority = authorities.find(a => a.id.startsWith(`${codespace}:`));
+        if (!authority) return;
         initializing.current = true;
-        queryOneExtraJourney('ENT', 'ENT:Authority:ENT', id)
+        queryOneExtraJourney(codespace, authority.id, id)
           .then(result => {
             if (result.data?.extraJourney) {
               const journey = result.data.extraJourney as Extrajourney;
-              const state = mapToFormData(journey);
+              const state = mapToFormData(journey, authority.id);
               setInitialState(state);
               setTripData(journey);
               loadStopsFromJourney(journey);
@@ -186,7 +194,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       };
       setCurrentTripId(tripId);
       loadInitialState(tripId);
-    }, [loadStopsFromJourney, queryOneExtraJourney, tripId]);
+    }, [authorities, codespace, loadStopsFromJourney, queryOneExtraJourney, tripId]);
 
     useImperativeHandle(
       ref,

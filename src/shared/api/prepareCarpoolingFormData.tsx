@@ -15,18 +15,22 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
     // an unrelated null deref further down.
     throw new Error('Cannot prepare carpooling form: departure and destination stops are required');
   }
+  // Codespace is the NeTEx authority id prefix: `<CODESPACE>:Authority:<X>`.
+  // The form only carries the authority — derive the codespace from it so the
+  // two cannot drift apart (nunamnir now rejects mismatched pairs).
+  const codespace = formData.authority.split(':')[0];
   const intermediateCalls = formData.intermediateCalls.map((call, index) => ({
     ...call,
     order: index + 2,
   }));
   const destinationOrder = intermediateCalls.length + 2;
   const variables = {
-    codespace: formData.codespace,
+    codespace,
     authority: formData.authority,
     input: {
       estimatedVehicleJourney: {
         recordedAtTime: dayjs().toISOString(),
-        lineRef: formData.lineRef ?? `${formData.codespace}:CarPooling:${uuidv4()}`,
+        lineRef: formData.lineRef ?? `${codespace}:CarPooling:${uuidv4()}`,
         directionRef: '0',
         estimatedVehicleJourneyCode: formData.estimatedVehicleJourneyCode ?? '',
         extraJourney: true,
@@ -37,7 +41,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         externalLineRef: '', // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
         operatorRef: formData.operator,
         monitored: true,
-        dataSource: 'ENT', // TODO: Remove hard coding
+        dataSource: codespace,
         cancellation: formData.tripCancellation,
         isCompleteStopSequence: true,
         estimatedCalls: {

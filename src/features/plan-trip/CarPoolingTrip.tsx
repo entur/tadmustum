@@ -11,13 +11,13 @@ import { useParams } from 'react-router-dom';
 import type { Feature } from 'geojson';
 
 export default function CarPoolingTrip() {
-  const { id } = useParams();
+  const { codespace, id } = useParams();
   // Remount on id change so a fresh plan-trip page loads when switching trips
   // (or from editing back to a blank new trip).
-  return <CarPoolingTripView key={id ?? 'new'} id={id} />;
+  return <CarPoolingTripView key={id ?? 'new'} id={id} codespace={codespace} />;
 }
 
-function CarPoolingTripView({ id }: { id?: string }) {
+function CarPoolingTripView({ id, codespace }: { id?: string; codespace?: string }) {
   const theme = useTheme();
 
   const editableMapRef = useRef<EditableMapHandle>(null);
@@ -64,6 +64,7 @@ function CarPoolingTripView({ id }: { id?: string }) {
       >
         <CarPoolingTripData
           tripId={id}
+          codespace={codespace}
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}
           onRemoveFlexibleStop={id => editableMapRef.current?.removeFeature(id)}
