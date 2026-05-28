@@ -531,6 +531,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           }}
         />
         <FormHelperText>{errors.operator?.message}</FormHelperText>
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          The operator value currently has no effect downstream. Only Entur is accepted until a
+          consumer starts using this field.
+        </Alert>
       </FormControl>
       <Typography variant="h6" component="h2">
         Departure
