@@ -19,8 +19,14 @@ export interface Auth {
   roleAssignments?: string[] | null;
   getAccessToken: () => Promise<string>;
   logout: ({ returnTo }: { returnTo?: string }) => Promise<void>;
-  /** Starts the OIDC login flow. `returnUrl` is the in-app path to return to afterwards. */
-  login: (returnUrl?: string) => Promise<void>;
+  /**
+   * Starts the OIDC login flow. `returnUrl` is the in-app path to return to
+   * afterwards. Pass `{ replace: true }` to replace the current history entry
+   * instead of pushing — used by protected routes so pressing back from the
+   * OIDC login page skips the protected URL (which would otherwise re-trigger
+   * the redirect and trap the user on the login page).
+   */
+  login: (returnUrl?: string, options?: { replace?: boolean }) => Promise<void>;
 }
 
 export const useAuth = (): Auth => {
@@ -49,13 +55,13 @@ export const useAuth = (): Auth => {
   );
 
   const login = useCallback(
-    (returnUrl?: string) => {
+    (returnUrl?: string, options?: { replace?: boolean }) => {
       if (returnUrl) {
         sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, returnUrl);
       }
       // Always use the registered redirect_uri configured on the AuthProvider;
       // passing an arbitrary current URL would be rejected as a callback mismatch.
-      return signinRedirect();
+      return signinRedirect(options?.replace ? { redirectMethod: 'replace' } : undefined);
     },
     [signinRedirect]
   );
