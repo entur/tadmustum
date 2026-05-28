@@ -33,7 +33,10 @@ export default function CarPoolingTrips() {
   const [failedCodespaces, setFailedCodespaces] = useState<string[]>([]);
 
   const queryExtraJourneys = useQueryExtraJourney();
-  const { authorities } = useAuthorities();
+  const { authorities, allowedCodespaces } = useAuthorities();
+  const adminCodespaceIds = new Set(
+    allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
+  );
 
   useEffect(() => {
     const message = (location.state as { savedMessage?: string } | null)?.savedMessage;
@@ -113,23 +116,31 @@ export default function CarPoolingTrips() {
         // It identifies which Firestore partition the trip lives in, so it must
         // be in the URL for the edit/book pages to know which tenant to query.
         const codespace = params.row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
+        // Edit and Book both go through write mutations on nunamnir, so only
+        // show them when the user actually has admin on that codespace —
+        // otherwise the buttons just lead to a 403.
+        const canModify = adminCodespaceIds.has(codespace);
         return (
           <Box>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => navigate(`/plan-trip/${codespace}/${params.row.id}`)}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => navigate(`/book-trip/${codespace}/${params.row.id}`)}
-              style={{ marginLeft: 8 }}
-            >
-              Book Ride
-            </Button>
+            {canModify && (
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => navigate(`/plan-trip/${codespace}/${params.row.id}`)}
+              >
+                Edit
+              </Button>
+            )}
+            {canModify && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => navigate(`/book-trip/${codespace}/${params.row.id}`)}
+                style={{ marginLeft: 8 }}
+              >
+                Book Ride
+              </Button>
+            )}
           </Box>
         );
       },

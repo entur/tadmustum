@@ -12,6 +12,11 @@
   "user.name": "Username",
   "user.userAccount": "User account",
   "user.logout": "Log out",
+  "user.permissions.title": "Permissions",
+  "user.permissions.empty": "No codespace access.",
+  "user.permissions.codespace": "Codespace",
+  "user.permissions.read": "Read",
+  "user.permissions.admin": "Admin",
 
   "data": "Data overview",
   "data.title": "Data Overview",
