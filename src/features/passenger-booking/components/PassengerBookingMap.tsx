@@ -14,6 +14,7 @@ import { mapStyle } from '../../../shared/util/mapStyle.ts';
 import type { Extrajourney } from '../../../shared/model/Extrajourney';
 import type { Feature, LineString, Point } from 'geojson';
 import loadFeatureFromFlexArea from '../../plan-trip/util/loadFeatureFromFlexArea.tsx';
+import { shortestPathThrough } from '../util/shortestPath.tsx';
 
 interface PassengerBookingMapProps {
   trip: Extrajourney | null;
@@ -61,16 +62,30 @@ export default function PassengerBookingMap({
     return areas;
   }, [trip, tripData]);
 
-  // Create route line between stops
+  // Route line drawn on the map. Origin and destination stay pinned to the
+  // first and last stops; the trip's intermediate stops plus any selected
+  // pickup/dropoff are reordered to form the shortest path between them.
+  // Without a pickup or dropoff we keep the driver's stop order untouched.
   const createRouteLineString = useCallback((): Feature<LineString> | null => {
     if (!trip || tripData.length < 2) return null;
 
     const flexAreas = getFlexibleAreas();
     if (flexAreas.length < 2) return null;
 
-    const coordinates: [number, number][] = flexAreas.map(
-      area => area.geometry.coordinates as [number, number]
-    );
+    const originCoord = flexAreas[0].geometry.coordinates as [number, number];
+    const destinationCoord = flexAreas[flexAreas.length - 1].geometry.coordinates as [
+      number,
+      number,
+    ];
+
+    const coordinates: [number, number][] =
+      pickupLocation || dropoffLocation
+        ? shortestPathThrough(originCoord, destinationCoord, [
+            ...flexAreas.slice(1, -1).map(area => area.geometry.coordinates as [number, number]),
+            ...(pickupLocation ? [pickupLocation] : []),
+            ...(dropoffLocation ? [dropoffLocation] : []),
+          ])
+        : flexAreas.map(area => area.geometry.coordinates as [number, number]);
 
     return {
       type: 'Feature',
@@ -80,7 +95,7 @@ export default function PassengerBookingMap({
         coordinates,
       },
     };
-  }, [trip, tripData, getFlexibleAreas]);
+  }, [trip, tripData, getFlexibleAreas, pickupLocation, dropoffLocation]);
 
   // Handle map clicks for location selection
   const handleMapClick = useCallback(
@@ -101,28 +116,32 @@ export default function PassengerBookingMap({
     [selectionMode, onPickupLocationSelect, onDropoffLocationSelect]
   );
 
-  // Fit map to show the entire trip route
+  // Fit map to show the trip route plus any selected pickup/dropoff. Without
+  // this the view stays anchored on the driver's origin/destination and a
+  // pickup or dropoff outside the trip's bounding box ends up off-screen.
   useEffect(() => {
     if (!isMapReady || !mapRef.current || !trip) return;
 
     const flexAreas = getFlexibleAreas();
     if (flexAreas.length === 0) return;
 
-    // Calculate bounds to include all flexible areas
+    const points: [number, number][] = flexAreas.map(
+      area => area.geometry.coordinates as [number, number]
+    );
+    if (pickupLocation) points.push(pickupLocation);
+    if (dropoffLocation) points.push(dropoffLocation);
+
     let minLng = Infinity,
       maxLng = -Infinity;
     let minLat = Infinity,
       maxLat = -Infinity;
-
-    flexAreas.forEach(area => {
-      const [lng, lat] = area.geometry.coordinates;
+    points.forEach(([lng, lat]) => {
       minLng = Math.min(minLng, lng);
       maxLng = Math.max(maxLng, lng);
       minLat = Math.min(minLat, lat);
       maxLat = Math.max(maxLat, lat);
     });
 
-    // Add padding
     const padding = 0.01;
     mapRef.current.fitBounds(
       [
@@ -131,7 +150,7 @@ export default function PassengerBookingMap({
       ],
       { padding: 40, duration: 1000 }
     );
-  }, [isMapReady, trip, getFlexibleAreas]);
+  }, [isMapReady, trip, getFlexibleAreas, pickupLocation, dropoffLocation]);
 
   const flexibleAreas = getFlexibleAreas();
   const routeLine = createRouteLineString();
