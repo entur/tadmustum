@@ -70,6 +70,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   // Without this filter, a view-only user would see authorities they can't
   // submit to and only learn of the rejection on a 403 from the server.
   const { adminAuthorities: authorities } = useAuthorities();
+  // A view-only user opening the new-trip page has no codespace they can
+  // submit to. Surface that up front rather than letting them fill out the
+  // form only to fail Yup's authority-required validation on submit.
+  const noAdminAccess = !tripData && authorities.length === 0;
   const operators = useOperators();
 
   // New trips get a client-generated id so the booking URL (this app's
@@ -735,8 +739,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }}
       />
 
+      {noAdminAccess && (
+        <Alert severity="info">
+          You don&apos;t have permission to create trips in any of your codespaces.
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        <Button type="submit" variant="contained" color="primary">
+        <Button type="submit" variant="contained" color="primary" disabled={noAdminAccess}>
           Submit trip
         </Button>
         <Button
