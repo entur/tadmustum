@@ -11,6 +11,7 @@ import {
   Alert,
   Chip,
   Stack,
+  CircularProgress,
 } from '@mui/material';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -542,11 +543,18 @@ export default function PassengerTripBooking() {
 
                 {/* Route Information - All Stops */}
                 <Box>
-                  <Typography variant="subtitle2" color="primary" gutterBottom>
-                    Trip Route ({estimatedCalls.length} stops)
-                    {isPreview && ' — preview with your stops'}
-                    {routePending && ' — updating route…'}
-                  </Typography>
+                  <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2" color="primary">
+                      Trip Route ({estimatedCalls.length} stops)
+                      {isPreview && ' — preview with your stops'}
+                    </Typography>
+                    {routePending && (
+                      <Box display="flex" alignItems="center" gap={0.5} color="text.secondary">
+                        <CircularProgress size={14} aria-label="Updating route" />
+                        <Typography variant="caption">updating route…</Typography>
+                      </Box>
+                    )}
+                  </Box>
                   {overCapacityStop && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                       <Box
