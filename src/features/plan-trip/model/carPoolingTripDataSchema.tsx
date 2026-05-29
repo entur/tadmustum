@@ -32,7 +32,14 @@ const dateSchema = Yup.mixed<Dayjs>().dayjs('Not a valid date');
 
 export const carPoolingTripDataSchema = Yup.object({
   authority: Yup.string().required(),
-  operator: Yup.string().required(),
+  operator: Yup.string()
+    .required()
+    // The operator field is currently dead data downstream (see ROR pipeline:
+    // tadmustum -> nunamnir -> subula -> nusku, and OTP's CarpoolTrip.provider
+    // — no consumer reads it). Until something actually depends on the value,
+    // restrict to Entur to avoid producing data that might be wrong but never
+    // noticed.
+    .matches(/^ENT:/, 'Only Entur is accepted as operator for now'),
   departureStopName: Yup.string()
     .min(3, 'Departure stop name must be at least 3 characters')
     .required(),

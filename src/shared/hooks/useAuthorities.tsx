@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useConfig } from '../../contexts/ConfigContext.tsx';
 import { useAuth } from 'react-oidc-context';
 import api from '../api/api.tsx';
@@ -74,12 +74,14 @@ export const useAuthorities: () => {
   // Codespaces with write permission. Use this for surfaces that lead to a
   // mutation (creating a trip, booking a ride) so the user doesn't see options
   // that would only fail on submit with a 403 from the server.
-  const adminCodespaceIds = new Set(
-    allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
-  );
-  const adminAuthorities = codespaceAuthorities.filter(a =>
-    adminCodespaceIds.has(a.id.split(':')[0])
-  );
+  // Memoized: otherwise a fresh array on every render causes effects that list
+  // adminAuthorities in their deps to refire each render and loop with setValue.
+  const adminAuthorities = useMemo(() => {
+    const adminCodespaceIds = new Set(
+      allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
+    );
+    return codespaceAuthorities.filter(a => adminCodespaceIds.has(a.id.split(':')[0]));
+  }, [allowedCodespaces, codespaceAuthorities]);
 
   return { authorities: codespaceAuthorities, adminAuthorities, allowedCodespaces };
 };

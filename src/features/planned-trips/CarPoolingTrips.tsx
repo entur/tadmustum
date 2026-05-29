@@ -37,6 +37,13 @@ export default function CarPoolingTrips() {
   const adminCodespaceIds = new Set(
     allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
   );
+  // Trips don't carry the authority name; resolve it from the codespace prefix
+  // of lineRef against the authorities the user has access to. Trips can only
+  // appear in the list if their codespace was queried, so a hit is guaranteed.
+  const authorityNameByCodespace = useMemo(
+    () => new Map(authorities.map(a => [a.id.split(':')[0], a.name])),
+    [authorities]
+  );
 
   useEffect(() => {
     const message = (location.state as { savedMessage?: string } | null)?.savedMessage;
@@ -150,6 +157,16 @@ export default function CarPoolingTrips() {
       headerName: 'ID',
       minWidth: 220,
       flex: 1,
+    },
+    {
+      field: 'authority',
+      headerName: 'Authority',
+      minWidth: 140,
+      flex: 1,
+      valueGetter: (_value: string, row: Extrajourney) => {
+        const codespace = row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
+        return authorityNameByCodespace.get(codespace) ?? codespace;
+      },
     },
     {
       field: 'cancellation',
@@ -302,6 +319,7 @@ export default function CarPoolingTrips() {
         columns={columns}
         columnVisibilityModel={{
           id: showHiddenFields,
+          authority: showHiddenFields,
           latestExpectedArrivalTime: showHiddenFields,
           expiresAtEpochMs: showHiddenFields,
         }}

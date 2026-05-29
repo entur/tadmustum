@@ -88,6 +88,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     handleSubmit,
     control,
     setValue,
+    getValues,
     watch,
     formState: { errors },
     reset,
@@ -142,9 +143,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     // Fill in the default booking URL once the authority (and therefore the
     // codespace) is known. Skip if the user has already entered something — we
     // never want to clobber a manual edit or an edited trip's existing URL.
+    // Read id off the form so that, when editing a trip that has no saved URL,
+    // we generate one pointing at the actual trip's id rather than the
+    // client-generated `newTripId` (which is only correct for new trips).
     if (authority && !contactUrl) {
       const codespace = authority.split(':')[0];
-      setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${newTripId}`);
+      const tripId = getValues('id') ?? newTripId;
+      setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${tripId}`);
     }
 
     if (operators.length && !operator) {
@@ -203,6 +208,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     setValue,
+    getValues,
     drawingStopsAllowed,
     error,
     errors?.departureFlexibleStop?.message,
@@ -233,16 +239,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     )
       .then(result => {
         if (cancelled || !result) return;
-        if (result.expectedEndTime) {
+        // Only auto-fill arrival time when it's not already set — otherwise
+        // editing a trip would silently overwrite the saved arrival with OTP's
+        // freshly-computed ETA on every street-route fire.
+        if (result.expectedEndTime && !getValues('destinationDatetime')) {
           setValue('destinationDatetime', dayjs(result.expectedEndTime), {
             shouldValidate: true,
           });
-        }
-        if (result.fromName) {
-          setValue('departureStopName', result.fromName, { shouldValidate: true });
-        }
-        if (result.toName) {
-          setValue('destinationStopName', result.toName, { shouldValidate: true });
         }
       })
       .catch(() => {
@@ -259,6 +262,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     departureMs,
     streetRoute,
     setValue,
+    getValues,
   ]);
 
   // Helper function to determine stop type and get appropriate icon/color
@@ -531,6 +535,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           }}
         />
         <FormHelperText>{errors.operator?.message}</FormHelperText>
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          The operator value currently has no effect downstream. Only Entur is accepted until a
+          consumer starts using this field.
+        </Alert>
       </FormControl>
       <Typography variant="h6" component="h2">
         Departure
@@ -574,16 +582,16 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
-      <Button
-        variant="contained"
-        disabled={!!departureFlexibleStop || !drawingStopsAllowed}
-        onClick={() => onAddDeparturestopClick()}
-      >
-        Add stop
-      </Button>
-      <Box display="flex" gap={1}>
+      <Box display="flex" gap={1} flexWrap="wrap">
         <Button
           variant="contained"
+          disabled={!!departureFlexibleStop || !drawingStopsAllowed}
+          onClick={() => onAddDeparturestopClick()}
+        >
+          Add stop
+        </Button>
+        <Button
+          variant="outlined"
           onClick={onRemoveDepartureStopClick}
           disabled={!departureFlexibleStop}
         >
@@ -592,7 +600,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         {mapDepartureFlexibleStop?.id && (
           <IconButton
             disabled={!departureFlexibleStop}
-            aria-label="Zoom to destination stop"
+            aria-label="Zoom to departure stop"
             onClick={() => onZoomToFeature(mapDepartureFlexibleStop.id as string)}
           >
             <GpsFixedIcon />
@@ -642,16 +650,16 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
-      <Button
-        variant="contained"
-        disabled={!!destinationFlexibleStop || !drawingStopsAllowed}
-        onClick={() => onAddDestinationtopClick()}
-      >
-        Add stop
-      </Button>
-      <Box display="flex" gap={1}>
+      <Box display="flex" gap={1} flexWrap="wrap">
         <Button
           variant="contained"
+          disabled={!!destinationFlexibleStop || !drawingStopsAllowed}
+          onClick={() => onAddDestinationtopClick()}
+        >
+          Add stop
+        </Button>
+        <Button
+          variant="outlined"
           onClick={onRemoveDestinationStopClick}
           disabled={!destinationFlexibleStop}
         >
@@ -669,6 +677,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       </Box>
 
       <Divider />
+      <Typography variant="h6" component="h2">
+        Trip details
+      </Typography>
 
       <Controller
         name="driverDeviationBudget"
@@ -705,39 +716,41 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }}
       />
 
-      <Controller
-        name="totalCapacity"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              value={field.value ?? ''}
-              label="Total Capacity"
-              error={!!errors.totalCapacity}
-              helperText={errors.totalCapacity?.message}
-              fullWidth
-            />
-          );
-        }}
-      />
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Controller
+          name="totalCapacity"
+          control={control}
+          render={({ field }) => {
+            return (
+              <TextField
+                {...field}
+                value={field.value ?? ''}
+                label="Total capacity"
+                error={!!errors.totalCapacity}
+                helperText={errors.totalCapacity?.message}
+                sx={{ flex: 1, minWidth: 160 }}
+              />
+            );
+          }}
+        />
 
-      <Controller
-        name="onboardCount"
-        control={control}
-        render={({ field }) => {
-          return (
-            <TextField
-              {...field}
-              value={field.value ?? ''}
-              label="Number of people in the vehicle"
-              error={!!errors.onboardCount}
-              helperText={errors.onboardCount?.message}
-              fullWidth
-            />
-          );
-        }}
-      />
+        <Controller
+          name="onboardCount"
+          control={control}
+          render={({ field }) => {
+            return (
+              <TextField
+                {...field}
+                value={field.value ?? ''}
+                label="Number of people in the vehicle"
+                error={!!errors.onboardCount}
+                helperText={errors.onboardCount?.message}
+                sx={{ flex: 1, minWidth: 160 }}
+              />
+            );
+          }}
+        />
+      </Box>
 
       {noAdminAccess && (
         <Alert severity="info">

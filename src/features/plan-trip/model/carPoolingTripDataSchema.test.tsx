@@ -40,6 +40,15 @@ describe('carPoolingTripDataSchema', () => {
     await expect(carPoolingTripDataSchema.validate(input)).rejects.toThrow();
   });
 
+  it.each(['ATB:Operator:1', 'RUT:Operator:99', 'foo'])(
+    'rejects non-Entur operator %s',
+    async value => {
+      await expect(
+        carPoolingTripDataSchema.validate({ ...validInput(), operator: value })
+      ).rejects.toThrow(/Only Entur is accepted/);
+    }
+  );
+
   it('requires departureFlexibleStop with a helpful message', async () => {
     await expect(
       carPoolingTripDataSchema.validate({ ...validInput(), departureFlexibleStop: undefined })
