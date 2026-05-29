@@ -23,6 +23,9 @@ const mapToFormData = (journey: Extrajourney, authority: string): CarPoolingTrip
     estimatedVehicleJourneyCode: journey.estimatedVehicleJourney.estimatedVehicleJourneyCode,
     departureStopName: firstCall.stopPointName,
     departureDatetime: dayjs(firstCall.aimedDepartureTime),
+    // Editing an existing trip keeps its saved arrival — auto-estimate off by
+    // default so opening the editor never silently recomputes the arrival.
+    estimateArrivalAutomatically: false,
     departureFlexibleStop: flexAreaToPosition(
       firstCall.departureStopAssignment?.expectedFlexibleArea
     ),

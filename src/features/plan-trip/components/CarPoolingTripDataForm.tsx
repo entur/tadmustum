@@ -15,6 +15,8 @@ import {
   Divider,
   Stack,
   Chip,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import { Cancel, Replay } from '@mui/icons-material';
@@ -84,6 +86,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   // below once that happens. When editing, reset(initialState) replaces both
   // with the existing trip's values.
   const newTripId = useMemo(() => uuidv4(), []);
+  // New trips default to departing exactly a week from now. Computed once so it
+  // stays stable across renders (and so Reset returns to the same value).
+  const defaultDeparture = useMemo(() => dayjs().add(1, 'week'), []);
 
   const {
     handleSubmit,
@@ -103,6 +108,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       operator: '',
       id: newTripId,
       departureStopName: 'Origin',
+      departureDatetime: defaultDeparture,
+      estimateArrivalAutomatically: true,
       departureFlexibleStop: null,
       departureCancellation: false,
       destinationStopName: 'Destination',
@@ -123,6 +130,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
+  const estimateArrivalAutomatically = watch('estimateArrivalAutomatically');
   const departureCancellation = watch('departureCancellation');
   const destinationCancellation = watch('destinationCancellation');
   const intermediateCalls = watch('intermediateCalls');
@@ -223,6 +231,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const departureMs = departureDatetime?.isValid() ? departureDatetime.valueOf() : undefined;
 
   useEffect(() => {
+    // Only auto-estimate when the checkbox is on (off when editing an existing
+    // trip, so its saved arrival is never silently overwritten).
+    if (!estimateArrivalAutomatically) {
+      return;
+    }
     if (
       departureLng == null ||
       departureLat == null ||
@@ -239,15 +252,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       dayjs(departureMs).toISOString()
     )
       .then(result => {
-        if (cancelled || !result) return;
-        // Only auto-fill arrival time when it's not already set — otherwise
-        // editing a trip would silently overwrite the saved arrival with OTP's
-        // freshly-computed ETA on every street-route fire.
-        if (result.expectedEndTime && !getValues('destinationDatetime')) {
-          setValue('destinationDatetime', dayjs(result.expectedEndTime), {
-            shouldValidate: true,
-          });
-        }
+        if (cancelled || !result?.expectedEndTime) return;
+        // Auto mode: always keep the arrival in sync with the route, so it
+        // updates whenever the origin, destination, or departure changes.
+        setValue('destinationDatetime', dayjs(result.expectedEndTime), {
+          shouldValidate: true,
+        });
       })
       .catch(() => {
         // Ignore street-routing failures; user can still set arrival manually.
@@ -256,6 +266,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       cancelled = true;
     };
   }, [
+    estimateArrivalAutomatically,
     departureLng,
     departureLat,
     destinationLng,
@@ -263,7 +274,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     departureMs,
     streetRoute,
     setValue,
-    getValues,
   ]);
 
   const estimatedCalls = tripData?.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
@@ -640,6 +650,21 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }}
       />
       <Controller
+        name="estimateArrivalAutomatically"
+        control={control}
+        render={({ field }) => (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={!!field.value}
+                onChange={event => field.onChange(event.target.checked)}
+              />
+            }
+            label="Estimate arrival time automatically"
+          />
+        )}
+      />
+      <Controller
         name="destinationDatetime"
         control={control}
         render={({ field, fieldState: { error } }) => {
@@ -647,7 +672,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <DateTimePicker
               {...field}
               ampm={false}
-              label="Select arrival time"
+              disabled={!!estimateArrivalAutomatically}
+              label={
+                estimateArrivalAutomatically ? 'Arrival time (estimated)' : 'Select arrival time'
+              }
               value={field.value || null}
               onChange={value => field.onChange(value)}
               slotProps={{
