@@ -12,12 +12,15 @@ import { Box } from '@mui/material';
 import { LocationOn, FmdGood, DirectionsWalk } from '@mui/icons-material';
 import { mapStyle } from '../../../shared/util/mapStyle.ts';
 import type { Extrajourney } from '../../../shared/model/Extrajourney';
+import type { EstimatedCall } from '../../../shared/model/EstimatedCall';
 import type { Feature, LineString, Point } from 'geojson';
 import loadFeatureFromFlexArea from '../../plan-trip/util/loadFeatureFromFlexArea.tsx';
-import { shortestPathThrough } from '../util/shortestPath.tsx';
 
 interface PassengerBookingMapProps {
   trip: Extrajourney | null;
+  // The authoritative ordered calls (from the booking preview) the route line
+  // should follow. Falls back to the trip's own calls when not provided.
+  routeCalls?: EstimatedCall[];
   onPickupLocationSelect?: (coordinates: [number, number], address?: string) => void;
   onDropoffLocationSelect?: (coordinates: [number, number], address?: string) => void;
   pickupLocation?: [number, number];
@@ -26,6 +29,7 @@ interface PassengerBookingMapProps {
 
 export default function PassengerBookingMap({
   trip,
+  routeCalls,
   onPickupLocationSelect,
   onDropoffLocationSelect,
   pickupLocation,
@@ -62,30 +66,21 @@ export default function PassengerBookingMap({
     return areas;
   }, [trip, tripData]);
 
-  // Route line drawn on the map. Origin and destination stay pinned to the
-  // first and last stops; the trip's intermediate stops plus any selected
-  // pickup/dropoff are reordered to form the shortest path between them.
-  // Without a pickup or dropoff we keep the driver's stop order untouched.
+  // Route line drawn on the map. It follows the single source of truth — the
+  // ordered calls from the booking preview (origin, the driver's stops, and
+  // this booking's pickup/dropoff inserted at their chosen positions) — so the
+  // line always matches the route list. Falls back to the trip's own call order
+  // before a preview is available (e.g. only one of pickup/dropoff selected).
   const createRouteLineString = useCallback((): Feature<LineString> | null => {
-    if (!trip || tripData.length < 2) return null;
+    const calls = routeCalls && routeCalls.length >= 2 ? routeCalls : tripData;
+    if (calls.length < 2) return null;
 
-    const flexAreas = getFlexibleAreas();
-    if (flexAreas.length < 2) return null;
+    const coordinates = calls
+      .map(call => loadFeatureFromFlexArea(call.departureStopAssignment?.expectedFlexibleArea))
+      .filter((feature): feature is Feature<Point> => feature !== null)
+      .map(feature => feature.geometry.coordinates as [number, number]);
 
-    const originCoord = flexAreas[0].geometry.coordinates as [number, number];
-    const destinationCoord = flexAreas[flexAreas.length - 1].geometry.coordinates as [
-      number,
-      number,
-    ];
-
-    const coordinates: [number, number][] =
-      pickupLocation || dropoffLocation
-        ? shortestPathThrough(originCoord, destinationCoord, [
-            ...flexAreas.slice(1, -1).map(area => area.geometry.coordinates as [number, number]),
-            ...(pickupLocation ? [pickupLocation] : []),
-            ...(dropoffLocation ? [dropoffLocation] : []),
-          ])
-        : flexAreas.map(area => area.geometry.coordinates as [number, number]);
+    if (coordinates.length < 2) return null;
 
     return {
       type: 'Feature',
@@ -95,7 +90,7 @@ export default function PassengerBookingMap({
         coordinates,
       },
     };
-  }, [trip, tripData, getFlexibleAreas, pickupLocation, dropoffLocation]);
+  }, [routeCalls, tripData]);
 
   // Handle map clicks for location selection
   const handleMapClick = useCallback(

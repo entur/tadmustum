@@ -24,7 +24,6 @@ import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from '../util/MAPBOXDRAW_DEFAULT_CONST
 import type { IControl } from 'maplibre-gl';
 import maplibregl from 'maplibre-gl';
 import { Box } from '@mui/material';
-import { NearMe, LocationOn } from '@mui/icons-material';
 
 export type EditableMapCallbacks = {
   onStopCreated?: (feature: Feature) => void;
@@ -342,21 +341,19 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
           </Source>
         )}
 
-        {/* Stop Markers */}
+        {/* Stop Markers — numbered circles matching the booking map. */}
         {featureArray.map((feature, index) => {
           if (feature.geometry.type !== 'Point') return null;
 
           const [centerLng, centerLat] = feature.geometry.coordinates as [number, number];
           const color = getFeatureColor(feature.id);
-          const isDeparture = feature.id === departureStopId;
-          const isArrival = feature.id === arrivalStopId;
 
           return (
             <Marker key={`marker-${feature.id}`} longitude={centerLng} latitude={centerLat}>
               <Box
                 sx={{
-                  width: 28,
-                  height: 28,
+                  width: 24,
+                  height: 24,
                   borderRadius: '50%',
                   backgroundColor: color,
                   border: '3px solid white',
@@ -365,15 +362,11 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
                 }}
               >
-                {isDeparture ? (
-                  <NearMe sx={{ fontSize: 16 }} />
-                ) : isArrival ? (
-                  <LocationOn sx={{ fontSize: 16 }} />
-                ) : (
-                  <Box sx={{ fontWeight: 'bold', fontSize: '12px' }}>{index + 1}</Box>
-                )}
+                {index + 1}
               </Box>
             </Marker>
           );

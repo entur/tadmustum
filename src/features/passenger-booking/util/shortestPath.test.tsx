@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { haversineKm, shortestPathThrough, type LngLat } from './shortestPath';
+import { haversineKm, insertStopsByShortestPath, type LngLat } from './shortestPath';
 
 // Coordinates used throughout the tests are [lng, lat].
 const OSLO: LngLat = [10.7522, 59.9139];
 const BERGEN: LngLat = [5.3221, 60.3913];
 const TRONDHEIM: LngLat = [10.3951, 63.4305];
-const STAVANGER: LngLat = [5.7331, 58.969];
 
 describe('haversineKm', () => {
   it('returns 0 for the same point', () => {
@@ -28,78 +27,44 @@ describe('haversineKm', () => {
   });
 });
 
-describe('shortestPathThrough', () => {
-  it('returns just [origin, destination] when there are no middle points', () => {
-    expect(shortestPathThrough(OSLO, BERGEN, [])).toEqual([OSLO, BERGEN]);
+describe('insertStopsByShortestPath', () => {
+  const origin: LngLat = [0, 0];
+  const destination: LngLat = [10, 0];
+  const mid = (item: string, x: number) => ({ item, coord: [x, 0] as LngLat });
+
+  it('inserts pickup and dropoff at the cheapest slots, keeping fixed stops in order', () => {
+    const fixed = [mid('a', 2), mid('b', 5), mid('c', 8)];
+    const pickup = mid('pickup', 3);
+    const dropoff = mid('dropoff', 7);
+
+    const result = insertStopsByShortestPath(origin, destination, fixed, pickup, dropoff);
+
+    expect(result).toEqual(['a', 'pickup', 'b', 'dropoff', 'c']);
   });
 
-  it('keeps the lone middle point between origin and destination', () => {
-    const pickup: LngLat = [10.5, 60.0];
-    expect(shortestPathThrough(OSLO, BERGEN, [pickup])).toEqual([OSLO, pickup, BERGEN]);
+  it('preserves the relative order of the fixed stops even when it is not geographic', () => {
+    // c (x=8) deliberately before a (x=2) — must stay that way.
+    const fixed = [mid('c', 8), mid('a', 2)];
+    const result = insertStopsByShortestPath(
+      origin,
+      destination,
+      fixed,
+      mid('pickup', 5),
+      mid('dropoff', 6)
+    );
+
+    expect(result.indexOf('c')).toBeLessThan(result.indexOf('a'));
   });
 
-  it('orders two middle points so the closer one to origin comes first', () => {
-    // nearOrigin sits a hair north of Oslo; nearDestination sits a hair east of Bergen.
-    const nearOrigin: LngLat = [10.7522, 60.0];
-    const nearDestination: LngLat = [5.5, 60.3913];
+  it('always keeps pickup before dropoff, even when dropoff is nearer the origin', () => {
+    const result = insertStopsByShortestPath(
+      origin,
+      destination,
+      [],
+      mid('pickup', 8),
+      mid('dropoff', 2)
+    );
 
-    // Pass them in the deliberately bad order to force the function to reorder.
-    const path = shortestPathThrough(OSLO, BERGEN, [nearDestination, nearOrigin]);
-
-    expect(path).toEqual([OSLO, nearOrigin, nearDestination, BERGEN]);
-  });
-
-  it('does not move origin or destination, regardless of which middle points are closer', () => {
-    // Throw a point that sits much closer to BERGEN than to OSLO into the middle —
-    // origin and destination must still be the bookends.
-    const closeToBergen: LngLat = [5.4, 60.39];
-    const closeToOslo: LngLat = [10.76, 59.92];
-    const path = shortestPathThrough(OSLO, BERGEN, [closeToBergen, closeToOslo]);
-
-    expect(path[0]).toEqual(OSLO);
-    expect(path[path.length - 1]).toEqual(BERGEN);
-    expect(path).toHaveLength(4);
-  });
-
-  it('finds the optimal ordering for several middle points', () => {
-    // Origin = Oslo, destination = Bergen. Middle = Trondheim (far north) and
-    // Stavanger (far southwest). Any path passing through both must hit one
-    // before the other; the optimum depends on geometry — we just assert that
-    // the returned ordering achieves the minimum cost across all permutations.
-    const middle: LngLat[] = [TRONDHEIM, STAVANGER];
-    const result = shortestPathThrough(OSLO, BERGEN, middle);
-
-    // Compute the cost of every permutation and confirm the result matches the minimum.
-    const candidates: LngLat[][] = [
-      [OSLO, TRONDHEIM, STAVANGER, BERGEN],
-      [OSLO, STAVANGER, TRONDHEIM, BERGEN],
-    ];
-    const cost = (path: LngLat[]) =>
-      path.slice(1).reduce((acc, p, i) => acc + haversineKm(path[i], p), 0);
-    const minCost = Math.min(...candidates.map(cost));
-
-    expect(cost(result)).toBeCloseTo(minCost, 9);
-  });
-
-  it('reorders three middle points to minimise total distance', () => {
-    // A small "stops along a corridor" scenario: passing them in scrambled order
-    // should produce the natural left-to-right ordering.
-    const origin: LngLat = [0, 0];
-    const destination: LngLat = [10, 0];
-    const a: LngLat = [2, 0];
-    const b: LngLat = [5, 0];
-    const c: LngLat = [8, 0];
-
-    const result = shortestPathThrough(origin, destination, [c, a, b]);
-    expect(result).toEqual([origin, a, b, c, destination]);
-  });
-
-  it('does not mutate the caller-provided middle array', () => {
-    const middle: LngLat[] = [TRONDHEIM, STAVANGER];
-    const snapshot: LngLat[] = middle.map(p => [...p] as LngLat);
-
-    shortestPathThrough(OSLO, BERGEN, middle);
-
-    expect(middle).toEqual(snapshot);
+    expect(result).toEqual(['pickup', 'dropoff']);
   });
 });
