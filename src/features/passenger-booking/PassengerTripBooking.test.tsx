@@ -158,12 +158,12 @@ describe('PassengerTripBooking', () => {
     expect(screen.getByText('Loading trip details...')).toBeInTheDocument();
   });
 
-  it('renders the trip line name once the trip resolves', async () => {
+  it('renders the origin → destination route heading once the trip resolves', async () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
     renderAt();
 
-    expect(await screen.findByText('Carpooling trip ENT:Authority:ENT')).toBeInTheDocument();
+    expect(await screen.findByText('Oslo S → Bergen stasjon')).toBeInTheDocument();
   });
 
   it('disables Book Ride until both pickup and dropoff are selected', async () => {
@@ -189,7 +189,7 @@ describe('PassengerTripBooking', () => {
 
     renderAt();
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await user.click(screen.getByRole('button', { name: 'stub-select-pickup' }));
     await user.click(screen.getByRole('button', { name: 'stub-select-dropoff' }));
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
@@ -216,7 +216,7 @@ describe('PassengerTripBooking', () => {
 
     renderAt();
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await user.click(screen.getByRole('button', { name: 'stub-select-pickup' }));
     await user.click(screen.getByRole('button', { name: 'stub-select-dropoff' }));
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
@@ -231,7 +231,7 @@ describe('PassengerTripBooking', () => {
       '/book-trip/ENT/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
     );
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
 
     expect(screen.getByDisplayValue('59.913900, 10.752200')).toBeInTheDocument();
     expect(screen.getByDisplayValue('60.391300, 5.322100')).toBeInTheDocument();
@@ -256,7 +256,7 @@ describe('PassengerTripBooking', () => {
       '/book-trip/ENT/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
     );
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
 
     expect(screen.queryByText(/pre-selected from the shared URL/i)).not.toBeInTheDocument();
   });
@@ -266,7 +266,7 @@ describe('PassengerTripBooking', () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
     renderAt();
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await selectPickupAndDropoff(user);
 
     expect(await screen.findByText('Your pickup')).toBeInTheDocument();
@@ -278,7 +278,7 @@ describe('PassengerTripBooking', () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: tripWithIntermediate } });
 
     renderAt();
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await selectPickupAndDropoff(user);
 
     expect(await screen.findByText('Intermediate stop 1')).toBeInTheDocument();
@@ -291,7 +291,7 @@ describe('PassengerTripBooking', () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: tripWithCapacity } });
 
     renderAt();
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await selectPickupAndDropoff(user);
 
     // driver (1) + 4 passengers = 5 > capacity 4
@@ -310,7 +310,7 @@ describe('PassengerTripBooking', () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
     renderAt();
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await selectPickupAndDropoff(user);
 
     const bookButton = screen.getByRole('button', { name: 'Book Ride' });

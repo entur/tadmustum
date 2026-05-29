@@ -526,18 +526,10 @@ export default function PassengerTripBooking() {
                 <Box display="flex" alignItems="center" gap={1}>
                   <DirectionsCar color="primary" />
                   <Typography variant="h6">
-                    {trip.estimatedVehicleJourney.publishedLineName}
+                    {estimatedCalls[0]?.stopPointName} →{' '}
+                    {estimatedCalls[estimatedCalls.length - 1]?.stopPointName}
                   </Typography>
-                  <Chip
-                    label={trip.estimatedVehicleJourney.vehicleMode}
-                    size="small"
-                    variant="outlined"
-                  />
                 </Box>
-
-                <Typography color="text.secondary" gutterBottom>
-                  {estimatedCalls[estimatedCalls.length - 1]?.destinationDisplay}
-                </Typography>
 
                 <Divider />
 
