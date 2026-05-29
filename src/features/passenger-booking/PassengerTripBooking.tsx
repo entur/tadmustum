@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   Box,
@@ -25,7 +25,6 @@ import {
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import StopOccupancy from '../../shared/components/StopOccupancy';
 import {
-  previewBookingRoute,
   routedBookingPreview,
   type BookingRoutePreview,
 } from '../../shared/api/prepareBookingData';
@@ -117,9 +116,11 @@ export default function PassengerTripBooking() {
   const bookPassengerRide = useBookPassengerRide();
   const getStreetRoute = useStreetRoute();
 
-  // Routed preview: re-times every stop with real driving durations (async).
-  // Falls back to the synchronous estimate until it resolves.
+  // The route preview comes from real OTP routing (async). `routePending` is
+  // true while a fresh route is being computed; we keep the previous result
+  // visible meanwhile so the times update once instead of flickering.
   const [routedPreview, setRoutedPreview] = useState<BookingRoutePreview | null>(null);
+  const [routePending, setRoutePending] = useState(false);
 
   // Parse coordinates from URL parameters
   const parseCoordinatesFromURL = (param: string | null): [number, number] | undefined => {
@@ -334,39 +335,20 @@ export default function PassengerTripBooking() {
     }
   };
 
-  // Live preview of the route as the passenger picks pickup/dropoff: shows the
-  // new stops inserted, the shortest-path reorder, and per-stop occupancy —
-  // recomputed synchronously whenever the selection or passenger count changes.
-  const previewRoute = useMemo(() => {
-    if (!trip?.id || !bookingData.pickupCoordinates || !bookingData.dropoffCoordinates) {
-      return null;
-    }
-    return previewBookingRoute(trip, {
-      tripId: trip.id,
-      pickupCoordinates: bookingData.pickupCoordinates,
-      dropoffCoordinates: bookingData.dropoffCoordinates,
-      numberOfPassengers: bookingData.numberOfPassengers,
-      passengerDeviationBudget: bookingData.passengerDeviationBudget,
-    });
-  }, [
-    trip,
-    bookingData.pickupCoordinates,
-    bookingData.dropoffCoordinates,
-    bookingData.numberOfPassengers,
-    bookingData.passengerDeviationBudget,
-  ]);
-
-  // Re-time every stop with real driving durations, debounced so we don't call
-  // the router on every map click. While it's pending we fall back to the
-  // synchronous estimate above, then swap in the routed times when ready.
+  // Build the route preview from real OTP routing (no rough synchronous
+  // estimate — that made stop times flicker as the passenger nudged the
+  // pickup). Debounced so we don't route on every map click. We keep the last
+  // routed result on screen while the next one computes, so the times update
+  // once when OTP responds instead of jumping to a placeholder first.
   useEffect(() => {
     const pickupCoordinates = bookingData.pickupCoordinates;
     const dropoffCoordinates = bookingData.dropoffCoordinates;
     if (!trip?.id || !pickupCoordinates || !dropoffCoordinates) {
       setRoutedPreview(null);
+      setRoutePending(false);
       return;
     }
-    setRoutedPreview(null);
+    setRoutePending(true);
     const tripId = trip.id;
     let cancelled = false;
     const timer = setTimeout(() => {
@@ -382,11 +364,14 @@ export default function PassengerTripBooking() {
         getStreetRoute
       )
         .then(preview => {
-          if (!cancelled) setRoutedPreview(preview);
+          if (!cancelled) {
+            setRoutedPreview(preview);
+            setRoutePending(false);
+          }
         })
         .catch(() => {
-          // Routing failed — keep showing the synchronous estimate.
-          if (!cancelled) setRoutedPreview(null);
+          // Routing failed — keep the last routed result on screen.
+          if (!cancelled) setRoutePending(false);
         });
     }, 400);
     return () => {
@@ -402,9 +387,7 @@ export default function PassengerTripBooking() {
     getStreetRoute,
   ]);
 
-  // Prefer the routed preview (real times for every stop) once it's ready,
-  // otherwise the instant synchronous estimate.
-  const activePreview = routedPreview ?? previewRoute;
+  const activePreview = routedPreview;
 
   if (loading) {
     return (
@@ -562,6 +545,7 @@ export default function PassengerTripBooking() {
                   <Typography variant="subtitle2" color="primary" gutterBottom>
                     Trip Route ({estimatedCalls.length} stops)
                     {isPreview && ' — preview with your stops'}
+                    {routePending && ' — updating route…'}
                   </Typography>
                   {overCapacityStop && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
