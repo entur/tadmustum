@@ -10,6 +10,10 @@ export type CarPoolingTripDataFormData = {
   estimatedVehicleJourneyCode?: string;
   departureStopName: string;
   departureDatetime: Dayjs;
+  // UI-only: when true the arrival time is estimated from OTP routing and the
+  // arrival picker is disabled. Not part of the SIRI payload. Left unset when
+  // editing an existing trip so the saved arrival is preserved.
+  estimateArrivalAutomatically?: boolean;
   departureFlexibleStop: Position | null;
   departureCancellation: boolean;
   destinationStopName: string;

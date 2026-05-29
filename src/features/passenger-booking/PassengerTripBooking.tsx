@@ -11,19 +11,26 @@ import {
   Alert,
   Chip,
   Stack,
+  CircularProgress,
 } from '@mui/material';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   DirectionsCar,
-  LocationOn,
-  Schedule,
   Share,
-  PersonPin,
-  Hail,
-  SensorsOff,
+  Clear,
+  LocationOn,
+  FmdGood,
+  FiberManualRecord,
+  type SvgIconComponent,
 } from '@mui/icons-material';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
+import StopOccupancy from '../../shared/components/StopOccupancy';
+import {
+  routedBookingPreview,
+  type BookingRoutePreview,
+} from '../../shared/api/prepareBookingData';
 import { useQueryExtraJourney } from '../plan-trip/hooks/useQueryOneExtraJourney';
+import { useStreetRoute } from '../plan-trip/hooks/useStreetRoute';
 import PassengerBookingMap from './components/PassengerBookingMap';
 import { useBookPassengerRide } from './hooks/useBookPassengerRide';
 import { useAuthorities } from '../../shared/hooks/useAuthorities';
@@ -35,8 +42,47 @@ interface PassengerBookingFormData {
   passengerDeviationBudget: number;
   pickupCoordinates?: [number, number];
   dropoffCoordinates?: [number, number];
-  estimatedPickupTime?: string;
-  estimatedDropoffTime?: string;
+}
+
+// A stop marker matching the booking map: a numbered coloured circle for the
+// trip's own stops, or the map's pickup/dropoff pin (no number) for this
+// booking's pickup and dropoff.
+function StopMarker({
+  markerNumber,
+  icon: Icon,
+  color,
+  size = 24,
+}: {
+  markerNumber: number | null;
+  icon: SvgIconComponent;
+  color: 'success' | 'error' | 'primary';
+  size?: number;
+}) {
+  if (markerNumber == null) {
+    return <Icon color={color} sx={{ fontSize: size }} />;
+  }
+  const background = color === 'success' ? '#4CAF50' : color === 'error' ? '#f44336' : '#2196F3';
+  return (
+    <Box
+      sx={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        backgroundColor: background,
+        border: '3px solid white',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: size * 0.5,
+        flexShrink: 0,
+      }}
+    >
+      {markerNumber}
+    </Box>
+  );
 }
 
 export default function PassengerTripBooking() {
@@ -69,6 +115,13 @@ export default function PassengerTripBooking() {
 
   const queryExtraJourney = useQueryExtraJourney();
   const bookPassengerRide = useBookPassengerRide();
+  const getStreetRoute = useStreetRoute();
+
+  // The route preview comes from real OTP routing (async). `routePending` is
+  // true while a fresh route is being computed; we keep the previous result
+  // visible meanwhile so the times update once instead of flickering.
+  const [routedPreview, setRoutedPreview] = useState<BookingRoutePreview | null>(null);
+  const [routePending, setRoutePending] = useState(false);
 
   // Parse coordinates from URL parameters
   const parseCoordinatesFromURL = (param: string | null): [number, number] | undefined => {
@@ -199,20 +252,15 @@ export default function PassengerTripBooking() {
     });
   };
 
-  const calculateEstimatedTimes = () => {
-    if (!trip || !bookingData.origin || !bookingData.destination) return;
-
-    const estimatedCalls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
-    if (!estimatedCalls || estimatedCalls.length < 2) return;
-
-    const departureTime = estimatedCalls[0].aimedDepartureTime;
-    const arrivalTime = estimatedCalls[estimatedCalls.length - 1].aimedArrivalTime;
-
+  const handleClearLocations = () => {
     setBookingData(prev => ({
       ...prev,
-      estimatedPickupTime: departureTime,
-      estimatedDropoffTime: arrivalTime,
+      pickupCoordinates: undefined,
+      dropoffCoordinates: undefined,
+      origin: '',
+      destination: '',
     }));
+    updateURLParams(undefined, undefined);
   };
 
   const handleBookRide = async () => {
@@ -239,8 +287,6 @@ export default function PassengerTripBooking() {
         tripId: trip.id,
         pickupCoordinates: bookingData.pickupCoordinates,
         dropoffCoordinates: bookingData.dropoffCoordinates,
-        pickupTime: bookingData.estimatedPickupTime,
-        dropoffTime: bookingData.estimatedDropoffTime,
         numberOfPassengers: bookingData.numberOfPassengers,
         passengerDeviationBudget: bookingData.passengerDeviationBudget,
       };
@@ -250,8 +296,6 @@ export default function PassengerTripBooking() {
       if (result.error) {
         setBookingError(result.error.message);
       } else {
-        // Calculate times and confirm booking
-        calculateEstimatedTimes();
         setIsBookingConfirmed(true);
       }
     } catch (error) {
@@ -292,6 +336,60 @@ export default function PassengerTripBooking() {
     }
   };
 
+  // Build the route preview from real OTP routing (no rough synchronous
+  // estimate — that made stop times flicker as the passenger nudged the
+  // pickup). Debounced so we don't route on every map click. We keep the last
+  // routed result on screen while the next one computes, so the times update
+  // once when OTP responds instead of jumping to a placeholder first.
+  useEffect(() => {
+    const pickupCoordinates = bookingData.pickupCoordinates;
+    const dropoffCoordinates = bookingData.dropoffCoordinates;
+    if (!trip?.id || !pickupCoordinates || !dropoffCoordinates) {
+      setRoutedPreview(null);
+      setRoutePending(false);
+      return;
+    }
+    setRoutePending(true);
+    const tripId = trip.id;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      routedBookingPreview(
+        trip,
+        {
+          tripId,
+          pickupCoordinates,
+          dropoffCoordinates,
+          numberOfPassengers: bookingData.numberOfPassengers,
+          passengerDeviationBudget: bookingData.passengerDeviationBudget,
+        },
+        getStreetRoute
+      )
+        .then(preview => {
+          if (!cancelled) {
+            setRoutedPreview(preview);
+            setRoutePending(false);
+          }
+        })
+        .catch(() => {
+          // Routing failed — keep the last routed result on screen.
+          if (!cancelled) setRoutePending(false);
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    trip,
+    bookingData.pickupCoordinates,
+    bookingData.dropoffCoordinates,
+    bookingData.numberOfPassengers,
+    bookingData.passengerDeviationBudget,
+    getStreetRoute,
+  ]);
+
+  const activePreview = routedPreview;
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
@@ -308,72 +406,109 @@ export default function PassengerTripBooking() {
     );
   }
 
-  const estimatedCalls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
+  // Show the live preview (with the prospective pickup/dropoff) when available,
+  // otherwise the trip's current stops.
+  const estimatedCalls =
+    activePreview?.calls ?? trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+  const isPreview = activePreview != null;
+  // Capacity is a property of the vehicle, so fall back to the origin's value
+  // for stops that don't carry their own capacity.
+  const vehicleCapacity = estimatedCalls[0]?.expectedDepartureCapacities?.[0]?.totalCapacity;
 
-  // Helper function to determine stop type and get appropriate icon/color
-  const getStopTypeInfo = (call: (typeof estimatedCalls)[0], index: number) => {
+  // Build the display info for each stop. This booking's own pickup and dropoff
+  // (identified by stopPointRef from the preview) get the map's pickup/dropoff
+  // pins and no number. Every other stop is one of the trip's own stops and
+  // keeps a numbered circle — numbered by its original position in the trip,
+  // ignoring the inserted pickup/dropoff — exactly matching the map's markers.
+  const currentPickupRef = activePreview?.pickupStopRef;
+  const currentDropoffRef = activePreview?.dropoffStopRef;
+  let stopNumber = 0; // trip-stop position, shown on the marker (origin = 1)
+  let intermediateCounter = 0; // counts only intermediate stops, for their names
+  const stopDisplays = estimatedCalls.map((call, index) => {
     const isFirst = index === 0;
     const isLast = index === estimatedCalls.length - 1;
-    const isPickup =
-      call.stopPointName?.includes('Pickup') ||
-      (call.departureBoardingActivity === 'boarding' && !isFirst);
-    const isDropoff =
-      call.stopPointName?.includes('Dropoff') ||
-      (call.arrivalBoardingActivity === 'alighting' && !isLast);
-
     const latestTime = call.latestExpectedArrivalTime;
 
-    if (isFirst) {
+    if (currentPickupRef && call.stopPointRef === currentPickupRef) {
       return {
         icon: LocationOn,
         color: 'success' as const,
-        label: 'Departure',
-        time: call.aimedDepartureTime || call.expectedDepartureTime,
-        timeType: 'Departure' as const,
-        latestTime,
-      };
-    } else if (isLast) {
-      return {
-        icon: LocationOn,
-        color: 'error' as const,
-        label: 'Destination',
-        time: call.aimedArrivalTime || call.expectedArrivalTime,
-        timeType: 'Arrival' as const,
-        latestTime,
-      };
-    } else if (isPickup) {
-      return {
-        icon: PersonPin,
-        color: 'primary' as const,
-        label: 'Passenger Pickup',
+        markerNumber: null as number | null,
+        label: 'Your pickup',
+        warningLabel: 'Your pickup',
+        name: call.stopPointName,
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Pickup' as const,
         latestTime,
       };
-    } else if (isDropoff) {
+    }
+    if (currentDropoffRef && call.stopPointRef === currentDropoffRef) {
       return {
-        icon: Hail,
-        color: 'secondary' as const,
-        label: 'Passenger Dropoff',
+        icon: FmdGood,
+        color: 'error' as const,
+        markerNumber: null as number | null,
+        label: 'Your dropoff',
+        warningLabel: 'Your dropoff',
+        name: call.stopPointName,
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Dropoff' as const,
         latestTime,
       };
-    } else {
+    }
+
+    // A trip stop — keep its original number (pickup/dropoff don't count).
+    stopNumber += 1;
+    if (isFirst) {
       return {
-        icon: SensorsOff,
-        color: 'action' as const,
-        label: 'Stop',
-        time:
-          call.aimedArrivalTime ||
-          call.aimedDepartureTime ||
-          call.expectedArrivalTime ||
-          call.expectedDepartureTime,
-        timeType: 'Stop' as const,
+        icon: FiberManualRecord,
+        color: 'success' as const,
+        markerNumber: stopNumber as number | null,
+        label: 'Departure',
+        warningLabel: call.stopPointName,
+        name: call.stopPointName,
+        time: call.aimedDepartureTime || call.expectedDepartureTime,
+        timeType: 'Departure' as const,
         latestTime,
       };
     }
-  };
+    if (isLast) {
+      return {
+        icon: FiberManualRecord,
+        color: 'error' as const,
+        markerNumber: stopNumber as number | null,
+        label: 'Destination',
+        warningLabel: call.stopPointName,
+        name: call.stopPointName,
+        time: call.aimedArrivalTime || call.expectedArrivalTime,
+        timeType: 'Arrival' as const,
+        latestTime,
+      };
+    }
+    intermediateCounter += 1;
+    return {
+      icon: FiberManualRecord,
+      color: 'primary' as const,
+      markerNumber: stopNumber as number | null,
+      label: 'Intermediate stop',
+      warningLabel: `Intermediate stop ${intermediateCounter}`,
+      name: `Intermediate stop ${intermediateCounter}`,
+      time:
+        call.aimedArrivalTime ||
+        call.aimedDepartureTime ||
+        call.expectedArrivalTime ||
+        call.expectedDepartureTime,
+      timeType: 'Stop' as const,
+      latestTime,
+    };
+  });
+
+  // The first over-capacity stop, taken from the same display info the route
+  // list uses, so the warning can show its icon + label (e.g. the pickup pin +
+  // "Your pickup") instead of a raw SIRI name.
+  const overCapacityStop =
+    activePreview?.overCapacityStopIndex != null
+      ? stopDisplays[activePreview.overCapacityStopIndex]
+      : null;
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
@@ -391,44 +526,67 @@ export default function PassengerTripBooking() {
                 <Box display="flex" alignItems="center" gap={1}>
                   <DirectionsCar color="primary" />
                   <Typography variant="h6">
-                    {trip.estimatedVehicleJourney.publishedLineName}
+                    {estimatedCalls[0]?.stopPointName} →{' '}
+                    {estimatedCalls[estimatedCalls.length - 1]?.stopPointName}
                   </Typography>
-                  <Chip
-                    label={trip.estimatedVehicleJourney.vehicleMode}
-                    size="small"
-                    variant="outlined"
-                  />
                 </Box>
-
-                <Typography color="text.secondary" gutterBottom>
-                  {estimatedCalls[estimatedCalls.length - 1]?.destinationDisplay}
-                </Typography>
 
                 <Divider />
 
                 {/* Route Information - All Stops */}
                 <Box>
-                  <Typography variant="subtitle2" color="primary" gutterBottom>
-                    Trip Route ({estimatedCalls.length} stops)
-                  </Typography>
+                  <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2" color="primary">
+                      Trip Route ({estimatedCalls.length} stops)
+                      {isPreview && ' — preview with your stops'}
+                    </Typography>
+                    {routePending && (
+                      <Box display="flex" alignItems="center" gap={0.5} color="text.secondary">
+                        <CircularProgress size={14} aria-label="Updating route" />
+                        <Typography variant="caption">updating route…</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                  {overCapacityStop && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}
+                      >
+                        Heads up: this booking puts the vehicle over capacity from
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                          <StopMarker
+                            markerNumber={overCapacityStop.markerNumber}
+                            icon={overCapacityStop.icon}
+                            color={overCapacityStop.color}
+                            size={20}
+                          />
+                          <strong>{overCapacityStop.warningLabel}</strong>
+                        </Box>
+                        onward — you can still book, but the car will be overfull.
+                      </Box>
+                    </Alert>
+                  )}
                   <Stack spacing={2}>
                     {estimatedCalls.map((call, index) => {
-                      const stopInfo = getStopTypeInfo(call, index);
-                      const IconComponent = stopInfo.icon;
+                      const stopInfo = stopDisplays[index];
 
                       return (
                         <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
-                          <IconComponent color={stopInfo.color} />
+                          <StopMarker
+                            markerNumber={stopInfo.markerNumber}
+                            icon={stopInfo.icon}
+                            color={stopInfo.color}
+                          />
                           <Box sx={{ flex: 1 }}>
                             <Box display="flex" alignItems="center" gap={1}>
                               <Typography variant="body2" fontWeight={500}>
-                                {call.stopPointName}
+                                {stopInfo.name}
                               </Typography>
                               <Chip
                                 label={stopInfo.label}
                                 size="small"
                                 variant="outlined"
-                                color={stopInfo.color === 'action' ? 'default' : stopInfo.color}
+                                color={stopInfo.color}
                                 sx={{ fontSize: '0.7rem', height: '20px' }}
                               />
                             </Box>
@@ -443,14 +601,14 @@ export default function PassengerTripBooking() {
                                 )}
                               </Typography>
                             )}
+                            <StopOccupancy
+                              onboardCount={call.expectedDepartureOccupancy?.[0]?.onboardCount}
+                              totalCapacity={
+                                call.expectedDepartureCapacities?.[0]?.totalCapacity ??
+                                vehicleCapacity
+                              }
+                            />
                           </Box>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ minWidth: '40px' }}
-                          >
-                            #{call.order}
-                          </Typography>
                         </Box>
                       );
                     })}
@@ -516,29 +674,6 @@ export default function PassengerTripBooking() {
                   variant="outlined"
                 />
 
-                {/* Estimated Times Display */}
-                {bookingData.estimatedPickupTime && bookingData.estimatedDropoffTime && (
-                  <Box>
-                    <Typography variant="subtitle2" color="primary" gutterBottom>
-                      Estimated Times
-                    </Typography>
-                    <Stack spacing={1}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Schedule fontSize="small" />
-                        <Typography variant="body2">
-                          Pickup: {new Date(bookingData.estimatedPickupTime).toLocaleString()}
-                        </Typography>
-                      </Box>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Schedule fontSize="small" />
-                        <Typography variant="body2">
-                          Drop-off: {new Date(bookingData.estimatedDropoffTime).toLocaleString()}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Box>
-                )}
-
                 {isBookingConfirmed && (
                   <Alert severity="success">
                     <Typography variant="body2">
@@ -564,13 +699,6 @@ export default function PassengerTripBooking() {
 
                 <Box display="flex" gap={2} flexWrap="wrap">
                   <Button
-                    variant="outlined"
-                    onClick={calculateEstimatedTimes}
-                    disabled={!bookingData.origin || !bookingData.destination}
-                  >
-                    Calculate Times
-                  </Button>
-                  <Button
                     variant="contained"
                     onClick={handleBookRide}
                     disabled={
@@ -588,6 +716,17 @@ export default function PassengerTripBooking() {
                         ? 'Booked'
                         : 'Book Ride'}
                   </Button>
+                  {(bookingData.pickupCoordinates || bookingData.dropoffCoordinates) && (
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<Clear />}
+                      onClick={handleClearLocations}
+                      disabled={isBookingConfirmed}
+                    >
+                      Clear pickup & dropoff
+                    </Button>
+                  )}
                   {bookingData.pickupCoordinates && bookingData.dropoffCoordinates && (
                     <Button
                       variant="outlined"
@@ -617,6 +756,7 @@ export default function PassengerTripBooking() {
               </Typography>
               <PassengerBookingMap
                 trip={trip}
+                routeCalls={estimatedCalls}
                 onPickupLocationSelect={handlePickupLocationSelect}
                 onDropoffLocationSelect={handleDropoffLocationSelect}
                 pickupLocation={bookingData.pickupCoordinates}

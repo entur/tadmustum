@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import { renderWithRouter } from '../../test/renderWithRouter';
@@ -14,6 +14,13 @@ vi.mock('../plan-trip/hooks/useQueryOneExtraJourney', () => ({
 
 vi.mock('./hooks/useBookPassengerRide', () => ({
   useBookPassengerRide: () => bookPassengerRide,
+}));
+
+// The routed-preview effect calls the street router after a debounce; stub it
+// so tests don't hit the network. Returning null makes the routed preview fall
+// back to the synchronous estimate (which is what the route list shows).
+vi.mock('../plan-trip/hooks/useStreetRoute', () => ({
+  useStreetRoute: () => async () => null,
 }));
 
 // The component looks up the trip's authority via the codespace from the URL.
@@ -50,6 +57,7 @@ const trip: Extrajourney = {
   id: 'ENT:ServiceJourney:1',
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
+    lineRef: 'ENT:CarPooling:trip-1',
     publishedLineName: 'Carpooling trip ENT:Authority:ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
@@ -71,8 +79,75 @@ const trip: Extrajourney = {
   },
 } as unknown as Extrajourney;
 
+// Trip with an origin capacity/occupancy so over-capacity can be exercised.
+const tripWithCapacity = {
+  id: 'ENT:ServiceJourney:1',
+  estimatedVehicleJourney: {
+    recordedAtTime: '2026-05-20T09:00:00.000Z',
+    lineRef: 'ENT:CarPooling:trip-1',
+    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    vehicleMode: 'bus',
+    estimatedCalls: {
+      estimatedCall: [
+        {
+          order: 1,
+          stopPointName: 'Oslo S',
+          destinationDisplay: 'Bergen',
+          aimedDepartureTime: '2026-06-01T09:00:00.000Z',
+          expectedDepartureOccupancy: [{ onboardCount: 1 }],
+          expectedDepartureCapacities: [{ totalCapacity: 4 }],
+        },
+        {
+          order: 2,
+          stopPointName: 'Bergen stasjon',
+          destinationDisplay: 'Bergen',
+          aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+        },
+      ],
+    },
+  },
+} as unknown as Extrajourney;
+
+// Trip with a driver intermediate stop between origin and destination.
+const tripWithIntermediate = {
+  id: 'ENT:ServiceJourney:1',
+  estimatedVehicleJourney: {
+    recordedAtTime: '2026-05-20T09:00:00.000Z',
+    lineRef: 'ENT:CarPooling:trip-1',
+    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    vehicleMode: 'bus',
+    estimatedCalls: {
+      estimatedCall: [
+        {
+          order: 1,
+          stopPointName: 'Oslo S',
+          destinationDisplay: 'Bergen',
+          aimedDepartureTime: '2026-06-01T09:00:00.000Z',
+        },
+        {
+          order: 2,
+          stopPointName: 'Hønefoss',
+          destinationDisplay: 'Bergen',
+          aimedArrivalTime: '2026-06-01T10:00:00.000Z',
+        },
+        {
+          order: 3,
+          stopPointName: 'Bergen stasjon',
+          destinationDisplay: 'Bergen',
+          aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+        },
+      ],
+    },
+  },
+} as unknown as Extrajourney;
+
 const renderAt = (path = '/book-trip/ENT/ENT:ServiceJourney:1') =>
   renderWithRouter(<PassengerTripBooking />, { path, route: '/book-trip/:codespace/:tripId' });
+
+const selectPickupAndDropoff = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole('button', { name: 'stub-select-pickup' }));
+  await user.click(screen.getByRole('button', { name: 'stub-select-dropoff' }));
+};
 
 describe('PassengerTripBooking', () => {
   it('shows a loading state while the trip query is pending', () => {
@@ -83,12 +158,12 @@ describe('PassengerTripBooking', () => {
     expect(screen.getByText('Loading trip details...')).toBeInTheDocument();
   });
 
-  it('renders the trip line name once the trip resolves', async () => {
+  it('renders the origin → destination route heading once the trip resolves', async () => {
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
 
     renderAt();
 
-    expect(await screen.findByText('Carpooling trip ENT:Authority:ENT')).toBeInTheDocument();
+    expect(await screen.findByText('Oslo S → Bergen stasjon')).toBeInTheDocument();
   });
 
   it('disables Book Ride until both pickup and dropoff are selected', async () => {
@@ -114,7 +189,7 @@ describe('PassengerTripBooking', () => {
 
     renderAt();
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await user.click(screen.getByRole('button', { name: 'stub-select-pickup' }));
     await user.click(screen.getByRole('button', { name: 'stub-select-dropoff' }));
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
@@ -141,7 +216,7 @@ describe('PassengerTripBooking', () => {
 
     renderAt();
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
     await user.click(screen.getByRole('button', { name: 'stub-select-pickup' }));
     await user.click(screen.getByRole('button', { name: 'stub-select-dropoff' }));
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
@@ -156,7 +231,7 @@ describe('PassengerTripBooking', () => {
       '/book-trip/ENT/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
     );
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
 
     expect(screen.getByDisplayValue('59.913900, 10.752200')).toBeInTheDocument();
     expect(screen.getByDisplayValue('60.391300, 5.322100')).toBeInTheDocument();
@@ -181,8 +256,70 @@ describe('PassengerTripBooking', () => {
       '/book-trip/ENT/ENT:ServiceJourney:1?from_coordinate=59.9139,10.7522&to_coordinate=60.3913,5.3221'
     );
 
-    await screen.findByText('Carpooling trip ENT:Authority:ENT');
+    await screen.findByText('Oslo S → Bergen stasjon');
 
     expect(screen.queryByText(/pre-selected from the shared URL/i)).not.toBeInTheDocument();
+  });
+
+  it('labels the selected stops as "Your pickup" / "Your dropoff" in the route list', async () => {
+    const user = userEvent.setup();
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
+
+    renderAt();
+    await screen.findByText('Oslo S → Bergen stasjon');
+    await selectPickupAndDropoff(user);
+
+    expect(await screen.findByText('Your pickup')).toBeInTheDocument();
+    expect(screen.getByText('Your dropoff')).toBeInTheDocument();
+  });
+
+  it("renames the driver's intermediate stop to 'Intermediate stop 1' in the route list", async () => {
+    const user = userEvent.setup();
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: tripWithIntermediate } });
+
+    renderAt();
+    await screen.findByText('Oslo S → Bergen stasjon');
+    await selectPickupAndDropoff(user);
+
+    expect(await screen.findByText('Intermediate stop 1')).toBeInTheDocument();
+    // The raw place name is not shown for the intermediate stop.
+    expect(screen.queryByText('Hønefoss')).not.toBeInTheDocument();
+  });
+
+  it('warns when the booking exceeds vehicle capacity but still allows booking', async () => {
+    const user = userEvent.setup();
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: tripWithCapacity } });
+
+    renderAt();
+    await screen.findByText('Oslo S → Bergen stasjon');
+    await selectPickupAndDropoff(user);
+
+    // driver (1) + 4 passengers = 5 > capacity 4
+    fireEvent.change(screen.getByLabelText('Number of passengers'), { target: { value: '4' } });
+
+    // The warning banner names the over-capacity point.
+    expect(
+      await screen.findByText(/this booking puts the vehicle over capacity/i)
+    ).toBeInTheDocument();
+    // Over capacity is allowed — booking stays enabled.
+    expect(screen.getByRole('button', { name: 'Book Ride' })).toBeEnabled();
+  });
+
+  it('clears the pickup and dropoff selection', async () => {
+    const user = userEvent.setup();
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
+
+    renderAt();
+    await screen.findByText('Oslo S → Bergen stasjon');
+    await selectPickupAndDropoff(user);
+
+    const bookButton = screen.getByRole('button', { name: 'Book Ride' });
+    expect(bookButton).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: /Clear pickup/i }));
+
+    expect(bookButton).toBeDisabled();
+    expect(screen.getByLabelText('Your Pickup Coordinates')).toHaveValue('');
+    expect(screen.getByLabelText('Your Dropoff Coordinates')).toHaveValue('');
   });
 });

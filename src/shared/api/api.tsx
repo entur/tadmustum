@@ -10,7 +10,10 @@ import { removeTypenameFromVariables } from '@apollo/client/link/remove-typename
 import type { Config } from '../../contexts/ConfigContext.tsx';
 import type { AuthState } from 'react-oidc-context';
 import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
-import prepareBookingData, { type PassengerBookingData } from './prepareBookingData.tsx';
+import prepareBookingData, {
+  type PassengerBookingData,
+  type RouteLeg,
+} from './prepareBookingData.tsx';
 import getStreetRoute from './journeyPlannerStreetRoute.tsx';
 import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
 import type { AppError } from '../error-message/AppError.tsx';
@@ -302,7 +305,8 @@ const bookPassengerRide =
     auth: AuthState,
     originalTrip: Extrajourney,
     bookingData: PassengerBookingData,
-    authority: string
+    authority: string,
+    routeLeg: RouteLeg
   ) =>
   async (): Promise<{ data?: string; error?: AppError }> => {
     if (!auth.user?.access_token) {
@@ -321,7 +325,7 @@ const bookPassengerRide =
     `;
 
     try {
-      const variables = prepareBookingData(originalTrip, bookingData, authority);
+      const variables = await prepareBookingData(originalTrip, bookingData, authority, routeLeg);
 
       const result = await client.mutate({
         mutation,
@@ -354,6 +358,7 @@ const bookPassengerRide =
   };
 
 const api = (config: Config, auth?: AuthState) => {
+  const streetRoute = getStreetRoute(config['journey-planner-api'] as string);
   return {
     getAuthorities: getAuthorities(config['journey-planner-api'] as string),
     getOperators: getOperators(config['journey-planner-api'] as string),
@@ -378,9 +383,10 @@ const api = (config: Config, auth?: AuthState) => {
         auth as AuthState,
         originalTrip,
         bookingData,
-        authority
+        authority,
+        streetRoute
       ),
-    getStreetRoute: getStreetRoute(config['journey-planner-api'] as string),
+    getStreetRoute: streetRoute,
   };
 };
 

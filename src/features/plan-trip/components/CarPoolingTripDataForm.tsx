@@ -15,9 +15,11 @@ import {
   Divider,
   Stack,
   Chip,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
-import { LocationOn, PersonPin, Hail, SensorsOff, Cancel, Replay } from '@mui/icons-material';
+import { Cancel, Replay } from '@mui/icons-material';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,6 +33,7 @@ import { carPoolingTripDataSchema } from '../model/carPoolingTripDataSchema.tsx'
 import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
+import StopOccupancy from '../../../shared/components/StopOccupancy.tsx';
 import dayjs from 'dayjs';
 
 export interface CarPoolingTripDataFormProps {
@@ -83,6 +86,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   // below once that happens. When editing, reset(initialState) replaces both
   // with the existing trip's values.
   const newTripId = useMemo(() => uuidv4(), []);
+  // New trips default to departing exactly a week from now. Computed once so it
+  // stays stable across renders (and so Reset returns to the same value).
+  const defaultDeparture = useMemo(() => dayjs().add(1, 'week'), []);
 
   const {
     handleSubmit,
@@ -102,6 +108,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       operator: '',
       id: newTripId,
       departureStopName: 'Origin',
+      departureDatetime: defaultDeparture,
+      estimateArrivalAutomatically: true,
       departureFlexibleStop: null,
       departureCancellation: false,
       destinationStopName: 'Destination',
@@ -122,6 +130,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
+  const estimateArrivalAutomatically = watch('estimateArrivalAutomatically');
   const departureCancellation = watch('departureCancellation');
   const destinationCancellation = watch('destinationCancellation');
   const intermediateCalls = watch('intermediateCalls');
@@ -222,6 +231,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const departureMs = departureDatetime?.isValid() ? departureDatetime.valueOf() : undefined;
 
   useEffect(() => {
+    // Only auto-estimate when the checkbox is on (off when editing an existing
+    // trip, so its saved arrival is never silently overwritten).
+    if (!estimateArrivalAutomatically) {
+      return;
+    }
     if (
       departureLng == null ||
       departureLat == null ||
@@ -238,15 +252,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       dayjs(departureMs).toISOString()
     )
       .then(result => {
-        if (cancelled || !result) return;
-        // Only auto-fill arrival time when it's not already set — otherwise
-        // editing a trip would silently overwrite the saved arrival with OTP's
-        // freshly-computed ETA on every street-route fire.
-        if (result.expectedEndTime && !getValues('destinationDatetime')) {
-          setValue('destinationDatetime', dayjs(result.expectedEndTime), {
-            shouldValidate: true,
-          });
-        }
+        if (cancelled || !result?.expectedEndTime) return;
+        // Auto mode: always keep the arrival in sync with the route, so it
+        // updates whenever the origin, destination, or departure changes.
+        setValue('destinationDatetime', dayjs(result.expectedEndTime), {
+          shouldValidate: true,
+        });
       })
       .catch(() => {
         // Ignore street-routing failures; user can still set arrival manually.
@@ -255,6 +266,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       cancelled = true;
     };
   }, [
+    estimateArrivalAutomatically,
     departureLng,
     departureLat,
     destinationLng,
@@ -262,79 +274,69 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     departureMs,
     streetRoute,
     setValue,
-    getValues,
   ]);
 
-  // Helper function to determine stop type and get appropriate icon/color
-  const getStopTypeInfo = (
-    call: Extrajourney['estimatedVehicleJourney']['estimatedCalls']['estimatedCall'][0],
-    index: number,
-    totalStops: number
-  ) => {
-    const isFirst = index === 0;
-    const isLast = index === totalStops - 1;
-    const isPickup =
-      call.stopPointName?.includes('Pickup') ||
-      (call.departureBoardingActivity === 'boarding' && !isFirst);
-    const isDropoff =
-      call.stopPointName?.includes('Dropoff') ||
-      (call.arrivalBoardingActivity === 'alighting' && !isLast);
+  const estimatedCalls = tripData?.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
+  // Capacity is a property of the vehicle, so fall back to the origin's value
+  // for stops that don't carry their own capacity.
+  const vehicleCapacity = estimatedCalls[0]?.expectedDepartureCapacities?.[0]?.totalCapacity;
 
+  // Display info per stop, matching the booking view: the driver's origin and
+  // destination are labelled Departure/Destination; everything in between (the
+  // driver's own stops and any passengers' pickup/dropoff) is shown as a
+  // neutral, numbered "Intermediate stop N". Marker colours mirror the map:
+  // green start, blue intermediate, red destination.
+  let intermediateCounter = 0;
+  const stopDisplays = estimatedCalls.map((call, index) => {
+    const isFirst = index === 0;
+    const isLast = index === estimatedCalls.length - 1;
     const latestTime = call.latestExpectedArrivalTime;
 
     if (isFirst) {
       return {
-        icon: LocationOn,
         color: 'success' as const,
         label: 'Departure',
+        name: call.stopPointName,
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Departure' as const,
         latestTime,
       };
-    } else if (isLast) {
+    }
+    if (isLast) {
       return {
-        icon: LocationOn,
         color: 'error' as const,
         label: 'Destination',
+        name: call.stopPointName,
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Arrival' as const,
         latestTime,
       };
-    } else if (isPickup) {
-      return {
-        icon: PersonPin,
-        color: 'primary' as const,
-        label: 'Passenger Pickup',
-        time: call.aimedDepartureTime || call.expectedDepartureTime,
-        timeType: 'Pickup' as const,
-        latestTime,
-      };
-    } else if (isDropoff) {
-      return {
-        icon: Hail,
-        color: 'secondary' as const,
-        label: 'Passenger Dropoff',
-        time: call.aimedArrivalTime || call.expectedArrivalTime,
-        timeType: 'Dropoff' as const,
-        latestTime,
-      };
-    } else {
-      return {
-        icon: SensorsOff,
-        color: 'action' as const,
-        label: 'Stop',
-        time:
-          call.aimedArrivalTime ||
-          call.aimedDepartureTime ||
-          call.expectedArrivalTime ||
-          call.expectedDepartureTime,
-        timeType: 'Stop' as const,
-        latestTime,
-      };
     }
-  };
+    intermediateCounter += 1;
+    return {
+      color: 'primary' as const,
+      label: 'Intermediate stop',
+      name: `Intermediate stop ${intermediateCounter}`,
+      time:
+        call.aimedArrivalTime ||
+        call.aimedDepartureTime ||
+        call.expectedArrivalTime ||
+        call.expectedDepartureTime,
+      timeType: 'Stop' as const,
+      latestTime,
+    };
+  });
 
-  const estimatedCalls = tripData?.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
+  // Numbered circle marker matching the markers on the trip map. Greyed when
+  // the stop is cancelled.
+  const markerColor = (color: 'success' | 'error' | 'primary', cancelled: boolean) =>
+    cancelled
+      ? '#9e9e9e'
+      : color === 'success'
+        ? '#4CAF50'
+        : color === 'error'
+          ? '#f44336'
+          : '#2196F3';
 
   return (
     <Box
@@ -390,8 +392,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           <Divider sx={{ mb: 2 }} />
           <Stack spacing={2}>
             {estimatedCalls.map((call, index) => {
-              const stopInfo = getStopTypeInfo(call, index, estimatedCalls.length);
-              const IconComponent = stopInfo.icon;
+              const stopInfo = stopDisplays[index];
               const isFirst = index === 0;
               const isLast = index === estimatedCalls.length - 1;
               const intermediateIndex = isFirst || isLast ? -1 : index - 1;
@@ -422,7 +423,25 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
 
               return (
                 <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
-                  <IconComponent color={cancelled ? 'disabled' : stopInfo.color} />
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      backgroundColor: markerColor(stopInfo.color, cancelled),
+                      border: '3px solid white',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '12px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {index + 1}
+                  </Box>
                   <Box sx={{ flex: 1 }}>
                     <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                       <Typography
@@ -433,13 +452,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                           color: cancelled ? 'text.disabled' : 'text.primary',
                         }}
                       >
-                        {call.stopPointName}
+                        {stopInfo.name}
                       </Typography>
                       <Chip
                         label={stopInfo.label}
                         size="small"
                         variant="outlined"
-                        color={stopInfo.color === 'action' ? 'default' : stopInfo.color}
+                        color={stopInfo.color}
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
                       {cancelled && (
@@ -463,6 +482,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                         )}
                       </Typography>
                     )}
+                    <StopOccupancy
+                      onboardCount={call.expectedDepartureOccupancy?.[0]?.onboardCount}
+                      totalCapacity={
+                        call.expectedDepartureCapacities?.[0]?.totalCapacity ?? vehicleCapacity
+                      }
+                    />
                   </Box>
                   <IconButton
                     size="small"
@@ -472,9 +497,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   >
                     {cancelled ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
                   </IconButton>
-                  <Typography variant="caption" color="text.secondary" sx={{ minWidth: '30px' }}>
-                    #{call.order}
-                  </Typography>
                 </Box>
               );
             })}
@@ -628,6 +650,21 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }}
       />
       <Controller
+        name="estimateArrivalAutomatically"
+        control={control}
+        render={({ field }) => (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={!!field.value}
+                onChange={event => field.onChange(event.target.checked)}
+              />
+            }
+            label="Estimate arrival time automatically"
+          />
+        )}
+      />
+      <Controller
         name="destinationDatetime"
         control={control}
         render={({ field, fieldState: { error } }) => {
@@ -635,7 +672,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             <DateTimePicker
               {...field}
               ampm={false}
-              label="Select arrival time"
+              disabled={!!estimateArrivalAutomatically}
+              label={
+                estimateArrivalAutomatically ? 'Arrival time (estimated)' : 'Select arrival time'
+              }
               value={field.value || null}
               onChange={value => field.onChange(value)}
               slotProps={{
