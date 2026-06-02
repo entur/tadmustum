@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
@@ -50,6 +50,17 @@ const trip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
 const renderInRouter = () => renderWithRouter(<CarPoolingTrips />);
 
 describe('CarPoolingTrips', () => {
+  // The past-arrival and expiry filters compare fixture dates against
+  // Date.now(). Pin "now" to just before the June-2026 fixtures so the suite
+  // stays green regardless of the real clock when it runs.
+  let nowSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-20T00:00:00.000Z').valueOf());
+  });
+  afterEach(() => {
+    nowSpy.mockRestore();
+  });
+
   it('shows a loading state until the query resolves', () => {
     queryExtraJourneys.mockReturnValue(new Promise(() => {})); // never resolves
 
