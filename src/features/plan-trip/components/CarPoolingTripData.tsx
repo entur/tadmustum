@@ -119,7 +119,11 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
         showSnackbar(result.error.message || 'Noe gikk galt under lagring.', 'error');
       } else {
         setCurrentTripId(result.data);
-        navigate('/trips', { state: { savedMessage: 'Turen ble lagret!' } });
+        // Carry the saved trip's id so the list can highlight and scroll to the
+        // row the user just created/edited.
+        navigate('/trips', {
+          state: { savedMessage: 'Turen ble lagret!', savedTripId: result.data },
+        });
       }
     };
     const handleZoomToFeature = useCallback(

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
@@ -50,6 +50,17 @@ const trip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
 const renderInRouter = () => renderWithRouter(<CarPoolingTrips />);
 
 describe('CarPoolingTrips', () => {
+  // The past-arrival and expiry filters compare fixture dates against
+  // Date.now(). Pin "now" to just before the June-2026 fixtures so the suite
+  // stays green regardless of the real clock when it runs.
+  let nowSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-20T00:00:00.000Z').valueOf());
+  });
+  afterEach(() => {
+    nowSpy.mockRestore();
+  });
+
   it('shows a loading state until the query resolves', () => {
     queryExtraJourneys.mockReturnValue(new Promise(() => {})); // never resolves
 
@@ -230,6 +241,56 @@ describe('CarPoolingTrips', () => {
     const row = await screen.findByRole('row', { name: /All-cancelled departure/ });
     expect(within(row).getByText('Cancelled')).toBeInTheDocument();
     expect(within(row).queryByText('Partially cancelled')).not.toBeInTheDocument();
+  });
+
+  it('highlights only the row for the trip just saved (carried via navigation state)', async () => {
+    // Far-future times so the default past-arrival / expiry filters never hide
+    // these rows regardless of the wall clock when the suite runs.
+    const futureTrip = (id: string, departureName: string, arrivalName: string): Extrajourney =>
+      ({
+        id,
+        estimatedVehicleJourney: {
+          recordedAtTime: '2099-01-01T09:00:00.000Z',
+          lineRef: 'ENT:CarPooling:trip',
+          expiresAtEpochMs: new Date('2099-01-01').valueOf(),
+          estimatedCalls: {
+            estimatedCall: [
+              {
+                order: 1,
+                stopPointName: departureName,
+                aimedDepartureTime: '2099-01-01T08:00:00.000Z',
+              },
+              {
+                order: 2,
+                stopPointName: arrivalName,
+                aimedArrivalTime: '2099-01-01T15:00:00.000Z',
+                latestExpectedArrivalTime: '2099-01-01T15:30:00.000Z',
+              },
+            ],
+          },
+        },
+      }) as Extrajourney;
+
+    const other = futureTrip('ENT:ServiceJourney:other', 'Other departure', 'Other arrival');
+    const saved = futureTrip(
+      'ENT:ServiceJourney:saved',
+      'Just-saved departure',
+      'Just-saved arrival'
+    );
+    queryExtraJourneys.mockResolvedValue({ data: [other, saved] });
+
+    renderWithRouter(<CarPoolingTrips />, {
+      path: '/trips',
+      state: { savedMessage: 'Turen ble lagret!', savedTripId: 'ENT:ServiceJourney:saved' },
+    });
+
+    const savedRow = await screen.findByRole('row', { name: /Just-saved departure/ });
+    // Exactly one row is highlighted, and it's the one we just saved.
+    await waitFor(() => expect(savedRow).toHaveClass('row-highlighted'));
+    expect(document.querySelectorAll('.MuiDataGrid-row.row-highlighted')).toHaveLength(1);
+
+    const otherRow = screen.getByRole('row', { name: /Other departure/ });
+    expect(otherRow).not.toHaveClass('row-highlighted');
   });
 
   it('shows an error message when the query rejects', async () => {
