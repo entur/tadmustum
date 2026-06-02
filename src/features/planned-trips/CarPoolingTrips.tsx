@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import { DataGrid, useGridApiRef, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
@@ -30,7 +30,13 @@ export default function CarPoolingTrips() {
   const [showExpired, setShowExpired] = useState(false);
   const [showHiddenFields, setShowHiddenFields] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [highlightedTripId, setHighlightedTripId] = useState<string | null>(null);
+  // Drives the one-shot attention pulse; once it has played we keep a steady
+  // highlight so paging away and back doesn't re-trigger the blink.
+  const [hasPulsed, setHasPulsed] = useState(false);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [failedCodespaces, setFailedCodespaces] = useState<string[]>([]);
+  const apiRef = useGridApiRef();
 
   const queryExtraJourneys = useQueryExtraJourney();
   const { authorities, allowedCodespaces } = useAuthorities();
@@ -46,10 +52,12 @@ export default function CarPoolingTrips() {
   );
 
   useEffect(() => {
-    const message = (location.state as { savedMessage?: string } | null)?.savedMessage;
-    if (message) {
-      setSavedMessage(message);
-      // Drop the state so the snackbar doesn't re-trigger on back/forward or refresh.
+    const state = location.state as { savedMessage?: string; savedTripId?: string } | null;
+    if (state?.savedMessage || state?.savedTripId) {
+      if (state.savedMessage) setSavedMessage(state.savedMessage);
+      if (state.savedTripId) setHighlightedTripId(state.savedTripId);
+      // Drop the state so the snackbar/highlight don't re-trigger on back/forward
+      // or refresh.
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location.state, location.pathname, navigate]);
@@ -102,6 +110,29 @@ export default function CarPoolingTrips() {
       return true;
     });
   }, [plannedTrips, showPastArrivals, showExpired]);
+
+  // Once the saved row is in the grid, jump to the page that holds it and scroll
+  // it into view so the user immediately sees the trip they just created/edited.
+  useEffect(() => {
+    if (!highlightedTripId || !rows?.length) return;
+    const api = apiRef.current;
+    if (!api?.getSortedRowIds) return;
+    const sortedIds = api.getSortedRowIds();
+    const index = sortedIds.indexOf(highlightedTripId);
+    if (index < 0) return;
+    const page = Math.floor(index / paginationModel.pageSize);
+    setPaginationModel(prev => (prev.page === page ? prev : { ...prev, page }));
+    api.scrollToIndexes?.({ rowIndex: index });
+  }, [highlightedTripId, rows, apiRef, paginationModel.pageSize]);
+
+  // Let the pulse play once, then settle into a steady (non-animated) highlight.
+  // The 2.2s matches the animation below (1.1s × 2 iterations).
+  useEffect(() => {
+    if (!highlightedTripId) return;
+    setHasPulsed(false);
+    const timer = setTimeout(() => setHasPulsed(true), 2200);
+    return () => clearTimeout(timer);
+  }, [highlightedTripId]);
 
   if (loading) {
     return <div className="alert alert-info">Loading...</div>;
@@ -323,20 +354,29 @@ export default function CarPoolingTrips() {
           latestExpectedArrivalTime: showHiddenFields,
           expiresAtEpochMs: showHiddenFields,
         }}
+        apiRef={apiRef}
         disableColumnMenu
         disableRowSelectionOnClick
         rowHeight={56}
         pageSizeOptions={[10, 25, 50]}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
         initialState={{
-          pagination: { paginationModel: { pageSize: 10 } },
           sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
         }}
         getRowClassName={params => {
+          const classes: string[] = [];
+          if ((params.row as Extrajourney).id === highlightedTripId) {
+            classes.push('row-highlighted');
+            // Only attach the animating class until the pulse has run once.
+            if (!hasPulsed) classes.push('row-highlighted-pulse');
+          }
           const journey = (params.row as Extrajourney).estimatedVehicleJourney;
-          if (journey?.cancellation) return 'row-cancelled';
           const calls = journey?.estimatedCalls?.estimatedCall ?? [];
-          if (calls.length > 0 && calls.every(c => c.cancellation)) return 'row-cancelled';
-          return '';
+          if (journey?.cancellation || (calls.length > 0 && calls.every(c => c.cancellation))) {
+            classes.push('row-cancelled');
+          }
+          return classes.join(' ');
         }}
         sx={{
           border: 0,
@@ -375,6 +415,24 @@ export default function CarPoolingTrips() {
           '& .row-cancelled': {
             textDecoration: 'line-through',
             color: 'text.disabled',
+          },
+          // Draw attention to the trip the user just created/edited: a green tint
+          // with a left accent bar, briefly pulsing to catch the eye on arrival.
+          // Selectors carry the extra `.MuiDataGrid-row` qualifier so they beat
+          // the zebra-stripe and hover rules above on specificity.
+          '@keyframes rowHighlightPulse': {
+            '0%': { backgroundColor: 'rgba(46, 125, 50, 0.32)' },
+            '100%': { backgroundColor: 'rgba(46, 125, 50, 0.14)' },
+          },
+          '& .MuiDataGrid-row.row-highlighted, & .MuiDataGrid-row.row-highlighted:hover': {
+            backgroundColor: 'rgba(46, 125, 50, 0.14)',
+            boxShadow: 'inset 4px 0 0 0 #2e7d32',
+          },
+          // The blink only runs while the one-shot `row-highlighted-pulse` class
+          // is present, so re-rendering the row (e.g. paging away and back) after
+          // it has played leaves just the steady highlight above.
+          '& .MuiDataGrid-row.row-highlighted-pulse': {
+            animation: 'rowHighlightPulse 1.1s ease-out 2',
           },
         }}
       />

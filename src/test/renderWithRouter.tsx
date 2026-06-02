@@ -7,9 +7,11 @@ interface Options {
   path?: string;
   // Route pattern when the component reads URL params via useParams.
   route?: string;
+  // Location state to seed the initial entry with (e.g. navigate(..., { state })).
+  state?: unknown;
 }
 
-export const renderWithRouter = (element: ReactElement, { path, route }: Options = {}) => {
+export const renderWithRouter = (element: ReactElement, { path, route, state }: Options = {}) => {
   const body = route ? (
     <Routes>
       <Route path={route} element={element} />
@@ -17,5 +19,7 @@ export const renderWithRouter = (element: ReactElement, { path, route }: Options
   ) : (
     element
   );
-  return render(<MemoryRouter initialEntries={path ? [path] : undefined}>{body}</MemoryRouter>);
+  const initialEntries =
+    state !== undefined ? [{ pathname: path ?? '/', state }] : path ? [path] : undefined;
+  return render(<MemoryRouter initialEntries={initialEntries}>{body}</MemoryRouter>);
 };

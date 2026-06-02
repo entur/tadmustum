@@ -232,6 +232,56 @@ describe('CarPoolingTrips', () => {
     expect(within(row).queryByText('Partially cancelled')).not.toBeInTheDocument();
   });
 
+  it('highlights only the row for the trip just saved (carried via navigation state)', async () => {
+    // Far-future times so the default past-arrival / expiry filters never hide
+    // these rows regardless of the wall clock when the suite runs.
+    const futureTrip = (id: string, departureName: string, arrivalName: string): Extrajourney =>
+      ({
+        id,
+        estimatedVehicleJourney: {
+          recordedAtTime: '2099-01-01T09:00:00.000Z',
+          lineRef: 'ENT:CarPooling:trip',
+          expiresAtEpochMs: new Date('2099-01-01').valueOf(),
+          estimatedCalls: {
+            estimatedCall: [
+              {
+                order: 1,
+                stopPointName: departureName,
+                aimedDepartureTime: '2099-01-01T08:00:00.000Z',
+              },
+              {
+                order: 2,
+                stopPointName: arrivalName,
+                aimedArrivalTime: '2099-01-01T15:00:00.000Z',
+                latestExpectedArrivalTime: '2099-01-01T15:30:00.000Z',
+              },
+            ],
+          },
+        },
+      }) as Extrajourney;
+
+    const other = futureTrip('ENT:ServiceJourney:other', 'Other departure', 'Other arrival');
+    const saved = futureTrip(
+      'ENT:ServiceJourney:saved',
+      'Just-saved departure',
+      'Just-saved arrival'
+    );
+    queryExtraJourneys.mockResolvedValue({ data: [other, saved] });
+
+    renderWithRouter(<CarPoolingTrips />, {
+      path: '/trips',
+      state: { savedMessage: 'Turen ble lagret!', savedTripId: 'ENT:ServiceJourney:saved' },
+    });
+
+    const savedRow = await screen.findByRole('row', { name: /Just-saved departure/ });
+    // Exactly one row is highlighted, and it's the one we just saved.
+    await waitFor(() => expect(savedRow).toHaveClass('row-highlighted'));
+    expect(document.querySelectorAll('.MuiDataGrid-row.row-highlighted')).toHaveLength(1);
+
+    const otherRow = screen.getByRole('row', { name: /Other departure/ });
+    expect(otherRow).not.toHaveClass('row-highlighted');
+  });
+
   it('shows an error message when the query rejects', async () => {
     queryExtraJourneys.mockRejectedValue('boom');
 
