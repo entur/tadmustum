@@ -149,6 +149,82 @@ const mutateExtrajourney =
     }
   };
 
+const cancelExtrajourney =
+  (uri: string, auth: AuthState, originalTrip: Extrajourney, authority: string) =>
+  async (): Promise<{ data?: string; error?: AppError }> => {
+    if (!auth.user?.access_token) {
+      throw new Error('Access token is missing');
+    }
+
+    // Codespace is the prefix of the trip's lineRef (`<CODESPACE>:CarPooling:<uuid>`)
+    // and must match the supplied authority — nunamnir enforces this server-side.
+    const codespace = originalTrip.estimatedVehicleJourney.lineRef?.split(':')[0];
+    if (!codespace) {
+      return {
+        error: {
+          message: 'Trip is missing a lineRef; cannot determine codespace',
+          code: 'MISSING_CODESPACE',
+          details: 'no estimatedVehicleJourney.lineRef',
+        },
+      };
+    }
+
+    const client = createClient(uri, auth);
+
+    const mutation = gql`
+      mutation CreateOrUpdateExtrajourney(
+        $codespace: String!
+        $authority: String!
+        $input: ExtrajourneyInput!
+      ) {
+        createOrUpdateExtrajourney(codespace: $codespace, authority: $authority, input: $input)
+      }
+    `;
+
+    // Cancel the whole trip by re-submitting the existing journey through the
+    // same upsert mutation the editor uses, with the journey-level cancellation
+    // flag set. recordedAtTime is bumped so downstream consumers treat this as
+    // the newest version of the journey.
+    const input: Extrajourney = {
+      id: originalTrip.id,
+      estimatedVehicleJourney: {
+        ...originalTrip.estimatedVehicleJourney,
+        cancellation: true,
+        recordedAtTime: new Date().toISOString(),
+      },
+    };
+
+    try {
+      const result = await client.mutate({
+        mutation,
+        variables: { codespace, authority, input },
+        errorPolicy: 'all',
+      });
+
+      if (result.errors?.length) {
+        const error: AppError = {
+          message: result.errors[0].message,
+          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
+          details: result.errors[0].path,
+        };
+        return { error };
+      }
+
+      return { data: result.data?.createOrUpdateExtrajourney };
+    } catch (err) {
+      const error = err as ApolloError;
+      const appError: AppError = {
+        message: error.message,
+        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
+        details: {
+          networkError: error.networkError,
+          graphQLErrors: error.graphQLErrors,
+        },
+      };
+      return { error: appError };
+    }
+  };
+
 const queryExtraJourney =
   (
     uri: string,
@@ -365,6 +441,13 @@ const api = (config: Config, auth?: AuthState) => {
     getUserContext: getUserContext(config['carpool-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
       mutateExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, formData),
+    cancelExtrajourney: (originalTrip: Extrajourney, authority: string) =>
+      cancelExtrajourney(
+        config['carpool-messages-api'] as string,
+        auth as AuthState,
+        originalTrip,
+        authority
+      ),
     queryExtraJourney: (codespace: string, authority: string, showCompletedTrips: boolean) =>
       queryExtraJourney(
         config['carpool-messages-api'] as string,

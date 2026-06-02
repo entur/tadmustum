@@ -1,4 +1,17 @@
 import '@testing-library/jest-dom/vitest';
+import { afterEach } from 'vitest';
+
+// Components persist filter preferences to localStorage; clear it between tests
+// so a toggle in one test never leaks into another's default state. Guarded:
+// this jsdom/Node env exposes a `localStorage` object whose methods are absent,
+// so calling clear() directly would throw.
+afterEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    // Storage methods unavailable in this environment — nothing to clear.
+  }
+});
 
 // Node 22+ ships an experimental native Web Storage (enabled by default from
 // Node 25). Under jsdom, @mui/x-data-grid's localStorage feature-check reaches

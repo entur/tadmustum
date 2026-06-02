@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { DataGrid, useGridApiRef, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
+import { useCancelExtrajourney } from '../plan-trip/hooks/useCancelExtrajourney.tsx';
 import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
+import { usePersistentState } from '../../shared/hooks/usePersistentState.tsx';
 import Button from '@mui/material/Button';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -20,16 +22,39 @@ import dayjs from 'dayjs';
 const formatMinuteResolution = (value: string | null | undefined) =>
   value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '';
 
+// A trip counts as cancelled when the journey itself is flagged cancelled, or
+// when every one of its stops is cancelled. (A trip with only *some* cancelled
+// stops is "partially cancelled" and is left visible.) Shared by the row filter
+// and the row styling so the two never disagree.
+const isTripCancelled = (trip: Extrajourney): boolean => {
+  const journey = trip.estimatedVehicleJourney;
+  const calls = journey?.estimatedCalls?.estimatedCall ?? [];
+  return Boolean(journey?.cancellation) || (calls.length > 0 && calls.every(c => c.cancellation));
+};
+
 export default function CarPoolingTrips() {
   const navigate = useNavigate();
   const location = useLocation();
   const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPastArrivals, setShowPastArrivals] = useState(false);
-  const [showExpired, setShowExpired] = useState(false);
-  const [showHiddenFields, setShowHiddenFields] = useState(false);
+  // Filter preferences persist across navigation and refresh (see usePersistentState).
+  const [showPastArrivals, setShowPastArrivals] = usePersistentState(
+    'tadmustum.trips.showPastArrivals',
+    false
+  );
+  const [showExpired, setShowExpired] = usePersistentState('tadmustum.trips.showExpired', false);
+  const [showCancelled, setShowCancelled] = usePersistentState(
+    'tadmustum.trips.showCancelled',
+    false
+  );
+  const [showHiddenFields, setShowHiddenFields] = usePersistentState(
+    'tadmustum.trips.showHiddenFields',
+    false
+  );
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [cancellingTripId, setCancellingTripId] = useState<string | null>(null);
   const [highlightedTripId, setHighlightedTripId] = useState<string | null>(null);
   // Drives the one-shot attention pulse; once it has played we keep a steady
   // highlight so paging away and back doesn't re-trigger the blink.
@@ -39,6 +64,7 @@ export default function CarPoolingTrips() {
   const apiRef = useGridApiRef();
 
   const queryExtraJourneys = useQueryExtraJourney();
+  const cancelExtrajourney = useCancelExtrajourney();
   const { authorities, allowedCodespaces } = useAuthorities();
   const adminCodespaceIds = new Set(
     allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
@@ -48,6 +74,13 @@ export default function CarPoolingTrips() {
   // appear in the list if their codespace was queried, so a hit is guaranteed.
   const authorityNameByCodespace = useMemo(
     () => new Map(authorities.map(a => [a.id.split(':')[0], a.name])),
+    [authorities]
+  );
+  // Cancelling re-submits the journey and must send the full authority id, not
+  // just the codespace prefix; resolve it from the trip's codespace the same way
+  // the name lookup above does.
+  const authorityIdByCodespace = useMemo(
+    () => new Map(authorities.map(a => [a.id.split(':')[0], a.id])),
     [authorities]
   );
 
@@ -98,6 +131,7 @@ export default function CarPoolingTrips() {
     if (!plannedTrips) return plannedTrips;
     const now = Date.now();
     return plannedTrips.filter(trip => {
+      if (!showCancelled && isTripCancelled(trip)) return false;
       if (!showPastArrivals) {
         const calls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
         const latestExpected =
@@ -109,7 +143,36 @@ export default function CarPoolingTrips() {
       }
       return true;
     });
-  }, [plannedTrips, showPastArrivals, showExpired]);
+  }, [plannedTrips, showPastArrivals, showExpired, showCancelled]);
+
+  const handleCancelTrip = async (trip: Extrajourney) => {
+    const codespace = trip.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
+    const authority = authorityIdByCodespace.get(codespace);
+    if (!authority) {
+      setActionError('Could not resolve the authority for this trip; cannot cancel it.');
+      return;
+    }
+    setCancellingTripId(trip.id ?? null);
+    const { error } = await cancelExtrajourney(trip, authority);
+    setCancellingTripId(null);
+    if (error) {
+      setActionError(`Could not cancel the trip: ${error.message}`);
+      return;
+    }
+    // Reflect the cancellation locally so the row updates (and, with "Show
+    // cancelled trips" off, drops out of the list) without a full refetch.
+    setPlannedTrips(prev =>
+      prev?.map(t =>
+        t.id === trip.id
+          ? {
+              ...t,
+              estimatedVehicleJourney: { ...t.estimatedVehicleJourney, cancellation: true },
+            }
+          : t
+      )
+    );
+    setSavedMessage('Trip cancelled.');
+  };
 
   // Once the saved row is in the grid, jump to the page that holds it and scroll
   // it into view so the user immediately sees the trip they just created/edited.
@@ -146,7 +209,7 @@ export default function CarPoolingTrips() {
     {
       field: 'actions',
       headerName: 'Actions',
-      minWidth: 180,
+      minWidth: 290,
       sortable: false,
       filterable: false,
       renderCell: params => {
@@ -158,6 +221,7 @@ export default function CarPoolingTrips() {
         // show them when the user actually has admin on that codespace —
         // otherwise the buttons just lead to a 403.
         const canModify = adminCodespaceIds.has(codespace);
+        const cancelled = isTripCancelled(params.row as Extrajourney);
         return (
           <Box>
             {canModify && (
@@ -177,6 +241,18 @@ export default function CarPoolingTrips() {
                 style={{ marginLeft: 8 }}
               >
                 Book Ride
+              </Button>
+            )}
+            {canModify && !cancelled && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                disabled={cancellingTripId === params.row.id}
+                onClick={() => handleCancelTrip(params.row as Extrajourney)}
+                style={{ marginLeft: 8 }}
+              >
+                {cancellingTripId === params.row.id ? 'Cancelling…' : 'Cancel'}
               </Button>
             )}
           </Box>
@@ -335,6 +411,15 @@ export default function CarPoolingTrips() {
         <FormControlLabel
           control={
             <Checkbox
+              checked={showCancelled}
+              onChange={event => setShowCancelled(event.target.checked)}
+            />
+          }
+          label="Show cancelled trips"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
               checked={showHiddenFields}
               onChange={event => setShowHiddenFields(event.target.checked)}
             />
@@ -371,9 +456,7 @@ export default function CarPoolingTrips() {
             // Only attach the animating class until the pulse has run once.
             if (!hasPulsed) classes.push('row-highlighted-pulse');
           }
-          const journey = (params.row as Extrajourney).estimatedVehicleJourney;
-          const calls = journey?.estimatedCalls?.estimatedCall ?? [];
-          if (journey?.cancellation || (calls.length > 0 && calls.every(c => c.cancellation))) {
+          if (isTripCancelled(params.row as Extrajourney)) {
             classes.push('row-cancelled');
           }
           return classes.join(' ');
@@ -449,6 +532,21 @@ export default function CarPoolingTrips() {
           sx={{ width: '100%' }}
         >
           {savedMessage}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={!!actionError}
+        autoHideDuration={6000}
+        onClose={() => setActionError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setActionError(null)}
+          severity="error"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {actionError}
         </Alert>
       </Snackbar>
     </Box>

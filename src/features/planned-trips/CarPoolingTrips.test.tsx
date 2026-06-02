@@ -6,17 +6,27 @@ import { renderWithRouter } from '../../test/renderWithRouter';
 import CarPoolingTrips from './CarPoolingTrips';
 
 const queryExtraJourneys = vi.fn();
+const cancelExtrajourney = vi.fn();
 
 vi.mock('./hooks/useQueryExtraJourney.tsx', () => ({
   useQueryExtraJourney: () => queryExtraJourneys,
 }));
 
+vi.mock('../plan-trip/hooks/useCancelExtrajourney.tsx', () => ({
+  useCancelExtrajourney: () => cancelExtrajourney,
+}));
+
 // useAuthorities drives the fan-out across allowed codespaces; the test pretends
 // the user only has access to ENT so the existing single-tenant assertions hold.
+// The returned arrays are stable module-level constants (mirroring the real
+// hook's memoized output) so the trip-loading effect — keyed on `authorities` —
+// runs once instead of re-fetching on every render and clobbering local state.
+const AUTHORITIES = [{ id: 'ENT:Authority:ENT', name: 'Entur' }];
+const ALLOWED_CODESPACES = [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }];
 vi.mock('../../shared/hooks/useAuthorities.tsx', () => ({
   useAuthorities: () => ({
-    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
-    allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
+    authorities: AUTHORITIES,
+    allowedCodespaces: ALLOWED_CODESPACES,
   }),
 }));
 
@@ -55,6 +65,8 @@ describe('CarPoolingTrips', () => {
   // stays green regardless of the real clock when it runs.
   let nowSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
+    queryExtraJourneys.mockReset();
+    cancelExtrajourney.mockReset();
     nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-20T00:00:00.000Z').valueOf());
   });
   afterEach(() => {
@@ -168,11 +180,15 @@ describe('CarPoolingTrips', () => {
 
     renderInRouter();
 
-    const cancelledRow = await screen.findByRole('row', { name: /Cancelled departure/ });
-    expect(within(cancelledRow).getByText('Cancelled')).toBeInTheDocument();
-
+    // Cancelled trips are hidden by default; the active trip is still shown.
     const activeRow = await screen.findByRole('row', { name: /Oslo S/ });
     expect(within(activeRow).queryByText('Cancelled')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cancelled departure')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show cancelled trips/ }));
+
+    const cancelledRow = await screen.findByRole('row', { name: /Cancelled departure/ });
+    expect(within(cancelledRow).getByText('Cancelled')).toBeInTheDocument();
   });
 
   it('shows a Partially cancelled chip when some but not all calls are cancelled', async () => {
@@ -238,9 +254,38 @@ describe('CarPoolingTrips', () => {
 
     renderInRouter();
 
+    await waitFor(() => expect(screen.queryByText('Loading...')).not.toBeInTheDocument());
+    // A trip with every call cancelled counts as cancelled, so it is hidden
+    // until "Show cancelled trips" is toggled on.
+    expect(screen.queryByText('All-cancelled departure')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show cancelled trips/ }));
+
     const row = await screen.findByRole('row', { name: /All-cancelled departure/ });
     expect(within(row).getByText('Cancelled')).toBeInTheDocument();
     expect(within(row).queryByText('Partially cancelled')).not.toBeInTheDocument();
+  });
+
+  it('cancels a whole trip when the Cancel button is clicked', async () => {
+    cancelExtrajourney.mockResolvedValue({ data: 'ENT:ServiceJourney:1' });
+    queryExtraJourneys.mockResolvedValue({ data: [trip()] });
+
+    renderInRouter();
+
+    const row = await screen.findByRole('row', { name: /Oslo S/ });
+    await userEvent.click(within(row).getByRole('button', { name: /^Cancel$/ }));
+
+    await waitFor(() =>
+      expect(cancelExtrajourney).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'ENT:ServiceJourney:1' }),
+        'ENT:Authority:ENT'
+      )
+    );
+
+    // With "Show cancelled trips" off, the now-cancelled trip drops out of the
+    // list and a confirmation snackbar is shown.
+    expect(await screen.findByText('Trip cancelled.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Oslo S')).not.toBeInTheDocument());
   });
 
   it('highlights only the row for the trip just saved (carried via navigation state)', async () => {
