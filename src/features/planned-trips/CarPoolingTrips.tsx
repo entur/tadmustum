@@ -4,6 +4,7 @@ import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import { useCancelExtrajourney } from '../plan-trip/hooks/useCancelExtrajourney.tsx';
 import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
+import { usePersistentState } from '../../shared/hooks/usePersistentState.tsx';
 import Button from '@mui/material/Button';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -37,10 +38,20 @@ export default function CarPoolingTrips() {
   const [plannedTrips, setPlannedTrips] = useState<Extrajourney[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPastArrivals, setShowPastArrivals] = useState(false);
-  const [showExpired, setShowExpired] = useState(false);
-  const [showCancelled, setShowCancelled] = useState(false);
-  const [showHiddenFields, setShowHiddenFields] = useState(false);
+  // Filter preferences persist across navigation and refresh (see usePersistentState).
+  const [showPastArrivals, setShowPastArrivals] = usePersistentState(
+    'tadmustum.trips.showPastArrivals',
+    false
+  );
+  const [showExpired, setShowExpired] = usePersistentState('tadmustum.trips.showExpired', false);
+  const [showCancelled, setShowCancelled] = usePersistentState(
+    'tadmustum.trips.showCancelled',
+    false
+  );
+  const [showHiddenFields, setShowHiddenFields] = usePersistentState(
+    'tadmustum.trips.showHiddenFields',
+    false
+  );
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancellingTripId, setCancellingTripId] = useState<string | null>(null);
