@@ -166,6 +166,18 @@ describe('PassengerTripBooking', () => {
     expect(await screen.findByText('Oslo S → Bergen stasjon')).toBeInTheDocument();
   });
 
+  it('warns when the driving route cannot be fetched from the journey planner', async () => {
+    // The stubbed street router returns null, so routing the trip's own path
+    // fails and the page falls back to straight lines — with a warning.
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
+
+    renderAt();
+
+    expect(
+      await screen.findByText(/Could not fetch the driving route from the journey planner/i)
+    ).toBeInTheDocument();
+  });
+
   it('disables Book Ride until both pickup and dropoff are selected', async () => {
     const user = userEvent.setup();
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });

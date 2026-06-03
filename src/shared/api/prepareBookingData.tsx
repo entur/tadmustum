@@ -8,7 +8,11 @@ import {
   insertStopsByShortestPath,
 } from '../../features/passenger-booking/util/shortestPath.tsx';
 import loadFeatureFromFlexArea from '../../features/plan-trip/util/loadFeatureFromFlexArea.tsx';
-import type { StreetRouteResult } from './journeyPlannerStreetRoute.tsx';
+import { routeLegChain, type RouteLeg } from './routeLegChain.tsx';
+
+// Re-exported for callers that pass the street router into the booking
+// helpers; the type itself lives with routeLegChain.
+export type { RouteLeg };
 
 export interface PassengerBookingData {
   tripId: string;
@@ -19,14 +23,6 @@ export interface PassengerBookingData {
   numberOfPassengers: number;
   passengerDeviationBudget?: number;
 }
-
-// Plans a single car leg between two points departing at `dateTime`. Same
-// signature as the journey-planner street route used when planning a trip.
-export type RouteLeg = (
-  from: Position,
-  to: Position,
-  dateTime: string
-) => Promise<StreetRouteResult | null>;
 
 export async function prepareBookingData(
   originalTrip: Extrajourney,
@@ -45,7 +41,7 @@ export async function prepareBookingData(
   // Over-capacity bookings are allowed (the UI warns about them), so we don't
   // reject here — occupancy is still computed so every stop reflects the load.
   const assembled = assembleBooking(originalTrip, bookingData);
-  const orderedCalls = await routeAssembledCalls(assembled, bookingData, routeLeg);
+  const { calls: orderedCalls } = await routeAssembledCalls(assembled, bookingData, routeLeg);
 
   const updatedTrip: Extrajourney = {
     id: originalTrip.id,
@@ -70,11 +66,13 @@ export async function prepareBookingData(
 // departure. A detour for a pickup pushes back every downstream stop, and each
 // stop's latestExpectedArrivalTime shifts with it. Without a router (or when a
 // stop lacks a coordinate) the assembled estimate is returned unchanged.
+// Also yields the routed street geometry per leg (null when not routed), so
+// the booking map can draw the actual driving path.
 async function routeAssembledCalls(
   assembled: AssembledBooking,
   bookingData: PassengerBookingData,
   routeLeg?: RouteLeg
-): Promise<EstimatedCall[]> {
+): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
   if (routeLeg && assembled.canOrderByPath) {
     return applyRoutedTimes(
       assembled.orderedCalls,
@@ -84,7 +82,7 @@ async function routeAssembledCalls(
       bookingData.passengerDeviationBudget
     );
   }
-  return assembled.orderedCalls;
+  return { calls: assembled.orderedCalls, legGeometries: null };
 }
 
 export interface BookingRoutePreview {
@@ -98,6 +96,10 @@ export interface BookingRoutePreview {
   // can label it with the same text it shows in the route list. Lets the UI
   // flag over-capacity live instead of throwing.
   overCapacityStopIndex: number | null;
+  // Routed street geometry per leg of the previewed route (calls[i] ->
+  // calls[i+1]), for drawing the actual driving path on the booking map.
+  // Null when the preview wasn't routed (sync preview, routing unavailable).
+  legGeometries: Position[][] | null;
 }
 
 // Synchronous preview of what a booking would do to the trip route: the new
@@ -121,6 +123,7 @@ export function previewBookingRoute(
     pickupStopRef: assembled.pickupStopRef,
     dropoffStopRef: assembled.dropoffStopRef,
     overCapacityStopIndex: assembled.exceededAt?.index ?? null,
+    legGeometries: null,
   };
 }
 
@@ -139,12 +142,13 @@ export async function routedBookingPreview(
   } catch {
     return null;
   }
-  const calls = await routeAssembledCalls(assembled, bookingData, routeLeg);
+  const { calls, legGeometries } = await routeAssembledCalls(assembled, bookingData, routeLeg);
   return {
     calls: renumberCalls(calls),
     pickupStopRef: assembled.pickupStopRef,
     dropoffStopRef: assembled.dropoffStopRef,
     overCapacityStopIndex: assembled.exceededAt?.index ?? null,
+    legGeometries,
   };
 }
 
@@ -403,28 +407,24 @@ function applyOccupancy(
 
 // Re-times the sequence using real car-driving durations. Routes each leg in
 // turn from the driver's departure, accumulating arrival times. Returns the
-// calls unchanged if there is no departure time or any leg can't be planned,
-// so a routing hiccup never yields a half-updated schedule.
+// calls unchanged (and no geometry) if there is no departure time or any leg
+// can't be planned, so a routing hiccup never yields a half-updated schedule
+// or a half-drawn route.
 async function applyRoutedTimes(
   orderedCalls: EstimatedCall[],
   coords: LngLat[],
   originDeparture: string | undefined,
   routeLeg: RouteLeg,
   passengerDeviationBudget?: number
-): Promise<EstimatedCall[]> {
-  if (!originDeparture) return orderedCalls;
+): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
+  if (!originDeparture) return { calls: orderedCalls, legGeometries: null };
 
-  const arrivals: string[] = [];
-  let currentTime = originDeparture;
-  for (let i = 0; i < orderedCalls.length - 1; i++) {
-    const route = await routeLeg(coords[i], coords[i + 1], currentTime);
-    if (!route) return orderedCalls;
-    arrivals[i + 1] = route.expectedEndTime;
-    currentTime = route.expectedEndTime;
-  }
+  const chain = await routeLegChain(coords, originDeparture, routeLeg);
+  if (!chain) return { calls: orderedCalls, legGeometries: null };
+  const { arrivals, legGeometries } = chain;
 
   const lastIndex = orderedCalls.length - 1;
-  return orderedCalls.map((call, index) => {
+  const calls = orderedCalls.map((call, index) => {
     if (index === 0) {
       // Origin keeps its planned departure; mirror it onto the expected time.
       return {
@@ -447,6 +447,7 @@ async function applyRoutedTimes(
     }
     return updated;
   });
+  return { calls, legGeometries };
 }
 
 // New latest-arrival deadline for a stop after its scheduled time moved to

@@ -34,6 +34,8 @@ import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
 import StopOccupancy from '../../../shared/components/StopOccupancy.tsx';
+import { routeLegChain, type RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
+import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
 import dayjs from 'dayjs';
 
 export interface CarPoolingTripDataFormProps {
@@ -50,6 +52,11 @@ export interface CarPoolingTripDataFormProps {
   mapDestinationFlexibleStop: Feature | null;
   drawingStopsAllowed: boolean;
   tripData?: Extrajourney | null;
+  // Reports the routed street geometry whenever it changes — one [lng, lat]
+  // linestring per leg of the trip (departure -> intermediate stops ->
+  // destination), 'failed' when the journey planner couldn't route it, or
+  // null when there is no complete route to draw.
+  onRouteGeometryChange?: (legGeometries: RouteLegGeometries) => void;
 }
 
 export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProps) {
@@ -67,6 +74,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     mapDestinationFlexibleStop,
     drawingStopsAllowed,
     tripData,
+    onRouteGeometryChange,
   } = props;
   // The form drives mutations (createOrUpdateExtrajourney), so restrict the
   // authority dropdown to codespaces where the user actually has write rights.
@@ -136,6 +144,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const intermediateCalls = watch('intermediateCalls');
   const tripCancellation = watch('tripCancellation');
   const streetRoute = useStreetRoute();
+  // True when the journey planner couldn't route the trip — surfaces a
+  // warning so the user knows the map line and arrival estimate are degraded.
+  const [streetRouteFailed, setStreetRouteFailed] = useState<boolean>(false);
   const [error, setError] = useState<AppError | undefined>(undefined);
   const [errorDismissed, setErrorDismissed] = useState<boolean>(false);
   const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
@@ -230,50 +241,81 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const destinationLat = destinationFlexibleStop?.[1];
   const departureMs = departureDatetime?.isValid() ? departureDatetime.valueOf() : undefined;
 
-  useEffect(() => {
-    // Only auto-estimate when the checkbox is on (off when editing an existing
-    // trip, so its saved arrival is never silently overwritten).
-    if (!estimateArrivalAutomatically) {
-      return;
-    }
+  // The ordered stops the vehicle visits: departure, the (non-cancelled)
+  // intermediate stops at their flex-area centroids, destination. Serialised
+  // to a string so the routing effect below re-runs only when an actual
+  // coordinate changes, not on every render's fresh array identity. Null
+  // until both endpoints are placed.
+  const routeStopsKey = useMemo(() => {
     if (
       departureLng == null ||
       departureLat == null ||
       destinationLng == null ||
-      destinationLat == null ||
-      departureMs == null
+      destinationLat == null
     ) {
+      return null;
+    }
+    const via = (intermediateCalls ?? [])
+      .filter(call => !call.cancellation)
+      .map(call => loadFeatureFromFlexArea(call.departureStopAssignment?.expectedFlexibleArea))
+      .filter(feature => feature !== null)
+      .map(feature => feature.geometry.coordinates);
+    return JSON.stringify([[departureLng, departureLat], ...via, [destinationLng, destinationLat]]);
+  }, [departureLng, departureLat, destinationLng, destinationLat, intermediateCalls]);
+
+  useEffect(() => {
+    // The route is fetched whenever both endpoints and the departure are set —
+    // even with auto-estimate off — so the driving path can always be drawn on
+    // the map. It is routed leg by leg through the intermediate stops, exactly
+    // like the booking flow re-times a trip. The arrival field is only written
+    // in auto mode (off when editing an existing trip), so a saved arrival is
+    // never silently overwritten.
+    if (routeStopsKey == null || departureMs == null) {
+      // No complete route — clear any stale line from the map.
+      onRouteGeometryChange?.(null);
+      setStreetRouteFailed(false);
       return;
     }
+    const stops: Position[] = JSON.parse(routeStopsKey);
     let cancelled = false;
-    streetRoute(
-      [departureLng, departureLat],
-      [destinationLng, destinationLat],
-      dayjs(departureMs).toISOString()
-    )
-      .then(result => {
-        if (cancelled || !result?.expectedEndTime) return;
-        // Auto mode: always keep the arrival in sync with the route, so it
-        // updates whenever the origin, destination, or departure changes.
-        setValue('destinationDatetime', dayjs(result.expectedEndTime), {
-          shouldValidate: true,
-        });
+    routeLegChain(stops, dayjs(departureMs).toISOString(), streetRoute)
+      .then(chain => {
+        if (cancelled) return;
+        if (!chain) {
+          // Routed but no result — let the map fall back to straight lines.
+          onRouteGeometryChange?.('failed');
+          setStreetRouteFailed(true);
+          return;
+        }
+        onRouteGeometryChange?.(chain.legGeometries);
+        setStreetRouteFailed(false);
+        if (estimateArrivalAutomatically) {
+          // Auto mode: always keep the arrival in sync with the route, so it
+          // updates whenever a stop or the departure changes. The chained
+          // arrival accounts for any intermediate stops along the way.
+          setValue('destinationDatetime', dayjs(chain.arrivals[chain.arrivals.length - 1]), {
+            shouldValidate: true,
+          });
+        }
       })
       .catch(() => {
-        // Ignore street-routing failures; user can still set arrival manually.
+        // Street-routing failed; the map shows its straight-line fallback and
+        // the user can still set the arrival manually.
+        if (!cancelled) {
+          onRouteGeometryChange?.('failed');
+          setStreetRouteFailed(true);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [
     estimateArrivalAutomatically,
-    departureLng,
-    departureLat,
-    destinationLng,
-    destinationLat,
+    routeStopsKey,
     departureMs,
     streetRoute,
     setValue,
+    onRouteGeometryChange,
   ]);
 
   const estimatedCalls = tripData?.estimatedVehicleJourney.estimatedCalls?.estimatedCall || [];
@@ -690,6 +732,15 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
+      {streetRouteFailed && (
+        <Alert severity="warning">
+          Could not fetch the driving route from the journey planner. The map shows straight lines
+          between the stops instead
+          {estimateArrivalAutomatically
+            ? ', and the arrival time could not be estimated automatically.'
+            : '.'}
+        </Alert>
+      )}
       <Box display="flex" gap={1} flexWrap="wrap">
         <Button
           variant="contained"

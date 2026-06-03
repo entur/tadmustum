@@ -5,8 +5,6 @@ import {
   type MapRef,
   NavigationControl,
   Marker,
-  Source,
-  Layer,
 } from 'react-map-gl/maplibre';
 import { Box } from '@mui/material';
 import { LocationOn, FmdGood, DirectionsWalk } from '@mui/icons-material';
@@ -14,6 +12,8 @@ import { mapStyle } from '../../../shared/util/mapStyle.ts';
 import type { Extrajourney } from '../../../shared/model/Extrajourney';
 import type { EstimatedCall } from '../../../shared/model/EstimatedCall';
 import type { Feature, LineString, Point } from 'geojson';
+import type { RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
+import RouteLineLayers from '../../../shared/components/RouteLineLayers.tsx';
 import loadFeatureFromFlexArea from '../../plan-trip/util/loadFeatureFromFlexArea.tsx';
 
 interface PassengerBookingMapProps {
@@ -21,6 +21,10 @@ interface PassengerBookingMapProps {
   // The authoritative ordered calls (from the booking preview) the route line
   // should follow. Falls back to the trip's own calls when not provided.
   routeCalls?: EstimatedCall[];
+  // Routed street geometry per leg of the route, drawn as a solid line.
+  // 'failed' draws the straight dashed line between the stops as a fallback;
+  // null draws nothing (route still being computed).
+  legGeometries?: RouteLegGeometries;
   onPickupLocationSelect?: (coordinates: [number, number], address?: string) => void;
   onDropoffLocationSelect?: (coordinates: [number, number], address?: string) => void;
   pickupLocation?: [number, number];
@@ -30,6 +34,7 @@ interface PassengerBookingMapProps {
 export default function PassengerBookingMap({
   trip,
   routeCalls,
+  legGeometries,
   onPickupLocationSelect,
   onDropoffLocationSelect,
   pickupLocation,
@@ -148,7 +153,7 @@ export default function PassengerBookingMap({
   }, [isMapReady, trip, getFlexibleAreas, pickupLocation, dropoffLocation]);
 
   const flexibleAreas = getFlexibleAreas();
-  const routeLine = createRouteLineString();
+  const fallbackRouteLine = createRouteLineString();
 
   return (
     <Box sx={{ height: '400px', width: '100%', position: 'relative' }}>
@@ -170,19 +175,7 @@ export default function PassengerBookingMap({
         <GeolocateControl position="top-right" />
 
         {/* Route Line */}
-        {routeLine && (
-          <Source type="geojson" data={routeLine}>
-            <Layer
-              id="route-line"
-              type="line"
-              paint={{
-                'line-color': '#FF9800',
-                'line-width': 4,
-                'line-dasharray': [2, 2],
-              }}
-            />
-          </Source>
-        )}
+        <RouteLineLayers legGeometries={legGeometries} fallbackLine={fallbackRouteLine} />
 
         {/* Stop Markers */}
         {flexibleAreas.map((area, index) => {

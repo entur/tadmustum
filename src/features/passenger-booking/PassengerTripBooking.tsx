@@ -24,7 +24,10 @@ import {
   type SvgIconComponent,
 } from '@mui/icons-material';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
+import type { Position } from 'geojson';
 import StopOccupancy from '../../shared/components/StopOccupancy';
+import { routeLegChain, type RouteLegGeometries } from '../../shared/api/routeLegChain';
+import loadFeatureFromFlexArea from '../plan-trip/util/loadFeatureFromFlexArea';
 import {
   routedBookingPreview,
   type BookingRoutePreview,
@@ -122,6 +125,44 @@ export default function PassengerTripBooking() {
   // visible meanwhile so the times update once instead of flickering.
   const [routedPreview, setRoutedPreview] = useState<BookingRoutePreview | null>(null);
   const [routePending, setRoutePending] = useState(false);
+
+  // The driving route of the trip as planned (origin -> intermediate stops ->
+  // destination), shown on the map before a booking preview exists — i.e.
+  // before the passenger has selected both pickup and dropoff. Null while
+  // routing (nothing drawn), 'failed' when it can't be routed (the map shows
+  // its straight-line fallback).
+  const [tripLegGeometries, setTripLegGeometries] = useState<RouteLegGeometries>(null);
+
+  useEffect(() => {
+    if (!trip) {
+      setTripLegGeometries(null);
+      return;
+    }
+    const calls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+    const coords = calls.map(
+      call =>
+        loadFeatureFromFlexArea(call.departureStopAssignment?.expectedFlexibleArea)?.geometry
+          .coordinates ?? null
+    );
+    const departure = calls[0]?.aimedDepartureTime || calls[0]?.expectedDepartureTime;
+    // A stop without a resolvable coordinate can't be routed (or drawn as a
+    // partial route) — show the straight-line fallback.
+    if (coords.length < 2 || coords.some(coord => coord == null) || !departure) {
+      setTripLegGeometries('failed');
+      return;
+    }
+    let cancelled = false;
+    routeLegChain(coords as Position[], departure, getStreetRoute)
+      .then(chain => {
+        if (!cancelled) setTripLegGeometries(chain ? chain.legGeometries : 'failed');
+      })
+      .catch(() => {
+        if (!cancelled) setTripLegGeometries('failed');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trip, getStreetRoute]);
 
   // Parse coordinates from URL parameters
   const parseCoordinatesFromURL = (param: string | null): [number, number] | undefined => {
@@ -389,6 +430,13 @@ export default function PassengerTripBooking() {
   ]);
 
   const activePreview = routedPreview;
+
+  // What the map should draw: the preview's routed path when a preview
+  // exists ('failed' when it couldn't be routed), otherwise the trip's own
+  // routed path. 'failed' also drives the routing warning below.
+  const displayedLegGeometries: RouteLegGeometries = activePreview
+    ? (activePreview.legGeometries ?? 'failed')
+    : tripLegGeometries;
 
   if (loading) {
     return (
@@ -754,9 +802,16 @@ export default function PassengerTripBooking() {
                 View the trip route and click the buttons below to select your pickup and drop-off
                 locations on the map.
               </Typography>
+              {displayedLegGeometries === 'failed' && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  Could not fetch the driving route from the journey planner. The map shows straight
+                  lines between the stops instead, and stop times may be rough estimates.
+                </Alert>
+              )}
               <PassengerBookingMap
                 trip={trip}
                 routeCalls={estimatedCalls}
+                legGeometries={displayedLegGeometries}
                 onPickupLocationSelect={handlePickupLocationSelect}
                 onDropoffLocationSelect={handleDropoffLocationSelect}
                 pickupLocation={bookingData.pickupCoordinates}

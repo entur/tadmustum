@@ -19,6 +19,8 @@ import {
 } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { Feature, Point, LineString } from 'geojson';
+import type { RouteLegGeometries } from '../api/routeLegChain.tsx';
+import RouteLineLayers from './RouteLineLayers.tsx';
 import { v4 as uuidv4 } from 'uuid';
 import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from '../util/MAPBOXDRAW_DEFAULT_CONSTRUCTOR.tsx';
 import type { IControl } from 'maplibre-gl';
@@ -34,6 +36,11 @@ export type EditableMapCallbacks = {
 export type EditableMapProps = EditableMapCallbacks & {
   departureStopId?: string | null;
   arrivalStopId?: string | null;
+  // The routed driving path of the trip, one [lng, lat] linestring per leg
+  // (through any intermediate stops), drawn as a solid line. 'failed' draws
+  // the straight dashed line between the stops as a fallback; null draws
+  // nothing (no stops yet, or a route still being computed).
+  legGeometries?: RouteLegGeometries;
 };
 
 export type MapModes = MapMode[keyof MapMode];
@@ -54,7 +61,7 @@ export interface MapMode {
 }
 
 const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
-  ({ departureStopId, arrivalStopId, ...props }, ref) => {
+  ({ departureStopId, arrivalStopId, legGeometries, ...props }, ref) => {
     const mapRef = useRef<null | MapRef>(null);
 
     // Tracked as a ref because it's only inspected in event handlers and the
@@ -241,7 +248,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       };
     }, [featureArray]);
 
-    const routeLine = createRouteLineString();
+    const fallbackRouteLine = createRouteLineString();
 
     useImperativeHandle(ref, () => ({
       addFeatures,
@@ -327,19 +334,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
         })}
 
         {/* Route Line */}
-        {routeLine && (
-          <Source type="geojson" data={routeLine}>
-            <Layer
-              id="route-line"
-              type="line"
-              paint={{
-                'line-color': '#FF9800',
-                'line-width': 4,
-                'line-dasharray': [2, 2],
-              }}
-            />
-          </Source>
-        )}
+        <RouteLineLayers legGeometries={legGeometries} fallbackLine={fallbackRouteLine} />
 
         {/* Stop Markers — numbered circles matching the booking map. */}
         {featureArray.map((feature, index) => {
