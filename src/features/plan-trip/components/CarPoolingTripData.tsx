@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { type AlertProps, Box, type SnackbarCloseReason } from '@mui/material';
 import type { Feature } from 'geojson';
+import type { RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
 import { useNavigate } from 'react-router-dom';
 import CarPoolingTripDataForm from './CarPoolingTripDataForm.tsx';
 import { useMutateExtrajourney } from '../hooks/useMutateExtrajourney.tsx';
@@ -44,6 +45,7 @@ export interface CarPoolingTripDataProps {
   loadedFlexibleStop: (stops: Feature[]) => void;
   onDepartureStopChange: (id: string | null) => void;
   onArrivalStopChange: (id: string | null) => void;
+  onRouteGeometryChange?: (legGeometries: RouteLegGeometries) => void;
 }
 
 export type CarPoolingTripDataHandle = {
@@ -64,6 +66,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       loadedFlexibleStop,
       onDepartureStopChange,
       onArrivalStopChange,
+      onRouteGeometryChange,
     } = stops;
     const { authorities } = useAuthorities();
     const [snackbar, setSnackbar] = useState<SnackbarState>({
@@ -225,6 +228,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
           mapDepartureFlexibleStop={departureStop}
           mapDestinationFlexibleStop={arrivalStop}
           tripData={tripData}
+          onRouteGeometryChange={onRouteGeometryChange}
         />
         <Snackbar
           open={snackbar.open}

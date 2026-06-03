@@ -9,6 +9,7 @@ import { type EditableMapHandle } from '../../shared/components/EditableMap.tsx'
 import EditableMap from '../../shared/components/EditableMap.tsx';
 import { useParams } from 'react-router-dom';
 import type { Feature } from 'geojson';
+import type { RouteLegGeometries } from '../../shared/api/routeLegChain.tsx';
 
 export default function CarPoolingTrip() {
   const { codespace, id } = useParams();
@@ -28,6 +29,10 @@ function CarPoolingTripView({ id, codespace }: { id?: string; codespace?: string
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [departureStopId, setDepartureStopId] = useState<string | null>(null);
   const [arrivalStopId, setArrivalStopId] = useState<string | null>(null);
+  // The routed driving path of the trip (one linestring per leg, through any
+  // intermediate stops), reported by the form whenever it (re)routes the
+  // trip; drawn on the map instead of the straight line.
+  const [routeGeometry, setRouteGeometry] = useState<RouteLegGeometries>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -76,6 +81,7 @@ function CarPoolingTripView({ id, codespace }: { id?: string; codespace?: string
           }}
           onDepartureStopChange={setDepartureStopId}
           onArrivalStopChange={setArrivalStopId}
+          onRouteGeometryChange={setRouteGeometry}
         />
       </Box>
 
@@ -107,6 +113,7 @@ function CarPoolingTripView({ id, codespace }: { id?: string; codespace?: string
           onDrawingStateChange={isDrawing => dataHandle.current?.onDrawingStateChange(isDrawing)}
           departureStopId={departureStopId}
           arrivalStopId={arrivalStopId}
+          legGeometries={routeGeometry}
           ref={editableMapRef}
         />
       </Box>

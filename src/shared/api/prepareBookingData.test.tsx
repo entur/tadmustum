@@ -504,6 +504,24 @@ describe('prepareBookingData', () => {
         '2026-06-01T09:40:00.000Z', // Dropoff
         '2026-06-01T09:50:00.000Z', // Destination
       ]);
+      // One geometry per leg. The stub returns no street geometry, so each
+      // leg falls back to the straight segment between its stops — still
+      // drawable end to end.
+      expect(preview!.legGeometries).toHaveLength(preview!.calls.length - 1);
+      preview!.legGeometries!.forEach(leg => expect(leg).toHaveLength(2));
+    });
+
+    it('returns no leg geometries when a leg cannot be routed', async () => {
+      const failingRouter: RouteLeg = async () => null;
+
+      const preview = await routedBookingPreview(
+        tripWithIntermediates(),
+        baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] }),
+        failingRouter
+      );
+
+      expect(preview).not.toBeNull();
+      expect(preview!.legGeometries).toBeNull();
     });
   });
 });
