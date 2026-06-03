@@ -41,7 +41,7 @@ describe('getStreetRoute', () => {
     expect(url).toBe(URI);
     expect(init.method).toBe('POST');
     expect(init.headers['Content-Type']).toBe('application/json');
-    expect(init.headers['ET-Client-Name']).toBeTruthy();
+    expect(init.headers['ET-Client-Name']).toBe('entur - tadmustum');
     const body = JSON.parse(init.body);
     expect(body.query).toContain('trip(');
     expect(body.query).toContain('pointsOnLink');
