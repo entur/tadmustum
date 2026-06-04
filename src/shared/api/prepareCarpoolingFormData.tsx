@@ -32,7 +32,12 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         recordedAtTime: dayjs().toISOString(),
         lineRef: formData.lineRef ?? `${codespace}:CarPooling:${uuidv4()}`,
         directionRef: '0',
-        estimatedVehicleJourneyCode: formData.estimatedVehicleJourneyCode ?? '',
+        // The estimatedVehicleJourneyCode is the single key identifying this trip across
+        // every system (nunamnir's storage doc id, subula's lookup key, OTP's trip id).
+        // Generate it once on create and round-trip it on edit (see mapToFormData) so the
+        // trip keeps one stable identity end-to-end.
+        estimatedVehicleJourneyCode:
+          formData.estimatedVehicleJourneyCode ?? `${codespace}:ServiceJourney:${uuidv4()}`,
         extraJourney: true,
         vehicleMode: 'bus', // TODO: Needs to add car as vehicle mode
         routeRef: '', // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
