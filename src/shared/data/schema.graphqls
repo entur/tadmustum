@@ -12,7 +12,6 @@ type Query {
 
   userContext: UserContext
   situationElements(codespace: String!, authority: String!): [SituationElement]
-  cancellations(codespace: String!, authority: String!): [Cancellation]
   extrajourneys(codespace: String!, authority: String!): [Extrajourney]
 }
 
@@ -54,11 +53,6 @@ type Mutation {
     codespace: String!
     authority: String!
     input: SituationElementInput!
-  ): String
-  createOrUpdateCancellation(
-    codespace: String!
-    authority: String!
-    input: CancellationInput!
   ): String
   createOrUpdateExtrajourney(
     codespace: String!
@@ -253,19 +247,9 @@ input FramedVehicleJourneyRefInput {
   datedVehicleJourneyRef: String
 }
 
-type Cancellation {
-  id: ID
-  estimatedVehicleJourney: EstimatedVehicleJourney
-}
-
 type Extrajourney {
   id: ID
   estimatedVehicleJourney: EstimatedVehicleJourney
-}
-
-input CancellationInput {
-  id: ID
-  estimatedVehicleJourney: EstimatedVehicleJourneyInput!
 }
 
 input ExtrajourneyInput {
