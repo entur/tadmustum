@@ -9,7 +9,6 @@ import {
   Toolbar,
   Divider,
   Box,
-  Typography,
   useTheme,
   useMediaQuery,
   IconButton,
@@ -19,7 +18,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getIconUrl } from '../../utils/iconLoaderUtils.ts';
 import { useTranslation } from 'react-i18next';
 
-const DESKTOP_WIDTH = 280;
+// The panel hugs its contents (the menu items) rather than spanning a fixed
+// wide column; this keeps it from leaving a large empty gap on the right.
+const MENU_MIN_WIDTH = 200;
 
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
   '& .MuiDrawer-paper': {
@@ -58,8 +59,13 @@ export default function Menu({ open, onClose }: SideMenuProps) {
       slotProps={{
         paper: {
           sx: {
-            width: isMobile ? '100%' : DESKTOP_WIDTH,
-            borderLeft: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
+            width: 'fit-content',
+            minWidth: MENU_MIN_WIDTH,
+            backgroundColor: theme.palette.common.white,
+            // Solid blue frame so the panel clearly reads as a menu.
+            border: `3px solid ${theme.palette.primary.main}`,
+            // Keep the panel fixed: it should never scroll, regardless of content.
+            overflow: 'hidden',
           },
         },
       }}
@@ -68,29 +74,31 @@ export default function Menu({ open, onClose }: SideMenuProps) {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           px: 1,
-          backgroundColor: theme.palette.primary.main,
-          color: theme.palette.common.white,
+          color: theme.palette.primary.main,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <img src={theme.logoUrl} alt="logo" height={24} />
-          <Typography variant="h6" noWrap sx={{ ml: 1 }}>
-            {theme.applicationName}
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} color="inherit">
+        <IconButton
+          onClick={onClose}
+          color="inherit"
+          aria-label="Close menu"
+          size="small"
+          sx={{
+            border: '2px solid currentColor',
+            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+          }}
+        >
           <ChevronRightIcon />
         </IconButton>
       </Toolbar>
-      <Divider />
+      <Divider sx={{ borderColor: 'primary.main', borderBottomWidth: 2 }} />
 
       <List disablePadding>
         {menuItems.map(({ textKey, path, iconKey }) => (
           <ListItem key={path} disablePadding>
-            <ListItemButton component={Link} to={path} onClick={onClose}>
-              <ListItemIcon>
+            <ListItemButton component={Link} to={path} onClick={onClose} sx={{ px: 1.5, gap: 1.5 }}>
+              <ListItemIcon sx={{ minWidth: 'auto' }}>
                 <Box
                   component="img"
                   src={getIconUrl(iconKey)}
@@ -103,14 +111,6 @@ export default function Menu({ open, onClose }: SideMenuProps) {
           </ListItem>
         ))}
       </List>
-
-      <Box sx={{ flexGrow: 1 }} />
-      <Divider />
-      <Box p={2} textAlign="center">
-        <Typography variant="caption" color={theme.palette.secondary.main}>
-          {theme.companyName}
-        </Typography>
-      </Box>
     </StyledDrawer>
   );
 }
