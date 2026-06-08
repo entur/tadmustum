@@ -14,8 +14,7 @@ export const useQueryExtraJourney = () => {
   return useCallback(
     async (
       codespace: string,
-      authority: string,
-      showCompletedTrips: boolean
+      authority: string
     ): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
       if (!auth.user?.access_token) {
         return {
@@ -27,9 +26,7 @@ export const useQueryExtraJourney = () => {
         };
       }
 
-      return await api(config, auth)
-        .queryExtraJourney(codespace, authority, showCompletedTrips)
-        .apply(this);
+      return await api(config, auth).queryExtraJourney(codespace, authority).apply(this);
     },
     [auth, config]
   );

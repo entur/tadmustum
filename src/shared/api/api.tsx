@@ -226,13 +226,7 @@ const cancelExtrajourney =
   };
 
 const queryExtraJourney =
-  (
-    uri: string,
-    auth: AuthState,
-    codespace: string,
-    authority: string,
-    showCompletedTrips: boolean
-  ) =>
+  (uri: string, auth: AuthState, codespace: string, authority: string) =>
   async (): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
     if (!auth.user?.access_token) {
       return {
@@ -246,16 +240,8 @@ const queryExtraJourney =
     const client = createClient(uri, auth);
 
     const query = gql`
-      query ExtraJourneysQuery(
-        $codespace: String!
-        $authority: String!
-        $showCompletedTrips: Boolean!
-      ) {
-        extrajourneys(
-          codespace: $codespace
-          authority: $authority
-          showCompletedTrips: $showCompletedTrips
-        ) {
+      query ExtraJourneysQuery($codespace: String!, $authority: String!) {
+        extrajourneys(codespace: $codespace, authority: $authority) {
           id
           estimatedVehicleJourney {
             cancellation
@@ -263,7 +249,6 @@ const queryExtraJourney =
             directionRef
             dataSource
             estimatedVehicleJourneyCode
-            expiresAtEpochMs
             extraJourney
             groupOfLinesRef
             isCompleteStopSequence
@@ -328,7 +313,6 @@ const queryExtraJourney =
     const variables = {
       codespace,
       authority,
-      showCompletedTrips,
     };
 
     try {
@@ -448,13 +432,12 @@ const api = (config: Config, auth?: AuthState) => {
         originalTrip,
         authority
       ),
-    queryExtraJourney: (codespace: string, authority: string, showCompletedTrips: boolean) =>
+    queryExtraJourney: (codespace: string, authority: string) =>
       queryExtraJourney(
         config['carpool-messages-api'] as string,
         auth as AuthState,
         codespace,
-        authority,
-        showCompletedTrips
+        authority
       ),
     bookPassengerRide: (
       originalTrip: Extrajourney,

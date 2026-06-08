@@ -36,7 +36,6 @@ const trip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
       lineRef: 'ENT:CarPooling:trip-1',
-      expiresAtEpochMs: new Date('2099-01-01').valueOf(),
       estimatedCalls: {
         estimatedCall: [
           {
@@ -60,7 +59,7 @@ const trip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
 const renderInRouter = () => renderWithRouter(<CarPoolingTrips />);
 
 describe('CarPoolingTrips', () => {
-  // The past-arrival and expiry filters compare fixture dates against
+  // The past-arrival filter compares fixture dates against
   // Date.now(). Pin "now" to just before the June-2026 fixtures so the suite
   // stays green regardless of the real clock when it runs.
   let nowSpy: ReturnType<typeof vi.spyOn>;
@@ -96,7 +95,7 @@ describe('CarPoolingTrips', () => {
     expect(within(row).getByText('2')).toBeInTheDocument(); // stop count
   });
 
-  it('hides ID, latest expected arrival, and expires-at until "Show hidden fields" is toggled', async () => {
+  it('hides ID and latest expected arrival until "Show hidden fields" is toggled', async () => {
     queryExtraJourneys.mockResolvedValue({ data: [trip()] });
 
     renderInRouter();
@@ -119,7 +118,6 @@ describe('CarPoolingTrips', () => {
       id: 'ENT:ServiceJourney:past',
       estimatedVehicleJourney: {
         recordedAtTime: '2020-01-01T00:00:00.000Z',
-        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
         estimatedCalls: {
           estimatedCall: [
             {
@@ -158,7 +156,6 @@ describe('CarPoolingTrips', () => {
       estimatedVehicleJourney: {
         cancellation: true,
         recordedAtTime: '2026-05-20T09:00:00.000Z',
-        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
         estimatedCalls: {
           estimatedCall: [
             {
@@ -197,7 +194,6 @@ describe('CarPoolingTrips', () => {
       estimatedVehicleJourney: {
         cancellation: false,
         recordedAtTime: '2026-05-20T09:00:00.000Z',
-        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
         estimatedCalls: {
           estimatedCall: [
             {
@@ -230,7 +226,6 @@ describe('CarPoolingTrips', () => {
       estimatedVehicleJourney: {
         cancellation: false,
         recordedAtTime: '2026-05-20T09:00:00.000Z',
-        expiresAtEpochMs: new Date('2099-01-01').valueOf(),
         estimatedCalls: {
           estimatedCall: [
             {
@@ -289,7 +284,7 @@ describe('CarPoolingTrips', () => {
   });
 
   it('highlights only the row for the trip just saved (carried via navigation state)', async () => {
-    // Far-future times so the default past-arrival / expiry filters never hide
+    // Far-future times so the default past-arrival filter never hides
     // these rows regardless of the wall clock when the suite runs.
     const futureTrip = (id: string, departureName: string, arrivalName: string): Extrajourney =>
       ({
@@ -297,7 +292,6 @@ describe('CarPoolingTrips', () => {
         estimatedVehicleJourney: {
           recordedAtTime: '2099-01-01T09:00:00.000Z',
           lineRef: 'ENT:CarPooling:trip',
-          expiresAtEpochMs: new Date('2099-01-01').valueOf(),
           estimatedCalls: {
             estimatedCall: [
               {

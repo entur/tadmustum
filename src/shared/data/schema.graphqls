@@ -12,12 +12,7 @@ type Query {
 
   userContext: UserContext
   situationElements(codespace: String!, authority: String!): [SituationElement]
-  cancellations(codespace: String!, authority: String!): [Cancellation]
-  extrajourneys(
-    codespace: String!
-    authority: String!
-    showCompletedTrips: Boolean!
-  ): [Extrajourney]
+  extrajourneys(codespace: String!, authority: String!): [Extrajourney]
 }
 
 "Authority involved in public transportation. An organisation under which the responsibility of organising the transport service in a certain area is placed."
@@ -58,11 +53,6 @@ type Mutation {
     codespace: String!
     authority: String!
     input: SituationElementInput!
-  ): String
-  createOrUpdateCancellation(
-    codespace: String!
-    authority: String!
-    input: CancellationInput!
   ): String
   createOrUpdateExtrajourney(
     codespace: String!
@@ -257,19 +247,9 @@ input FramedVehicleJourneyRefInput {
   datedVehicleJourneyRef: String
 }
 
-type Cancellation {
-  id: ID
-  estimatedVehicleJourney: EstimatedVehicleJourney
-}
-
 type Extrajourney {
   id: ID
   estimatedVehicleJourney: EstimatedVehicleJourney
-}
-
-input CancellationInput {
-  id: ID
-  estimatedVehicleJourney: EstimatedVehicleJourneyInput!
 }
 
 input ExtrajourneyInput {
@@ -304,7 +284,6 @@ type EstimatedVehicleJourney {
   dataSource: String
   estimatedCalls: EstimatedCalls
   isCompleteStopSequence: Boolean
-  expiresAtEpochMs: Float
   publicContact: SimpleContactStructure
 }
 
@@ -326,7 +305,6 @@ input EstimatedVehicleJourneyInput {
   dataSource: String
   estimatedCalls: EstimatedCallsInput
   isCompleteStopSequence: Boolean
-  expiresAtEpochMs: Float
   publicContact: SimpleContactStructureInput
 }
 

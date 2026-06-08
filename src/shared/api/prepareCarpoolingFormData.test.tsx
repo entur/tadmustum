@@ -78,14 +78,6 @@ describe('prepareCarpoolingFormData', () => {
     expect(arrival.latestExpectedArrivalTime).toBe('2026-06-01T15:45:00.000Z');
   });
 
-  it('sets expiresAtEpochMs to 7 days after the destination time', () => {
-    const result = prepareCarpoolingFormData(baseForm());
-
-    expect(result.input.estimatedVehicleJourney.expiresAtEpochMs).toBe(
-      dayjs('2026-06-08T15:00:00.000Z').valueOf()
-    );
-  });
-
   it('generates a lineRef using the codespace and a uuid when none is provided', () => {
     const result = prepareCarpoolingFormData(baseForm());
 
