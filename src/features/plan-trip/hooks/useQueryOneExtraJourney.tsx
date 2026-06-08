@@ -34,9 +34,7 @@ export const useQueryExtraJourney = () => {
         };
       }
 
-      const trips = await api(config, auth)
-        .queryExtraJourney(codespace, authority, true)
-        .apply(this);
+      const trips = await api(config, auth).queryExtraJourney(codespace, authority).apply(this);
 
       if (!trips.error) {
         const filtered = trips.data?.filter(journey => journey.id === id);
