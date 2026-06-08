@@ -1,6 +1,11 @@
-import { Dayjs } from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import * as Yup from 'yup';
 import type { Position } from 'geojson';
+
+// Must match nunamnir's carpool trip expiry grace: a trip whose time is more
+// than this many days in the past expires immediately in the backend and never
+// reaches OTP (the journey planner), so there is no point creating it.
+export const TRIP_EXPIRY_DAYS = 2;
 
 declare module 'yup' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -43,7 +48,18 @@ export const carPoolingTripDataSchema = Yup.object({
   departureStopName: Yup.string()
     .min(3, 'Departure stop name must be at least 3 characters')
     .required(),
-  departureDatetime: dateSchema.required(),
+  departureDatetime: dateSchema
+    .required()
+    // A departure more than TRIP_EXPIRY_DAYS in the past would expire instantly
+    // in the backend and never reach OTP, so block it at creation time.
+    .test(
+      'not-expired',
+      'Departure is more than 2 days in the past — this trip will expire immediately and never reach the journey planner (OTP). Choose a later time.',
+      value =>
+        !value ||
+        !(value as Dayjs).isValid() ||
+        (value as Dayjs).valueOf() >= dayjs().subtract(TRIP_EXPIRY_DAYS, 'day').valueOf()
+    ),
   departureFlexibleStop: positionSchema.required('Please place the departure stop on the map.'),
   departureCancellation: Yup.boolean().required(),
   destinationStopName: Yup.string()

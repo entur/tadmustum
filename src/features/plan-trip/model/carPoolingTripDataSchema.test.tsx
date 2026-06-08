@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import dayjs from 'dayjs';
-import { carPoolingTripDataSchema } from './carPoolingTripDataSchema';
+import { carPoolingTripDataSchema, TRIP_EXPIRY_DAYS } from './carPoolingTripDataSchema';
 
+// Departure validation is relative to "now" (a trip too far in the past expires
+// instantly in the backend), so base fixtures on the current time rather than a
+// fixed calendar date that would drift into the past as the suite ages.
 const validInput = () => ({
   authority: 'ENT:Authority:ENT',
   operator: 'ENT:Operator:1',
   departureStopName: 'Oslo S',
-  departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
+  departureDatetime: dayjs().add(1, 'day'),
   departureFlexibleStop: [10.7522, 59.9139],
   departureCancellation: false,
   destinationStopName: 'Bergen stasjon',
-  destinationDatetime: dayjs('2026-06-01T15:00:00.000Z'),
+  destinationDatetime: dayjs().add(1, 'day').add(7, 'hour'),
   destinationFlexibleStop: [5.3221, 60.3913],
   destinationCancellation: false,
   intermediateCalls: [],
@@ -123,5 +126,23 @@ describe('carPoolingTripDataSchema', () => {
         departureDatetime: dayjs('not-a-date'),
       })
     ).rejects.toThrow(/Not a valid date/);
+  });
+
+  it('rejects a departure more than 2 days in the past', async () => {
+    await expect(
+      carPoolingTripDataSchema.validate({
+        ...validInput(),
+        departureDatetime: dayjs().subtract(TRIP_EXPIRY_DAYS, 'day').subtract(1, 'hour'),
+      })
+    ).rejects.toThrow(/expire immediately and never reach the journey planner/);
+  });
+
+  it('accepts a departure within the last 2 days', async () => {
+    await expect(
+      carPoolingTripDataSchema.validate({
+        ...validInput(),
+        departureDatetime: dayjs().subtract(1, 'day'),
+      })
+    ).resolves.toBeDefined();
   });
 });

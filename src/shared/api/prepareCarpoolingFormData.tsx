@@ -107,7 +107,6 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
             },
           ],
         },
-        expiresAtEpochMs: formData.destinationDatetime.add(7, 'day').valueOf(),
         publicContact: {
           phoneNumber: null,
           url: formData.contactUrl,

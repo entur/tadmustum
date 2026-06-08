@@ -43,7 +43,6 @@ export default function CarPoolingTrips() {
     'tadmustum.trips.showPastArrivals',
     false
   );
-  const [showExpired, setShowExpired] = usePersistentState('tadmustum.trips.showExpired', false);
   const [showCancelled, setShowCancelled] = usePersistentState(
     'tadmustum.trips.showCancelled',
     false
@@ -103,9 +102,7 @@ export default function CarPoolingTrips() {
     // Track per-codespace failures so we can surface a non-fatal warning rather
     // than silently returning fewer trips than the user expects.
     Promise.all(
-      authorities.map(authority =>
-        queryExtraJourneys(authority.id.split(':')[0], authority.id, true)
-      )
+      authorities.map(authority => queryExtraJourneys(authority.id.split(':')[0], authority.id))
     )
       .then(responses => {
         const merged: Extrajourney[] = [];
@@ -138,12 +135,9 @@ export default function CarPoolingTrips() {
           calls && calls.length > 0 ? calls[calls.length - 1].latestExpectedArrivalTime : null;
         if (latestExpected && dayjs(latestExpected).valueOf() < now) return false;
       }
-      if (!showExpired) {
-        if (trip.estimatedVehicleJourney.expiresAtEpochMs < now) return false;
-      }
       return true;
     });
-  }, [plannedTrips, showPastArrivals, showExpired, showCancelled]);
+  }, [plannedTrips, showPastArrivals, showCancelled]);
 
   const handleCancelTrip = async (trip: Extrajourney) => {
     const codespace = trip.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
@@ -370,15 +364,6 @@ export default function CarPoolingTrips() {
         row.estimatedVehicleJourney.recordedAtTime,
       valueFormatter: (value: string) => formatMinuteResolution(value),
     },
-    {
-      field: 'expiresAtEpochMs',
-      headerName: 'Expires at',
-      flex: 1,
-      valueGetter: (_value: number, row: Extrajourney) =>
-        row.estimatedVehicleJourney.expiresAtEpochMs,
-      valueFormatter: (value: number | null | undefined) =>
-        value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '',
-    },
   ];
 
   return (
@@ -398,15 +383,6 @@ export default function CarPoolingTrips() {
             />
           }
           label="Show completed trips"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={showExpired}
-              onChange={event => setShowExpired(event.target.checked)}
-            />
-          }
-          label="Show expired trips"
         />
         <FormControlLabel
           control={
@@ -437,7 +413,6 @@ export default function CarPoolingTrips() {
           id: showHiddenFields,
           authority: showHiddenFields,
           latestExpectedArrivalTime: showHiddenFields,
-          expiresAtEpochMs: showHiddenFields,
         }}
         apiRef={apiRef}
         disableColumnMenu

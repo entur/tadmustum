@@ -17,6 +17,5 @@ export interface EstimatedVehicleJourney {
   dataSource: string;
   estimatedCalls: EstimatedCalls;
   isCompleteStopSequence: boolean;
-  expiresAtEpochMs: number;
   publicContact: SimpleContactStructure;
 }
