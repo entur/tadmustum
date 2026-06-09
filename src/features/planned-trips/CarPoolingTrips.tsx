@@ -203,7 +203,7 @@ export default function CarPoolingTrips() {
     {
       field: 'actions',
       headerName: 'Actions',
-      minWidth: 290,
+      width: 300,
       sortable: false,
       filterable: false,
       renderCell: params => {
@@ -256,14 +256,12 @@ export default function CarPoolingTrips() {
     {
       field: 'id',
       headerName: 'ID',
-      minWidth: 220,
-      flex: 1,
+      width: 240,
     },
     {
       field: 'authority',
       headerName: 'Authority',
-      minWidth: 140,
-      flex: 1,
+      width: 150,
       valueGetter: (_value: string, row: Extrajourney) => {
         const codespace = row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
         return authorityNameByCodespace.get(codespace) ?? codespace;
@@ -294,7 +292,7 @@ export default function CarPoolingTrips() {
     {
       field: 'stopCount',
       headerName: 'Stops',
-      width: 80,
+      width: 100,
       valueGetter: (_value: string, row: Extrajourney) => {
         const callsLength = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall.length || 0;
         return callsLength;
@@ -313,14 +311,14 @@ export default function CarPoolingTrips() {
     {
       field: 'departureStopName',
       headerName: 'Departure stop name',
-      flex: 1,
+      width: 200,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].stopPointName,
     },
     {
       field: 'departureTimeName',
       headerName: 'Departure time',
-      flex: 1,
+      width: 170,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.estimatedCalls?.estimatedCall[0].aimedDepartureTime,
       valueFormatter: (value: string) => formatMinuteResolution(value),
@@ -328,7 +326,7 @@ export default function CarPoolingTrips() {
     {
       field: 'arrivalStopName',
       headerName: 'Final destination',
-      flex: 1,
+      width: 200,
       valueGetter: (_value: string, row: Extrajourney) => {
         const calls = row.estimatedVehicleJourney?.estimatedCalls?.estimatedCall;
         return calls && calls.length > 0 ? calls[calls.length - 1].stopPointName : '';
@@ -337,7 +335,7 @@ export default function CarPoolingTrips() {
     {
       field: 'arrivalTimeName',
       headerName: 'Arrival time',
-      flex: 1,
+      width: 170,
       valueGetter: (_value: string, row: Extrajourney) => {
         const calls = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
         return calls && calls.length > 0 ? calls[calls.length - 1].aimedArrivalTime : '';
@@ -347,7 +345,7 @@ export default function CarPoolingTrips() {
     {
       field: 'latestExpectedArrivalTime',
       headerName: 'Latest expected arrival time',
-      flex: 1,
+      width: 230,
       valueGetter: (_value: string, row: Extrajourney) => {
         const calls = row.estimatedVehicleJourney.estimatedCalls?.estimatedCall;
         return calls && calls.length > 0
@@ -359,22 +357,49 @@ export default function CarPoolingTrips() {
     {
       field: 'recordedAtTime',
       headerName: 'Recorded at',
-      flex: 1,
+      width: 170,
       valueGetter: (_value: string, row: Extrajourney) =>
         row.estimatedVehicleJourney.recordedAtTime,
       valueFormatter: (value: string) => formatMinuteResolution(value),
     },
   ];
 
+  // Hidden-field columns are toggled on demand; everything else is always shown.
+  const columnVisibilityModel = {
+    id: showHiddenFields,
+    authority: showHiddenFields,
+    latestExpectedArrivalTime: showHiddenFields,
+  };
+
+  // Size the grid to exactly fit its visible columns so it shows all content and
+  // headers without truncating. The wrapper caps it at the viewport width, so the
+  // table is only narrower than the browser when everything fits; otherwise it
+  // overflows into a horizontal scroll. The trailing buffer keeps rounding from
+  // triggering a spurious inner scrollbar.
+  const tableWidth =
+    columns.reduce((sum, col) => {
+      if (columnVisibilityModel[col.field as keyof typeof columnVisibilityModel] === false) {
+        return sum;
+      }
+      return sum + (col.width ?? col.minWidth ?? 100);
+    }, 0) + 2;
+
   return (
-    <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', p: { xs: 1, sm: 2 } }}>
+    <Box sx={{ width: '100%', mx: 'auto', p: { xs: 1, sm: 2 } }}>
       {failedCodespaces.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           Could not load trips from: {failedCodespaces.join(', ')}. The list below may be
           incomplete.
         </Alert>
       )}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="center"
+        justifyContent="center"
+        flexWrap="wrap"
+        sx={{ mb: 1 }}
+      >
         <FormControlLabel
           control={
             <Checkbox
@@ -406,94 +431,96 @@ export default function CarPoolingTrips() {
           Showing {rows?.length ?? 0} of {plannedTrips?.length ?? 0} trips
         </Typography>
       </Stack>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        columnVisibilityModel={{
-          id: showHiddenFields,
-          authority: showHiddenFields,
-          latestExpectedArrivalTime: showHiddenFields,
-        }}
-        apiRef={apiRef}
-        disableColumnMenu
-        disableRowSelectionOnClick
-        rowHeight={56}
-        pageSizeOptions={[10, 25, 50]}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        initialState={{
-          sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
-        }}
-        getRowClassName={params => {
-          const classes: string[] = [];
-          if ((params.row as Extrajourney).id === highlightedTripId) {
-            classes.push('row-highlighted');
-            // Only attach the animating class until the pulse has run once.
-            if (!hasPulsed) classes.push('row-highlighted-pulse');
-          }
-          if (isTripCancelled(params.row as Extrajourney)) {
-            classes.push('row-cancelled');
-          }
-          return classes.join(' ');
-        }}
-        sx={{
-          border: 0,
-          borderRadius: 2,
-          boxShadow: 1,
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-          '& .MuiDataGrid-columnHeaders': {
-            bgcolor: 'rgba(0, 0, 0, 0.04)',
-          },
-          '& .MuiDataGrid-columnHeaderTitle': {
-            fontWeight: 600,
-          },
-          '& .MuiDataGrid-cell': {
-            display: 'flex',
-            alignItems: 'center',
-          },
-          '& .MuiDataGrid-row:nth-of-type(even)': {
-            bgcolor: 'rgba(0, 0, 0, 0.02)',
-          },
-          // Rows aren't clickable, so suppress the default (themed) hover highlight
-          // while keeping the zebra stripe steady.
-          '& .MuiDataGrid-row:hover': {
-            bgcolor: 'transparent',
-          },
-          '& .MuiDataGrid-row:nth-of-type(even):hover': {
-            bgcolor: 'rgba(0, 0, 0, 0.02)',
-          },
-          '& .MuiDataGrid-row.Mui-selected, & .MuiDataGrid-row.Mui-selected:hover': {
-            bgcolor: 'transparent',
-          },
-          '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within':
-            {
-              outline: 'none',
+      {/* Size the wrapper to the columns but never past the viewport. The grid
+          fills this box, so when the columns don't fit the DataGrid shows its
+          own internal horizontal scrollbar — the page itself never overflows
+          (which would shove the fixed header/menu around). */}
+      <Box sx={{ width: tableWidth, maxWidth: '100%', mx: 'auto' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          columnVisibilityModel={columnVisibilityModel}
+          apiRef={apiRef}
+          disableColumnMenu
+          disableRowSelectionOnClick
+          rowHeight={56}
+          pageSizeOptions={[10, 25, 50]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          initialState={{
+            sorting: { sortModel: [{ field: 'departureTimeName', sort: 'desc' }] },
+          }}
+          getRowClassName={params => {
+            const classes: string[] = [];
+            if ((params.row as Extrajourney).id === highlightedTripId) {
+              classes.push('row-highlighted');
+              // Only attach the animating class until the pulse has run once.
+              if (!hasPulsed) classes.push('row-highlighted-pulse');
+            }
+            if (isTripCancelled(params.row as Extrajourney)) {
+              classes.push('row-cancelled');
+            }
+            return classes.join(' ');
+          }}
+          sx={{
+            border: 0,
+            borderRadius: 2,
+            boxShadow: 1,
+            bgcolor: 'background.paper',
+            overflow: 'hidden',
+            '& .MuiDataGrid-columnHeaders': {
+              bgcolor: 'rgba(0, 0, 0, 0.04)',
             },
-          '& .row-cancelled': {
-            textDecoration: 'line-through',
-            color: 'text.disabled',
-          },
-          // Draw attention to the trip the user just created/edited: a green tint
-          // with a left accent bar, briefly pulsing to catch the eye on arrival.
-          // Selectors carry the extra `.MuiDataGrid-row` qualifier so they beat
-          // the zebra-stripe and hover rules above on specificity.
-          '@keyframes rowHighlightPulse': {
-            '0%': { backgroundColor: 'rgba(46, 125, 50, 0.32)' },
-            '100%': { backgroundColor: 'rgba(46, 125, 50, 0.14)' },
-          },
-          '& .MuiDataGrid-row.row-highlighted, & .MuiDataGrid-row.row-highlighted:hover': {
-            backgroundColor: 'rgba(46, 125, 50, 0.14)',
-            boxShadow: 'inset 4px 0 0 0 #2e7d32',
-          },
-          // The blink only runs while the one-shot `row-highlighted-pulse` class
-          // is present, so re-rendering the row (e.g. paging away and back) after
-          // it has played leaves just the steady highlight above.
-          '& .MuiDataGrid-row.row-highlighted-pulse': {
-            animation: 'rowHighlightPulse 1.1s ease-out 2',
-          },
-        }}
-      />
+            '& .MuiDataGrid-columnHeaderTitle': {
+              fontWeight: 600,
+            },
+            '& .MuiDataGrid-cell': {
+              display: 'flex',
+              alignItems: 'center',
+            },
+            '& .MuiDataGrid-row:nth-of-type(even)': {
+              bgcolor: 'rgba(0, 0, 0, 0.02)',
+            },
+            // Rows aren't clickable, so suppress the default (themed) hover highlight
+            // while keeping the zebra stripe steady.
+            '& .MuiDataGrid-row:hover': {
+              bgcolor: 'transparent',
+            },
+            '& .MuiDataGrid-row:nth-of-type(even):hover': {
+              bgcolor: 'rgba(0, 0, 0, 0.02)',
+            },
+            '& .MuiDataGrid-row.Mui-selected, & .MuiDataGrid-row.Mui-selected:hover': {
+              bgcolor: 'transparent',
+            },
+            '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within':
+              {
+                outline: 'none',
+              },
+            '& .row-cancelled': {
+              textDecoration: 'line-through',
+              color: 'text.disabled',
+            },
+            // Draw attention to the trip the user just created/edited: a green tint
+            // with a left accent bar, briefly pulsing to catch the eye on arrival.
+            // Selectors carry the extra `.MuiDataGrid-row` qualifier so they beat
+            // the zebra-stripe and hover rules above on specificity.
+            '@keyframes rowHighlightPulse': {
+              '0%': { backgroundColor: 'rgba(46, 125, 50, 0.32)' },
+              '100%': { backgroundColor: 'rgba(46, 125, 50, 0.14)' },
+            },
+            '& .MuiDataGrid-row.row-highlighted, & .MuiDataGrid-row.row-highlighted:hover': {
+              backgroundColor: 'rgba(46, 125, 50, 0.14)',
+              boxShadow: 'inset 4px 0 0 0 #2e7d32',
+            },
+            // The blink only runs while the one-shot `row-highlighted-pulse` class
+            // is present, so re-rendering the row (e.g. paging away and back) after
+            // it has played leaves just the steady highlight above.
+            '& .MuiDataGrid-row.row-highlighted-pulse': {
+              animation: 'rowHighlightPulse 1.1s ease-out 2',
+            },
+          }}
+        />
+      </Box>
       <Snackbar
         open={!!savedMessage}
         autoHideDuration={4000}

@@ -114,8 +114,9 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     const mutateExtrajourney = useMutateExtrajourney();
     const navigate = useNavigate();
     const handleSubmitCallback = async (formData: CarPoolingTripDataFormData) => {
-      // Keep the form's id (the existing trip's id when editing, or the
-      // client-generated id for a new trip); fall back to a previously-saved id.
+      // Keep the form's id when editing (it's the existing trip's id); fall
+      // back to a previously-saved id. New trips have no id — their identity is
+      // the estimatedVehicleJourneyCode, which nunamnir keys storage on.
       formData.id = formData.id ?? currentTripId;
       const result = await mutateExtrajourney(formData);
       if (result.error) {

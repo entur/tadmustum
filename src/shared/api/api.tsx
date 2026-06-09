@@ -184,9 +184,10 @@ const cancelExtrajourney =
     // Cancel the whole trip by re-submitting the existing journey through the
     // same upsert mutation the editor uses, with the journey-level cancellation
     // flag set. recordedAtTime is bumped so downstream consumers treat this as
-    // the newest version of the journey.
+    // the newest version of the journey. The upsert keys on the journey's
+    // estimatedVehicleJourneyCode (preserved by the spread), so we don't echo
+    // back the server `id`, which nunamnir ignores.
     const input: Extrajourney = {
-      id: originalTrip.id,
       estimatedVehicleJourney: {
         ...originalTrip.estimatedVehicleJourney,
         cancellation: true,
