@@ -22,6 +22,7 @@ const baseTrip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
       lineRef: 'ENT:CarPooling:trip-1',
+      estimatedVehicleJourneyCode: 'ENT:ServiceJourney:1',
       publishedLineName: 'Carpooling trip',
       estimatedCalls: {
         estimatedCall: [
@@ -59,12 +60,13 @@ const baseBooking = (overrides: Partial<PassengerBookingData> = {}): PassengerBo
 });
 
 describe('prepareBookingData', () => {
-  it('throws when the original trip has no id', async () => {
+  it('throws when the original trip has no estimatedVehicleJourneyCode', async () => {
     const trip = baseTrip();
-    delete (trip as { id?: string }).id;
+    delete (trip.estimatedVehicleJourney as { estimatedVehicleJourneyCode?: string })
+      .estimatedVehicleJourneyCode;
 
     await expect(prepareBookingData(trip, baseBooking(), 'ENT:Authority:ENT')).rejects.toThrow(
-      /must have an ID/
+      /estimatedVehicleJourneyCode/
     );
   });
 
@@ -78,10 +80,13 @@ describe('prepareBookingData', () => {
     );
   });
 
-  it('preserves the original trip id', async () => {
+  it('does not echo back the server id and preserves the estimatedVehicleJourneyCode', async () => {
     const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
 
-    expect(result.input.id).toBe('ENT:ServiceJourney:1');
+    expect(result.input).not.toHaveProperty('id');
+    expect(result.input.estimatedVehicleJourney.estimatedVehicleJourneyCode).toBe(
+      'ENT:ServiceJourney:1'
+    );
   });
 
   it('inserts pickup and dropoff between the original first and last stops and reorders them', async () => {
@@ -205,6 +210,7 @@ describe('prepareBookingData', () => {
         recordedAtTime: '2026-05-20T09:00:00.000Z',
         lineRef: 'ENT:CarPooling:trip-1',
         publishedLineName: 'Carpooling trip',
+        estimatedVehicleJourneyCode: 'ENT:ServiceJourney:1',
         estimatedCalls: {
           estimatedCall: [
             stop('Origin', 10.0, 1, {

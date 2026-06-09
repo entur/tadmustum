@@ -34,8 +34,12 @@ export async function prepareBookingData(
   authority: string;
   input: Extrajourney;
 }> {
-  if (!originalTrip.id) {
-    throw new Error('Original trip must have an ID');
+  // The booking re-submits the trip as an upsert keyed on its
+  // estimatedVehicleJourneyCode (nunamnir's storage key, carried along by the
+  // spread below), so a trip without one can't be targeted. We no longer echo
+  // back the server `id` — nunamnir ignores it now that the code is the identity.
+  if (!originalTrip.estimatedVehicleJourney.estimatedVehicleJourneyCode) {
+    throw new Error('Original trip must have an estimatedVehicleJourneyCode');
   }
 
   // Over-capacity bookings are allowed (the UI warns about them), so we don't
@@ -44,7 +48,6 @@ export async function prepareBookingData(
   const { calls: orderedCalls } = await routeAssembledCalls(assembled, bookingData, routeLeg);
 
   const updatedTrip: Extrajourney = {
-    id: originalTrip.id,
     estimatedVehicleJourney: {
       ...originalTrip.estimatedVehicleJourney,
       recordedAtTime: dayjs().toISOString(),

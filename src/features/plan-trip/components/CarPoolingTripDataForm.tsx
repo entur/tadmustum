@@ -87,13 +87,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const noAdminAccess = !tripData && authorities.length === 0;
   const operators = useOperators();
 
-  // New trips get a client-generated id so the booking URL (this app's
-  // /book-trip/{codespace}/{id} page) can be prefilled before the trip is
-  // saved; the backend upserts at the supplied id. The codespace isn't known
-  // until the authority is selected, so the URL is filled in by the effect
-  // below once that happens. When editing, reset(initialState) replaces both
-  // with the existing trip's values.
-  const newTripId = useMemo(() => uuidv4(), []);
   // New trips default to departing exactly a week from now. Computed once so it
   // stays stable across renders (and so Reset returns to the same value).
   const defaultDeparture = useMemo(() => dayjs().add(1, 'week'), []);
@@ -114,7 +107,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     defaultValues: {
       authority: '',
       operator: '',
-      id: newTripId,
       departureStopName: 'Origin',
       departureDatetime: defaultDeparture,
       estimateArrivalAutomatically: true,
@@ -163,13 +155,20 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     // Fill in the default booking URL once the authority (and therefore the
     // codespace) is known. Skip if the user has already entered something — we
     // never want to clobber a manual edit or an edited trip's existing URL.
-    // Read id off the form so that, when editing a trip that has no saved URL,
-    // we generate one pointing at the actual trip's id rather than the
-    // client-generated `newTripId` (which is only correct for new trips).
+    // The booking page (/book-trip/{codespace}/{tripId}) looks a trip up by its
+    // estimatedVehicleJourneyCode — nunamnir keys storage on the code and
+    // returns it as the journey id — so the URL must carry the code, not the
+    // form's local `id`. Generate the code here (matching prepareCarpoolingFormData)
+    // when it's absent so a new trip's URL and stored id are identical; when
+    // editing, the code was filled in from the existing journey by mapToFormData.
     if (authority && !contactUrl) {
       const codespace = authority.split(':')[0];
-      const tripId = getValues('id') ?? newTripId;
-      setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${tripId}`);
+      let code = getValues('estimatedVehicleJourneyCode');
+      if (!code) {
+        code = `${codespace}:ServiceJourney:${uuidv4()}`;
+        setValue('estimatedVehicleJourneyCode', code);
+      }
+      setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${code}`);
     }
 
     if (operators.length && !operator) {
@@ -222,7 +221,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     authorities,
     authority,
     contactUrl,
-    newTripId,
     operators,
     operator,
     mapDepartureFlexibleStop,
