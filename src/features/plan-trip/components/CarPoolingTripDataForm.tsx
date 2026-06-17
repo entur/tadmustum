@@ -571,7 +571,28 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             control={control}
             render={({ field }) => {
               return (
-                <Select {...field} labelId="authority-label" label="Authority">
+                <Select
+                  {...field}
+                  labelId="authority-label"
+                  label="Authority"
+                  onChange={event => {
+                    field.onChange(event);
+                    // The journey code and booking URL are derived from the authority's codespace.
+                    // For a new trip, re-mint them when the authority changes so the published
+                    // booking URL (/book-trip/{codespace}/{code}) and the stored code match the
+                    // codespace the trip is actually saved under. When editing, the code is the
+                    // trip's fixed identity (filled in from the existing journey), so leave it.
+                    if (!initialState) {
+                      const newCodespace = String(event.target.value).split(':')[0];
+                      const newCode = `${newCodespace}:ServiceJourney:${uuidv4()}`;
+                      setValue('estimatedVehicleJourneyCode', newCode);
+                      setValue(
+                        'contactUrl',
+                        `${window.location.origin}/book-trip/${newCodespace}/${newCode}`
+                      );
+                    }
+                  }}
+                >
                   <MenuItem value="" disabled>
                     <em>Authority</em>
                   </MenuItem>
