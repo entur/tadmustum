@@ -29,7 +29,10 @@ import { useOperators } from '../hooks/useOperators.tsx';
 import { useStreetRoute } from '../hooks/useStreetRoute.tsx';
 import type { Feature, Point, Position } from 'geojson';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
-import { carPoolingTripDataSchema } from '../model/carPoolingTripDataSchema.tsx';
+import {
+  carPoolingTripDataSchema,
+  MAX_TRIP_DURATION_MINUTES,
+} from '../model/carPoolingTripDataSchema.tsx';
 import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
@@ -130,6 +133,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
+  const destinationDatetime = watch('destinationDatetime');
+  const driverDeviationBudget = watch('driverDeviationBudget');
   const estimateArrivalAutomatically = watch('estimateArrivalAutomatically');
   const departureCancellation = watch('departureCancellation');
   const destinationCancellation = watch('destinationCancellation');
@@ -238,6 +243,18 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const destinationLng = destinationFlexibleStop?.[0];
   const destinationLat = destinationFlexibleStop?.[1];
   const departureMs = departureDatetime?.isValid() ? departureDatetime.valueOf() : undefined;
+
+  // Warn (but don't block) when the trip span — arrival plus the driver's deviation budget,
+  // minus departure — exceeds the limit OTP enforces, so the driver knows a longer trip will be
+  // rejected by the journey planner before they save it.
+  const tripExceedsMaxDuration = useMemo(() => {
+    if (!departureDatetime?.isValid() || !destinationDatetime?.isValid()) {
+      return false;
+    }
+    const budgetMinutes = Number(driverDeviationBudget) || 0;
+    const latestArrival = destinationDatetime.add(budgetMinutes, 'minute');
+    return latestArrival.diff(departureDatetime, 'minute') > MAX_TRIP_DURATION_MINUTES;
+  }, [departureDatetime, destinationDatetime, driverDeviationBudget]);
 
   // The ordered stops the vehicle visits: departure, the (non-cancelled)
   // intermediate stops at their flex-area centroids, destination. Serialised
@@ -787,6 +804,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
+
+      {tripExceedsMaxDuration && (
+        <Alert severity="warning">
+          This trip is longer than 2.5 hours (arrival time plus the deviation budget, minus
+          departure time). The journey planner (OTP) rejects trips this long, so it will not be
+          bookable — shorten the trip or reduce the deviation budget.
+        </Alert>
+      )}
 
       <Controller
         name="contactUrl"
