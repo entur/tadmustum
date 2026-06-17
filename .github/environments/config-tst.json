@@ -1,0 +1,16 @@
+{
+  "carpool-messages-api": "https://api.staging.entur.io/carpool-messages/v1/graphql",
+  "journey-planner-api": "https://api.staging.entur.io/journey-planner/v3/graphql",
+  "applicationEnv": "staging",
+  "claimsNamespace": "https://ror.entur.io/role_assignments",
+  "preferredNameNamespace": "https://ror.entur.io/preferred_name",
+  "oidcConfig": {
+    "authority": "https://partner.staging.entur.org",
+    "client_id": "REPLACE_WITH_STAGING_CLIENT_ID",
+    "extraQueryParams": {
+      "audience": "https://api.staging.entur.io"
+    }
+  },
+  "showErrorDetails": false,
+  "themeFilePath": "/theme-tst.json"
+}

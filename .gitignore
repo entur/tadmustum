@@ -31,3 +31,4 @@ public/theme-*.json
 # Claude AI
 .claude/
 thoughts/
+.playwright-mcp/
