@@ -7,6 +7,12 @@ import type { Position } from 'geojson';
 // reaches OTP (the journey planner), so there is no point creating it.
 export const TRIP_EXPIRY_DAYS = 2;
 
+// Must match OTP's CarpoolSiriMapper.MAX_TRIP_DURATION: OTP rejects carpool trips
+// whose span (latest arrival − departure) exceeds this, so a longer trip never
+// reaches the journey planner. Surfaced as a warning rather than a hard validation
+// so the driver can still save the trip, but is told it won't be bookable.
+export const MAX_TRIP_DURATION_MINUTES = 150;
+
 declare module 'yup' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface MixedSchema<TType, TContext, TDefault, TFlags> {

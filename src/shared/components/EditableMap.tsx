@@ -29,7 +29,6 @@ import { Box } from '@mui/material';
 
 export type EditableMapCallbacks = {
   onStopCreated?: (feature: Feature) => void;
-  onStopUpdated?: (feature: Feature) => void;
   onDrawingStateChange?: (isDrawing: boolean) => void;
 };
 
@@ -80,7 +79,9 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       callbacksRef.current = props;
     });
 
-    const onMapboxDrawUpdate = useCallback((e: { features: Feature[]; type: string }) => {
+    // Stops are created and deleted, never moved (dragging is disabled in the draw config), so this
+    // only handles draw.create.
+    const onMapboxDrawCreate = useCallback((e: { features: Feature[]; type: string }) => {
       setFeatures(currFeatures => {
         const newFeatures = { ...currFeatures };
         for (const f of e.features) {
@@ -88,17 +89,11 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
         }
         return newFeatures;
       });
-      if (e.type === 'draw.create') {
-        for (const f of e.features) {
-          callbacksRef.current.onStopCreated?.(f);
-        }
-        isDrawingRef.current = false;
-        callbacksRef.current.onDrawingStateChange?.(false);
-      } else if (e.type === 'draw.update') {
-        for (const f of e.features) {
-          callbacksRef.current.onStopUpdated?.(f);
-        }
+      for (const f of e.features) {
+        callbacksRef.current.onStopCreated?.(f);
       }
+      isDrawingRef.current = false;
+      callbacksRef.current.onDrawingStateChange?.(false);
     }, []);
     const onMapboxDrawDelete = useCallback((e: { features: Feature[] }) => {
       setFeatures(currFeatures => {
@@ -121,12 +116,11 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
 
     const mapBoxDrawDefaultOnAdd = useCallback(
       (map: MapRef | null): void => {
-        map?.on('draw.create', onMapboxDrawUpdate);
-        map?.on('draw.update', onMapboxDrawUpdate);
+        map?.on('draw.create', onMapboxDrawCreate);
         map?.on('draw.delete', onMapboxDrawDelete);
         map?.on('draw.modechange', onMapboxDrawModeChange);
       },
-      [onMapboxDrawDelete, onMapboxDrawUpdate, onMapboxDrawModeChange]
+      [onMapboxDrawDelete, onMapboxDrawCreate, onMapboxDrawModeChange]
     );
     // const mapBoxDrawDefaultOnRemove = useCallback(
     //   (map: MapRef | null): void => {
@@ -197,7 +191,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
         const zoom = mapRef.current?.getZoom() ?? 0;
         if (zoom <= 15) return;
 
-        // Don't interfere with selecting/dragging an existing stop.
+        // Don't drop a new stop on top of an existing one — let the click select it instead.
         if ((drawToolRef.current?.getFeatureIdsAt(e.point) ?? []).length > 0) return;
 
         const numStops = (departureStopId ? 1 : 0) + (arrivalStopId ? 1 : 0);

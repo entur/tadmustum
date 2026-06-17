@@ -260,3 +260,40 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
     expect(streetRoute).not.toHaveBeenCalled();
   });
 });
+
+describe('CarPoolingTripDataForm — trip duration warning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('warns when arrival plus deviation budget exceeds 2.5 hours after departure', () => {
+    // editingState is an 08:00 → 15:00 trip (7h) with a 30-min budget — well over the limit.
+    renderForm({ initialState: editingState() });
+
+    expect(screen.getByText(/longer than 2.5 hours/i)).toBeInTheDocument();
+  });
+
+  it('does not warn when the trip stays within 2.5 hours', () => {
+    renderForm({
+      initialState: {
+        ...editingState(),
+        // 08:00 → 09:00 (1h) plus the 30-min budget = 1h30m, within the limit.
+        destinationDatetime: dayjs('2026-06-01T09:00:00.000Z'),
+      },
+    });
+
+    expect(screen.queryByText(/longer than 2.5 hours/i)).not.toBeInTheDocument();
+  });
+
+  it('warns only because of the deviation budget when arrival alone is within the limit', () => {
+    renderForm({
+      initialState: {
+        ...editingState(),
+        // 08:00 → 10:20 (2h20m) is within 2.5h, but +30-min budget pushes it to 2h50m.
+        destinationDatetime: dayjs('2026-06-01T10:20:00.000Z'),
+      },
+    });
+
+    expect(screen.getByText(/longer than 2.5 hours/i)).toBeInTheDocument();
+  });
+});
