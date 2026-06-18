@@ -264,6 +264,17 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     return latestArrival.diff(departureDatetime, 'minute') > MAX_TRIP_DURATION_MINUTES;
   }, [departureDatetime, destinationDatetime, driverDeviationBudget]);
 
+  // Warn (but don't block) when the arrival time is before the departure time. A negative-span
+  // trip corrupts expiry and booking math downstream (nunamnir/subula/OTP), but is surfaced as a
+  // warning rather than a hard validation so the driver can still save — matching how the
+  // trip-too-long case above is handled.
+  const arrivalBeforeDeparture = useMemo(() => {
+    if (!departureDatetime?.isValid() || !destinationDatetime?.isValid()) {
+      return false;
+    }
+    return destinationDatetime.isBefore(departureDatetime);
+  }, [departureDatetime, destinationDatetime]);
+
   // The ordered stops the vehicle visits: departure, the (non-cancelled)
   // intermediate stops at their flex-area centroids, destination. Serialised
   // to a string so the routing effect below re-runs only when an actual
@@ -785,6 +796,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
+      {arrivalBeforeDeparture && (
+        <Alert severity="warning">
+          The arrival time is before the departure time, so this trip would end before it starts
+        </Alert>
+      )}
       {streetRouteFailed && (
         <Alert severity="warning">
           Could not fetch the driving route from the journey planner. The map shows straight lines
