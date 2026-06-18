@@ -261,6 +261,62 @@ describe('CarPoolingTrips', () => {
     expect(within(row).queryByText('Partially cancelled')).not.toBeInTheDocument();
   });
 
+  it('collapses the same trip returned twice (fan-out) to its latest snapshot', async () => {
+    // The same trip can come back from more than one authority's query — once as
+    // a stale *active* snapshot, once as the newer *cancelled* one. They share an
+    // id, which the grid keys on, so the duplicate must be collapsed (keeping the
+    // newest) before rendering or the cancelled copy lingers after the filter.
+    const sharedId = 'TRI:ServiceJourney:dup';
+    const sharedCalls = {
+      estimatedCall: [
+        { order: 1, stopPointName: 'Vikersund', aimedDepartureTime: '2026-06-24T13:57:00.000Z' },
+        {
+          order: 2,
+          stopPointName: 'Hønefoss',
+          aimedArrivalTime: '2026-06-24T14:28:00.000Z',
+          latestExpectedArrivalTime: '2026-06-24T14:43:00.000Z',
+        },
+      ],
+    };
+    const staleActive = trip({
+      id: sharedId,
+      estimatedVehicleJourney: {
+        cancellation: false,
+        recordedAtTime: '2026-05-19T14:11:00.000Z',
+        lineRef: 'TRI:CarPooling:dup',
+        estimatedCalls: sharedCalls,
+      },
+    } as Extrajourney);
+    const newerCancelled = trip({
+      id: sharedId,
+      estimatedVehicleJourney: {
+        cancellation: true,
+        recordedAtTime: '2026-05-19T14:12:00.000Z', // 1 min newer → wins
+        lineRef: 'TRI:CarPooling:dup',
+        estimatedCalls: sharedCalls,
+      },
+    } as Extrajourney);
+
+    queryExtraJourneys.mockResolvedValue({ data: [staleActive, newerCancelled] });
+
+    renderInRouter();
+
+    await waitFor(() => expect(screen.queryByText('Loading...')).not.toBeInTheDocument());
+
+    // Latest snapshot wins → the trip is cancelled, so with "Show cancelled" off
+    // it is hidden entirely; the stale active copy must not linger. The total
+    // count reflects one de-duplicated trip, not two.
+    expect(screen.queryByText('Vikersund')).not.toBeInTheDocument();
+    expect(screen.getByText(/Showing 0 of 1 trips/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Show cancelled trips/ }));
+
+    // Exactly one row for the de-duplicated trip, shown as cancelled.
+    const rows = await screen.findAllByRole('row', { name: /Vikersund/ });
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByText('Cancelled')).toBeInTheDocument();
+  });
+
   it('cancels a whole trip when the Cancel button is clicked', async () => {
     cancelExtrajourney.mockResolvedValue({ data: 'ENT:ServiceJourney:1' });
     queryExtraJourneys.mockResolvedValue({ data: [trip()] });
