@@ -297,3 +297,23 @@ describe('CarPoolingTripDataForm — trip duration warning', () => {
     expect(screen.getByText(/longer than 2.5 hours/i)).toBeInTheDocument();
   });
 });
+
+describe('CarPoolingTripDataForm — operator is locked to Entur', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    streetRoute.mockResolvedValue(null);
+  });
+
+  it('disables the operator picker and defaults it to the Entur operator', async () => {
+    renderForm();
+
+    // Only Entur is accepted as the operator for now, so the picker is locked and
+    // can't be changed to another (backend-rejected) operator.
+    const operator = screen.getByRole('combobox', { name: 'Operator' });
+    expect(operator).toHaveAttribute('aria-disabled', 'true');
+
+    // It is still auto-populated with the Entur operator, so the required field
+    // passes validation despite being read-only.
+    await waitFor(() => expect(operator).toHaveTextContent('Entur'));
+  });
+});

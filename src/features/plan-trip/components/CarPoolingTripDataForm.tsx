@@ -631,7 +631,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           control={control}
           render={({ field }) => {
             return (
-              <Select {...field} labelId="operator-label" label="Operator">
+              // Only Entur is accepted as the operator for now and the field has
+              // no downstream consumer yet (see the notice below), so the picker
+              // is locked to the auto-selected Entur operator rather than letting
+              // the choice drift to a value the backend would reject.
+              <Select {...field} labelId="operator-label" label="Operator" disabled>
                 <MenuItem value="" disabled>
                   <em>Operator</em>
                 </MenuItem>
