@@ -88,6 +88,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   // submit to. Surface that up front rather than letting them fill out the
   // form only to fail Yup's authority-required validation on submit.
   const noAdminAccess = !tripData && authorities.length === 0;
+  // A trip's codespace (derived from its authority) is baked into its stable
+  // identity — the estimatedVehicleJourneyCode, lineRef and booking URL all carry
+  // it, and nunamnir stores the trip under codespaces/{codespace}/authorities/
+  // {authority}/…/{code}. There is no move operation: re-submitting an existing
+  // trip under a different authority writes a *new* document and orphans the
+  // original (and nunamnir now rejects the mismatch outright). So the authority
+  // is fixed once a trip exists — lock the picker when editing.
+  const isEditing = !!initialState;
   const operators = useOperators();
 
   // New trips default to departing exactly a week from now. Computed once so it
@@ -575,22 +583,23 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   {...field}
                   labelId="authority-label"
                   label="Authority"
+                  // The authority is the trip's codespace, which is part of its fixed
+                  // identity — it can only be chosen while creating the trip (see isEditing).
+                  disabled={isEditing}
                   onChange={event => {
                     field.onChange(event);
                     // The journey code and booking URL are derived from the authority's codespace.
-                    // For a new trip, re-mint them when the authority changes so the published
-                    // booking URL (/book-trip/{codespace}/{code}) and the stored code match the
-                    // codespace the trip is actually saved under. When editing, the code is the
-                    // trip's fixed identity (filled in from the existing journey), so leave it.
-                    if (!initialState) {
-                      const newCodespace = String(event.target.value).split(':')[0];
-                      const newCode = `${newCodespace}:ServiceJourney:${uuidv4()}`;
-                      setValue('estimatedVehicleJourneyCode', newCode);
-                      setValue(
-                        'contactUrl',
-                        `${window.location.origin}/book-trip/${newCodespace}/${newCode}`
-                      );
-                    }
+                    // Re-mint them when the authority changes so the published booking URL
+                    // (/book-trip/{codespace}/{code}) and the stored code match the codespace the
+                    // trip is actually saved under. This only runs while creating a trip — the
+                    // picker is disabled once editing, so the code stays the trip's fixed identity.
+                    const newCodespace = String(event.target.value).split(':')[0];
+                    const newCode = `${newCodespace}:ServiceJourney:${uuidv4()}`;
+                    setValue('estimatedVehicleJourneyCode', newCode);
+                    setValue(
+                      'contactUrl',
+                      `${window.location.origin}/book-trip/${newCodespace}/${newCode}`
+                    );
                   }}
                 >
                   <MenuItem value="" disabled>
@@ -608,7 +617,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               );
             }}
           />
-          <FormHelperText>{errors.authority?.message}</FormHelperText>
+          <FormHelperText>
+            {isEditing
+              ? "A trip's authority is fixed once it's created. To use a different one, create a new trip."
+              : errors.authority?.message}
+          </FormHelperText>
         </FormControl>
       )}
       <FormControl fullWidth required error={!!errors.operator} margin="normal">
