@@ -32,6 +32,37 @@ const isTripCancelled = (trip: Extrajourney): boolean => {
   return Boolean(journey?.cancellation) || (calls.length > 0 && calls.every(c => c.cancellation));
 };
 
+const recordedAtMs = (trip: Extrajourney): number => {
+  const recordedAt = trip.estimatedVehicleJourney?.recordedAtTime;
+  return recordedAt ? dayjs(recordedAt).valueOf() : 0;
+};
+
+// The backend keys trips by dataSource rather than codespace, so the same trip
+// can come back from more than one authority's query during the fan-out — and
+// the copies can disagree (e.g. one authority returns a stale *active* snapshot
+// while another returns the newer *cancelled* one). Concatenating the responses
+// blindly then hands the grid two rows with the same id, which corrupts its row
+// identity: React/MUI can't tell the copies apart, so a cancelled row lingers in
+// the DOM even after the "Show cancelled trips" filter should have dropped it.
+// Collapse duplicates by id, keeping the most recently recorded snapshot as the
+// source of truth. (The grid sorts client-side, so the emitted order is moot.)
+const dedupeTripsByLatest = (trips: Extrajourney[]): Extrajourney[] => {
+  const latestById = new Map<string, Extrajourney>();
+  const withoutId: Extrajourney[] = [];
+  for (const trip of trips) {
+    if (!trip.id) {
+      // No id means the grid can't key it either; keep it rather than guess.
+      withoutId.push(trip);
+      continue;
+    }
+    const existing = latestById.get(trip.id);
+    if (!existing || recordedAtMs(trip) > recordedAtMs(existing)) {
+      latestById.set(trip.id, trip);
+    }
+  }
+  return [...latestById.values(), ...withoutId];
+};
+
 export default function CarPoolingTrips() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,7 +145,7 @@ export default function CarPoolingTrips() {
             failed.push(authorities[index].id.split(':')[0]);
           }
         });
-        setPlannedTrips(merged);
+        setPlannedTrips(dedupeTripsByLatest(merged));
         setFailedCodespaces(failed);
         setLoading(false);
       })
