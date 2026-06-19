@@ -36,6 +36,7 @@ import { useQueryExtraJourney } from '../plan-trip/hooks/useQueryOneExtraJourney
 import { useStreetRoute } from '../plan-trip/hooks/useStreetRoute';
 import PassengerBookingMap from './components/PassengerBookingMap';
 import { useBookPassengerRide } from './hooks/useBookPassengerRide';
+import { userFacingMessage } from '../../shared/error-message/userFacingMessage.tsx';
 import { useAuthorities } from '../../shared/hooks/useAuthorities';
 
 interface PassengerBookingFormData {
@@ -335,7 +336,9 @@ export default function PassengerTripBooking() {
       const result = await bookPassengerRide(trip, bookingPayload, tripAuthority.id);
 
       if (result.error) {
-        setBookingError(result.error.message);
+        setBookingError(
+          userFacingMessage(result.error, 'Could not complete the booking. Please try again.')
+        );
       } else {
         setIsBookingConfirmed(true);
       }

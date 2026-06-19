@@ -128,7 +128,9 @@ const mutateExtrajourney =
       if (result.errors?.length) {
         const error: AppError = {
           message: result.errors[0].message,
-          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
+          code:
+            ((result.errors[0].extensions?.classification ??
+              result.errors[0].extensions?.code) as string) || 'GRAPHQL_ERROR',
           details: result.errors[0].path,
         };
         return { error };
@@ -139,7 +141,9 @@ const mutateExtrajourney =
       const error = err as ApolloError;
       const appError: AppError = {
         message: error.message,
-        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
+        code:
+          ((error.graphQLErrors?.[0]?.extensions?.classification ??
+            error.graphQLErrors?.[0]?.extensions?.code) as string) || 'NETWORK_ERROR',
         details: {
           networkError: error.networkError,
           graphQLErrors: error.graphQLErrors,
@@ -205,7 +209,9 @@ const cancelExtrajourney =
       if (result.errors?.length) {
         const error: AppError = {
           message: result.errors[0].message,
-          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
+          code:
+            ((result.errors[0].extensions?.classification ??
+              result.errors[0].extensions?.code) as string) || 'GRAPHQL_ERROR',
           details: result.errors[0].path,
         };
         return { error };
@@ -216,7 +222,9 @@ const cancelExtrajourney =
       const error = err as ApolloError;
       const appError: AppError = {
         message: error.message,
-        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
+        code:
+          ((error.graphQLErrors?.[0]?.extensions?.classification ??
+            error.graphQLErrors?.[0]?.extensions?.code) as string) || 'NETWORK_ERROR',
         details: {
           networkError: error.networkError,
           graphQLErrors: error.graphQLErrors,
@@ -326,7 +334,9 @@ const queryExtraJourney =
       if (result.errors?.length) {
         const error: AppError = {
           message: result.errors[0].message,
-          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
+          code:
+            ((result.errors[0].extensions?.classification ??
+              result.errors[0].extensions?.code) as string) || 'GRAPHQL_ERROR',
           details: result.errors[0].path,
         };
         return { error };
@@ -350,7 +360,9 @@ const queryExtraJourney =
       const error = err as ApolloError;
       const appError: AppError = {
         message: error.message,
-        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
+        code:
+          ((error.graphQLErrors?.[0]?.extensions?.classification ??
+            error.graphQLErrors?.[0]?.extensions?.code) as string) || 'NETWORK_ERROR',
         details: {
           networkError: error.networkError,
           graphQLErrors: error.graphQLErrors,
@@ -397,7 +409,9 @@ const bookPassengerRide =
       if (result.errors?.length) {
         const error: AppError = {
           message: result.errors[0].message,
-          code: (result.errors[0].extensions?.code as string) || 'GRAPHQL_ERROR',
+          code:
+            ((result.errors[0].extensions?.classification ??
+              result.errors[0].extensions?.code) as string) || 'GRAPHQL_ERROR',
           details: result.errors[0].path,
         };
         return { error };
@@ -408,7 +422,9 @@ const bookPassengerRide =
       const error = err as ApolloError;
       const appError: AppError = {
         message: error.message,
-        code: (error.graphQLErrors?.[0]?.extensions?.code as string) || 'NETWORK_ERROR',
+        code:
+          ((error.graphQLErrors?.[0]?.extensions?.classification ??
+            error.graphQLErrors?.[0]?.extensions?.code) as string) || 'NETWORK_ERROR',
         details: {
           networkError: error.networkError,
           graphQLErrors: error.graphQLErrors,

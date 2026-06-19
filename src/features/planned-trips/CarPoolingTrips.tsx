@@ -5,6 +5,7 @@ import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import { useCancelExtrajourney } from '../plan-trip/hooks/useCancelExtrajourney.tsx';
 import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
 import { usePersistentState } from '../../shared/hooks/usePersistentState.tsx';
+import { isClientError } from '../../shared/error-message/userFacingMessage.tsx';
 import Button from '@mui/material/Button';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -181,7 +182,13 @@ export default function CarPoolingTrips() {
     const { error } = await cancelExtrajourney(trip, authority);
     setCancellingTripId(null);
     if (error) {
-      setActionError(`Could not cancel the trip: ${error.message}`);
+      // Show the server's reason only for client errors (e.g. validation); hide internal
+      // /network faults behind a generic message.
+      setActionError(
+        isClientError(error)
+          ? `Could not cancel the trip: ${error.message}`
+          : 'Could not cancel the trip. Please try again.'
+      );
       return;
     }
     // Reflect the cancellation locally so the row updates (and, with "Show

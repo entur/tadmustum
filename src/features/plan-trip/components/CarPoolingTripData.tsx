@@ -22,6 +22,7 @@ import MuiAlert from '@mui/material/Alert';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
 import mapToFormData from '../util/mapToFormData.tsx';
 import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
+import { userFacingMessage } from '../../../shared/error-message/userFacingMessage.tsx';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -120,7 +121,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       formData.id = formData.id ?? currentTripId;
       const result = await mutateExtrajourney(formData);
       if (result.error) {
-        showSnackbar(result.error.message || 'Noe gikk galt under lagring.', 'error');
+        showSnackbar(userFacingMessage(result.error, 'Noe gikk galt under lagring.'), 'error');
       } else {
         setCurrentTripId(result.data);
         // Carry the saved trip's id so the list can highlight and scroll to the
