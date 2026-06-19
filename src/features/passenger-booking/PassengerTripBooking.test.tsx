@@ -224,7 +224,9 @@ describe('PassengerTripBooking', () => {
   it('surfaces a booking failure', async () => {
     const user = userEvent.setup();
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
-    bookPassengerRide.mockResolvedValue({ error: { message: 'Backend rejected booking' } });
+    bookPassengerRide.mockResolvedValue({
+      error: { message: 'Backend rejected booking', code: 'BAD_REQUEST' },
+    });
 
     renderAt();
 
