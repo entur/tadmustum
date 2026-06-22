@@ -185,9 +185,19 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     }
 
     if (operators.length && !operator) {
+      // Prefer an Entur operator when one exists; otherwise fall back to the
+      // first operator belonging to the selected authority's codespace (operator
+      // ids look like `<codespace>:Operator:<X>`), so staging environments that
+      // have no Entur operator still get a sensible default instead of a blank,
+      // required field.
       const enturOperator = operators.find(o => o.name.toLowerCase().includes('entur'));
-      if (enturOperator) {
-        setValue('operator', enturOperator.id);
+      const codespace = authority ? authority.split(':')[0] : undefined;
+      const codespaceOperator = codespace
+        ? operators.find(o => o.id.split(':')[0] === codespace)
+        : undefined;
+      const defaultOperator = enturOperator ?? codespaceOperator;
+      if (defaultOperator) {
+        setValue('operator', defaultOperator.id);
       }
     }
 
