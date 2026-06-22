@@ -8,6 +8,14 @@ import CarPoolingTrips from './CarPoolingTrips';
 const queryExtraJourneys = vi.fn();
 const cancelExtrajourney = vi.fn();
 
+// Capture navigation so the action buttons' targets can be asserted; the rest
+// of react-router-dom (MemoryRouter, useLocation) stays real.
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
+vi.mock('react-router-dom', async importOriginal => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => navigateMock };
+});
+
 vi.mock('./hooks/useQueryExtraJourney.tsx', () => ({
   useQueryExtraJourney: () => queryExtraJourneys,
 }));
@@ -66,6 +74,7 @@ describe('CarPoolingTrips', () => {
   beforeEach(() => {
     queryExtraJourneys.mockReset();
     cancelExtrajourney.mockReset();
+    navigateMock.mockReset();
     nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-20T00:00:00.000Z').valueOf());
   });
   afterEach(() => {
@@ -315,6 +324,19 @@ describe('CarPoolingTrips', () => {
     const rows = await screen.findAllByRole('row', { name: /Vikersund/ });
     expect(rows).toHaveLength(1);
     expect(within(rows[0]).getByText('Cancelled')).toBeInTheDocument();
+  });
+
+  it('opens the plan-trip form pre-filled as a duplicate when Duplicate is clicked', async () => {
+    queryExtraJourneys.mockResolvedValue({ data: [trip()] });
+
+    renderInRouter();
+
+    const row = await screen.findByRole('row', { name: /Oslo S/ });
+    await userEvent.click(within(row).getByRole('button', { name: /Duplicate/ }));
+
+    // Reuses the edit route with ?duplicate=true so the form clones the trip
+    // into a new one rather than editing it in place.
+    expect(navigateMock).toHaveBeenCalledWith('/plan-trip/ENT/ENT:ServiceJourney:1?duplicate=true');
   });
 
   it('cancels a whole trip when the Cancel button is clicked', async () => {

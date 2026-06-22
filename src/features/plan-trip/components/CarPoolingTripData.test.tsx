@@ -12,8 +12,10 @@ vi.mock('../hooks/useQueryOneExtraJourney', () => ({
   useQueryExtraJourney: () => queryOneExtraJourney,
 }));
 
+// Stable mutation mock so the duplicate test can assert what gets saved.
+const { mutate } = vi.hoisted(() => ({ mutate: vi.fn() }));
 vi.mock('../hooks/useMutateExtrajourney', () => ({
-  useMutateExtrajourney: () => vi.fn(),
+  useMutateExtrajourney: () => mutate,
 }));
 
 // useAuthorities pairs codespaces to NeTEx authority ids; the component waits
@@ -26,14 +28,23 @@ vi.mock('../../../shared/hooks/useAuthorities', () => ({
   }),
 }));
 
-// Stub the heavy form (MUI fields, date pickers, schema). The reset behaviour
-// lives in CarPoolingTripData, so we only need a way to fire onResetCallback
-// and observe whether a trip was loaded.
+// Stub the heavy form (MUI fields, date pickers, schema). The reset/identity
+// logic lives in CarPoolingTripData, so we expose the pre-filled initialState
+// and a way to fire onReset/onSubmit, plus whether a trip was loaded.
 vi.mock('./CarPoolingTripDataForm', () => ({
-  default: (props: { onResetCallback: () => void; tripData: unknown }) => (
+  default: (props: {
+    onResetCallback: () => void;
+    onSubmitCallback: (data: CarPoolingTripDataFormData) => void;
+    initialState?: CarPoolingTripDataFormData;
+    tripData: unknown;
+  }) => (
     <div>
       <button onClick={() => props.onResetCallback()}>reset</button>
+      <button onClick={() => props.onSubmitCallback(props.initialState!)}>submit</button>
       <span data-testid="editing">{props.tripData ? 'yes' : 'no'}</span>
+      <span data-testid="trip-id">{props.initialState?.id ?? 'none'}</span>
+      <span data-testid="code">{props.initialState?.estimatedVehicleJourneyCode ?? 'none'}</span>
+      <span data-testid="line-ref">{props.initialState?.lineRef ?? 'none'}</span>
     </div>
   ),
 }));
@@ -114,5 +125,50 @@ describe('CarPoolingTripData reset behaviour', () => {
     // No trip to restore: the map is wiped and nothing is reloaded.
     expect(props.onRemoveAllFlexibleStops).toHaveBeenCalledTimes(1);
     expect(props.loadedFlexibleStop).not.toHaveBeenCalled();
+  });
+});
+
+describe('CarPoolingTripData duplicate behaviour', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('pre-fills from the source trip but mints a fresh identity', async () => {
+    queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
+    const props = mapCallbacks();
+
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" duplicate {...props} />);
+
+    // The source trip is still loaded (its stops are drawn) to pre-fill the form.
+    await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
+
+    // ...but its identity is replaced: the source id is dropped and a fresh
+    // journey code / lineRef are minted under the same codespace.
+    expect(screen.getByTestId('trip-id')).toHaveTextContent('none');
+    const code = screen.getByTestId('code').textContent ?? '';
+    const lineRef = screen.getByTestId('line-ref').textContent ?? '';
+    expect(code).toMatch(/^ENT:ServiceJourney:/);
+    expect(code).not.toBe(TRIP_ID);
+    expect(lineRef).toMatch(/^ENT:CarPooling:/);
+  });
+
+  it('saves as a new trip rather than overwriting the source on submit', async () => {
+    queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
+    mutate.mockResolvedValue({ data: 'ENT:ServiceJourney:new' });
+    const props = mapCallbacks();
+
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" duplicate {...props} />);
+
+    await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
+    const code = screen.getByTestId('code').textContent ?? '';
+
+    fireEvent.click(screen.getByText('submit'));
+
+    // The mutation must carry no id (so nunamnir creates a new trip) and the
+    // freshly-minted code — never the source id, which would overwrite it.
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    const saved = mutate.mock.calls[0][0] as CarPoolingTripDataFormData;
+    expect(saved.id).toBeUndefined();
+    expect(saved.estimatedVehicleJourneyCode).toBe(code);
   });
 });

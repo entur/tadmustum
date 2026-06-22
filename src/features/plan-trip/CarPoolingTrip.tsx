@@ -7,18 +7,37 @@ import CarPoolingTripData, {
 } from './components/CarPoolingTripData.tsx';
 import { type EditableMapHandle } from '../../shared/components/EditableMap.tsx';
 import EditableMap from '../../shared/components/EditableMap.tsx';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import type { Feature } from 'geojson';
 import type { RouteLegGeometries } from '../../shared/api/routeLegChain.tsx';
 
 export default function CarPoolingTrip() {
   const { codespace, id } = useParams();
-  // Remount on id change so a fresh plan-trip page loads when switching trips
-  // (or from editing back to a blank new trip).
-  return <CarPoolingTripView key={id ?? 'new'} id={id} codespace={codespace} />;
+  // `?duplicate=true` reuses the edit route but tells the form to clone the
+  // loaded trip into a brand-new one (fresh id/code) instead of editing it.
+  const [searchParams] = useSearchParams();
+  const duplicate = searchParams.get('duplicate') === 'true';
+  // Remount on id (and duplicate mode) change so a fresh plan-trip page loads
+  // when switching trips, duplicating, or going back to a blank new trip.
+  return (
+    <CarPoolingTripView
+      key={`${id ?? 'new'}${duplicate ? ':duplicate' : ''}`}
+      id={id}
+      codespace={codespace}
+      duplicate={duplicate}
+    />
+  );
 }
 
-function CarPoolingTripView({ id, codespace }: { id?: string; codespace?: string }) {
+function CarPoolingTripView({
+  id,
+  codespace,
+  duplicate,
+}: {
+  id?: string;
+  codespace?: string;
+  duplicate?: boolean;
+}) {
   const theme = useTheme();
 
   const editableMapRef = useRef<EditableMapHandle>(null);
@@ -70,6 +89,7 @@ function CarPoolingTripView({ id, codespace }: { id?: string; codespace?: string
         <CarPoolingTripData
           tripId={id}
           codespace={codespace}
+          duplicate={duplicate}
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}
           onRemoveFlexibleStop={id => editableMapRef.current?.removeFeature(id)}

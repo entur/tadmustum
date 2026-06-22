@@ -241,7 +241,7 @@ export default function CarPoolingTrips() {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 300,
+      width: 400,
       sortable: false,
       filterable: false,
       renderCell: params => {
@@ -263,6 +263,20 @@ export default function CarPoolingTrips() {
                 onClick={() => navigate(`/plan-trip/${codespace}/${params.row.id}`)}
               >
                 Edit
+              </Button>
+            )}
+            {canModify && (
+              <Button
+                variant="outlined"
+                size="small"
+                // Duplicate opens the plan-trip form pre-filled with this trip's
+                // values but as a *new* trip (fresh id/code) — the `duplicate`
+                // flag tells the form to mint a new identity rather than edit
+                // this one in place.
+                onClick={() => navigate(`/plan-trip/${codespace}/${params.row.id}?duplicate=true`)}
+                style={{ marginLeft: 8 }}
+              >
+                Duplicate
               </Button>
             )}
             {canModify && (

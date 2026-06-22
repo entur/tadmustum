@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { type AlertProps, Box, type SnackbarCloseReason } from '@mui/material';
 import type { Feature } from 'geojson';
+import { v4 as uuidv4 } from 'uuid';
 import type { RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
 import { useNavigate } from 'react-router-dom';
 import CarPoolingTripDataForm from './CarPoolingTripDataForm.tsx';
@@ -38,6 +39,9 @@ interface SnackbarState {
 export interface CarPoolingTripDataProps {
   tripId?: string;
   codespace?: string;
+  // When true, the trip identified by tripId is loaded only to pre-fill the
+  // form: it's saved as a brand-new trip (fresh id/code) rather than edited.
+  duplicate?: boolean;
   onAddFlexibleStop: () => void;
   onZoomToFeature: (id: string) => void;
   onZoomToAllFeatures: () => void;
@@ -64,6 +68,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       onZoomToAllFeatures,
       tripId,
       codespace,
+      duplicate,
       loadedFlexibleStop,
       onDepartureStopChange,
       onArrivalStopChange,
@@ -192,6 +197,18 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
             if (result.data?.extraJourney) {
               const journey = result.data.extraJourney as Extrajourney;
               const state = mapToFormData(journey, authority.id);
+              if (duplicate) {
+                // A duplicate copies every field of the source trip but is a new
+                // trip, so it needs its own identity: drop the source id and mint
+                // a fresh journey code, lineRef and booking URL. The code is the
+                // stable key nunamnir/subula/OTP store the trip under — reusing it
+                // would overwrite the original instead of creating a copy.
+                const code = `${codespace}:ServiceJourney:${uuidv4()}`;
+                state.id = undefined;
+                state.estimatedVehicleJourneyCode = code;
+                state.lineRef = `${codespace}:CarPooling:${uuidv4()}`;
+                state.contactUrl = `${window.location.origin}/book-trip/${codespace}/${code}`;
+              }
               setInitialState(state);
               setTripData(journey);
               loadStopsFromJourney(journey);
@@ -201,9 +218,12 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
             showSnackbar(error.message || 'Noe gikk galt under lesing.', 'error');
           });
       };
-      setCurrentTripId(tripId);
+      // A duplicate must not carry the source's id forward: on submit the form
+      // falls back to currentTripId when it has no id of its own, so keeping the
+      // source id here would make "save" overwrite the original trip instead.
+      setCurrentTripId(duplicate ? undefined : tripId);
       loadInitialState(tripId);
-    }, [authorities, codespace, loadStopsFromJourney, queryOneExtraJourney, tripId]);
+    }, [authorities, codespace, duplicate, loadStopsFromJourney, queryOneExtraJourney, tripId]);
 
     useImperativeHandle(
       ref,
