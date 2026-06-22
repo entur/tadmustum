@@ -6,7 +6,7 @@
   "preferredNameNamespace": "https://ror.entur.io/preferred_name",
   "oidcConfig": {
     "authority": "https://partner.staging.entur.org",
-    "client_id": "REPLACE_WITH_STAGING_CLIENT_ID",
+    "client_id": "ToKCcec3JywHuCYrxUB9a2qZlBuhaBXd",
     "extraQueryParams": {
       "audience": "https://api.staging.entur.io"
     }
