@@ -28,3 +28,6 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENT_TADMUSTUM_DEV }}
           projectId: ent-tadmustum-dev
+          # Pinned: firebase-tools 15.22.1-15.22.3 hit "premature close" on every
+          # API call, and the non-idempotent retries fail channel deploys (409/400).
+          firebaseToolsVersion: "15.22.0"

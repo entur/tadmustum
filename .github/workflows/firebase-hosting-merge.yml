@@ -31,6 +31,9 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENT_TADMUSTUM_DEV }}
           channelId: live
           projectId: ent-tadmustum-dev
+          # Pinned: firebase-tools 15.22.1-15.22.3 hit "premature close" on every
+          # API call, and the non-idempotent retries fail deploys (409/400).
+          firebaseToolsVersion: "15.22.0"
 
   deploy_tst:
     needs: build_and_deploy
@@ -55,3 +58,6 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENT_TADMUSTUM_TST }}
           channelId: live
           projectId: ent-tadmustum-tst
+          # Pinned: firebase-tools 15.22.1-15.22.3 hit "premature close" on every
+          # API call, and the non-idempotent retries fail deploys (409/400).
+          firebaseToolsVersion: "15.22.0"
