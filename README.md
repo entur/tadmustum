@@ -1,2 +1,2 @@
 # Tadmustum
-Starting point for Entur PoC for Car Pooling.
+Starting point for Entur's carpooling test client.

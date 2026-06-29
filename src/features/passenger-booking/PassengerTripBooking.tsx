@@ -356,7 +356,7 @@ export default function PassengerTripBooking() {
     if (navigator.share && bookingData.pickupCoordinates && bookingData.dropoffCoordinates) {
       try {
         await navigator.share({
-          title: 'Car Pooling Trip Booking',
+          title: 'Carpooling Trip Booking',
           text: `Book a ride on ${trip?.estimatedVehicleJourney.publishedLineName}`,
           url: currentURL,
         });

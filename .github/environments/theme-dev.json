@@ -1,5 +1,5 @@
 {
-  "applicationName": "Entur Car Pooling PoC",
+  "applicationName": "Entur's carpooling test client",
   "companyName": "Entur",
   "palette": {
     "primary": { "main": "#181C56" },
