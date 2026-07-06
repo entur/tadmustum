@@ -77,19 +77,17 @@ export function useStopsController({
 
   const onStopCreated = useCallback(
     (feature: Feature) => {
+      // Stops are only created through the Add stop buttons, which set
+      // currentStop before starting the draw. A create without a target (e.g.
+      // a stray draw event) is ignored rather than guessed into a slot.
       if (currentStop === 'departure') {
         setDepartureStop(feature);
       } else if (currentStop === 'arrival') {
         setArrivalStop(feature);
-      } else if (!departureStop) {
-        // No active draw target (click-to-add path): fill the next empty slot.
-        setDepartureStop(feature);
-      } else if (!arrivalStop) {
-        setArrivalStop(feature);
       }
       setCurrentStop(null);
     },
-    [currentStop, departureStop, arrivalStop]
+    [currentStop]
   );
 
   const onDrawingStateChange = useCallback((isDrawing: boolean) => {

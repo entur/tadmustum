@@ -21,7 +21,6 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { Feature, Point, LineString } from 'geojson';
 import type { RouteLegGeometries } from '../api/routeLegChain.tsx';
 import RouteLineLayers from './RouteLineLayers.tsx';
-import { v4 as uuidv4 } from 'uuid';
 import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from '../util/MAPBOXDRAW_DEFAULT_CONSTRUCTOR.tsx';
 import type { IControl } from 'maplibre-gl';
 import maplibregl from 'maplibre-gl';
@@ -66,7 +65,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
     // Tracked as a ref because it's only inspected in event handlers and the
     // value never needs to drive a render.
     const isDrawingRef = useRef<boolean>(false);
-    // Ref-based so multiple call sites (drawFeature, addFeatures, onMapClick)
+    // Ref-based so multiple call sites (drawFeature, addFeatures)
     // can lazily init without racing through async setState.
     const drawToolRef = useRef<MapboxDraw | null>(null);
 
@@ -183,34 +182,6 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
       features.forEach(feature => tool.add(feature));
     };
 
-    const onMapClick = useCallback(
-      (e: { lngLat: { lng: number; lat: number }; point: { x: number; y: number } }) => {
-        // Don't interfere with an active draw — MapboxDraw owns the click in draw_point mode.
-        if (isDrawingRef.current) return;
-
-        const zoom = mapRef.current?.getZoom() ?? 0;
-        if (zoom <= 15) return;
-
-        // Don't drop a new stop on top of an existing one — let the click select it instead.
-        if ((drawToolRef.current?.getFeatureIdsAt(e.point) ?? []).length > 0) return;
-
-        const numStops = (departureStopId ? 1 : 0) + (arrivalStopId ? 1 : 0);
-        if (numStops >= 2) return;
-
-        const newFeature: Feature<Point> = {
-          id: uuidv4(),
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [e.lngLat.lng, e.lngLat.lat] },
-          properties: {},
-        };
-
-        ensureDrawTool().add(newFeature);
-        setFeatures(curr => ({ ...curr, [String(newFeature.id)]: newFeature }));
-        callbacksRef.current.onStopCreated?.(newFeature);
-      },
-      [departureStopId, arrivalStopId, ensureDrawTool]
-    );
-
     const featureArray = useMemo(() => {
       return Object.values(features).sort((a, b) => {
         if (String(a.id) === departureStopId) return -1;
@@ -297,7 +268,6 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
           zoom: 8,
         }}
         mapStyle={mapStyle}
-        onClick={onMapClick}
       >
         <NavigationControl position="bottom-right" />
         <GeolocateControl position="bottom-right" />
