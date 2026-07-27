@@ -10,12 +10,14 @@ import { removeTypenameFromVariables } from '@apollo/client/link/remove-typename
 import type { Config } from '../../contexts/ConfigContext.tsx';
 import type { AuthState } from 'react-oidc-context';
 import prepareCarpoolingFormData from './prepareCarpoolingFormData.tsx';
+import prepareFlexTourData from './prepareFlexTourData.tsx';
 import prepareBookingData, {
   type PassengerBookingData,
   type RouteLeg,
 } from './prepareBookingData.tsx';
 import getStreetRoute from './journeyPlannerStreetRoute.tsx';
 import type { CarPoolingTripDataFormData } from '../../features/plan-trip/model/CarPoolingTripDataFormData.tsx';
+import type { FlexTourFormData } from '../../features/plan-flex-tour/model/FlexTourFormData.tsx';
 import type { AppError } from '../error-message/AppError.tsx';
 import type { Extrajourney } from '../model/Extrajourney.tsx';
 import type { EstimatedCall } from '../model/EstimatedCall.tsx';
@@ -79,6 +81,62 @@ const mutateExtrajourney =
     const variables = prepareCarpoolingFormData(formData);
 
     try {
+      const result = await client.mutate({
+        mutation,
+        variables,
+        errorPolicy: 'all',
+      });
+
+      if (result.errors?.length) {
+        const error: AppError = {
+          message: result.errors[0].message,
+          code:
+            ((result.errors[0].extensions?.classification ??
+              result.errors[0].extensions?.code) as string) || 'GRAPHQL_ERROR',
+          details: result.errors[0].path,
+        };
+        return { error };
+      }
+
+      return { data: result.data?.createOrUpdateExtrajourney };
+    } catch (err) {
+      const error = err as ApolloError;
+      const appError: AppError = {
+        message: error.message,
+        code:
+          ((error.graphQLErrors?.[0]?.extensions?.classification ??
+            error.graphQLErrors?.[0]?.extensions?.code) as string) || 'NETWORK_ERROR',
+        details: {
+          networkError: error.networkError,
+          graphQLErrors: error.graphQLErrors,
+        },
+      };
+      return { error: appError };
+    }
+  };
+
+/**
+ * Upserts a flex booked tour. Uses the same `createOrUpdateExtrajourney` mutation as carpool
+ * trips — nunamnir distinguishes the two by the presence of `framedVehicleJourneyRef` — but
+ * builds its input from the flex tour form instead.
+ */
+const mutateFlexTour =
+  (uri: string, auth: AuthState, formData: FlexTourFormData) =>
+  async (): Promise<{ data?: string; error?: AppError }> => {
+    if (!auth.user?.access_token) {
+      throw new Error('Access token is missing');
+    }
+    const client = createClient(uri, auth);
+
+    const mutation = gql`
+      mutation CreateOrUpdateExtrajourney($input: ExtrajourneyInput!) {
+        createOrUpdateExtrajourney(input: $input)
+      }
+    `;
+
+    try {
+      const variables = prepareFlexTourData(formData);
+
       const result = await client.mutate({
         mutation,
         variables,
@@ -388,6 +446,8 @@ const api = (config: Config, auth?: AuthState) => {
     getUserContext: getUserContext(config['carpool-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
       mutateExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, formData),
+    mutateFlexTour: (formData: FlexTourFormData) =>
+      mutateFlexTour(config['carpool-messages-api'] as string, auth as AuthState, formData),
     cancelExtrajourney: (originalTrip: Extrajourney) =>
       cancelExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, originalTrip),
     queryExtraJourney: () =>

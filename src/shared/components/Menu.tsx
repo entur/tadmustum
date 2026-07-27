@@ -36,6 +36,7 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 const menuItems = [
   { textKey: 'Home', path: '/', iconKey: 'home' },
   { textKey: 'Plan trip', path: '/plan-trip', iconKey: 'map' },
+  { textKey: 'Flex tour', path: '/flex-tour', iconKey: 'map' },
   { textKey: 'Trips', path: '/trips', iconKey: 'data' },
 ];
 

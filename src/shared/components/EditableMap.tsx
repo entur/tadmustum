@@ -39,6 +39,16 @@ export type EditableMapProps = EditableMapCallbacks & {
   // the straight dashed line between the stops as a fallback; null draws
   // nothing (no stops yet, or a route still being computed).
   legGeometries?: RouteLegGeometries;
+  // Where the map opens, as [lng, lat] plus zoom. Defaults to the Oslo area.
+  // Surfaces that work on a known service area (e.g. a flex line's flexible
+  // area) pass their own so the user doesn't start out panning across Norway.
+  initialCenter?: { longitude: number; latitude: number; zoom: number };
+};
+
+const DEFAULT_INITIAL_CENTER = {
+  longitude: 10.813701152801514,
+  latitude: 59.90490269568961,
+  zoom: 8,
 };
 
 export type MapModes = MapMode[keyof MapMode];
@@ -59,7 +69,7 @@ export interface MapMode {
 }
 
 const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
-  ({ departureStopId, arrivalStopId, legGeometries, ...props }, ref) => {
+  ({ departureStopId, arrivalStopId, legGeometries, initialCenter, ...props }, ref) => {
     const mapRef = useRef<null | MapRef>(null);
 
     // Tracked as a ref because it's only inspected in event handlers and the
@@ -262,11 +272,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
     return (
       <Map
         ref={mapRef}
-        initialViewState={{
-          longitude: 10.813701152801514,
-          latitude: 59.90490269568961,
-          zoom: 8,
-        }}
+        initialViewState={initialCenter ?? DEFAULT_INITIAL_CENTER}
         mapStyle={mapStyle}
       >
         <NavigationControl position="bottom-right" />

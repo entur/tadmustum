@@ -15,6 +15,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { loadDevMessages, loadErrorMessages } from '@apollo/client/dev';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import CarPoolingTrip from './features/plan-trip/CarPoolingTrip.tsx';
+import FlexTour from './features/plan-flex-tour/FlexTour.tsx';
 import CarPoolingTrips from './features/planned-trips/CarPoolingTrips.tsx';
 import NoAccessModal from './shared/components/auth/NoAccessModal.tsx';
 import { NoAccessProvider } from './contexts/NoAccessContext.tsx';
@@ -77,6 +78,10 @@ export default function App() {
                       <Route
                         path="/plan-trip/:codespace/:id"
                         element={<ProtectedRoute element={<CarPoolingTrip />} />}
+                      />
+                      <Route
+                        path="/flex-tour"
+                        element={<ProtectedRoute element={<FlexTour />} />}
                       />
                       <Route
                         path="/trips"
