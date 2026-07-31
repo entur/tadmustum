@@ -4,6 +4,7 @@ import { Box, IconButton, useTheme } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import FlexTourData, { type FlexTourDataHandle } from './components/FlexTourData.tsx';
 import EditableMap, { type EditableMapHandle } from '../../shared/components/EditableMap.tsx';
+import type { RouteLegGeometries } from '../../shared/api/routeLegChain.tsx';
 import { TRONDHEIM_FLEX_LINE } from './model/trondheimFlexLine.tsx';
 
 /**
@@ -20,6 +21,7 @@ export default function FlexTour() {
   const [sidebarWidth, setSidebarWidth] = useState<number>(360);
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [routeGeometry, setRouteGeometry] = useState<RouteLegGeometries>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -62,6 +64,7 @@ export default function FlexTour() {
           onRemoveAllFlexibleStops={() => editableMapRef.current?.removeAllFeatures()}
           onZoomToFeature={id => editableMapRef.current?.zoomToFeature(id)}
           onZoomToAllFeatures={() => editableMapRef.current?.zoomToAllFeatures()}
+          onRouteGeometryChange={setRouteGeometry}
         />
       </Box>
 
@@ -91,6 +94,7 @@ export default function FlexTour() {
           initialCenter={TRONDHEIM_FLEX_LINE.mapCenter}
           onStopCreated={feature => dataHandle.current?.onStopCreated(feature)}
           onDrawingStateChange={isDrawing => dataHandle.current?.onDrawingStateChange(isDrawing)}
+          legGeometries={routeGeometry}
         />
       </Box>
     </Box>

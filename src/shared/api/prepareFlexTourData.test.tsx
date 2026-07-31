@@ -26,10 +26,6 @@ const baseForm = (overrides: Partial<FlexTourFormData> = {}): FlexTourFormData =
   lineRef: 'MAL:FlexibleLine:5ca5e3c6-00fd-4224-95a5-ab8ff60c072e',
   totalCapacity: 16,
   tourCancellation: false,
-  anchorFeatureId: 'anchor-feature',
-  anchorPosition: [10.3951, 63.4305],
-  anchorStopName: 'Vehicle position',
-  anchorDepartureDatetime: dayjs('2026-08-03T09:00:00.000Z'),
   dwellMinutes: 1,
   bookedStops: [
     bookedStop(),
@@ -82,26 +78,28 @@ describe('prepareFlexTourData', () => {
     expect(result.input.estimatedVehicleJourney.dataSource).toBe('ent');
   });
 
-  it('puts the vehicle anchor first, then the booked stops in visit order', () => {
+  it('emits one call per booked stop, in visit order', () => {
     const calls = callsOf(baseForm());
 
-    expect(calls).toHaveLength(3);
-    expect(calls.map(c => c.order)).toEqual([1, 2, 3]);
-    expect(calls.map(c => c.stopPointName)).toEqual(['Vehicle position', 'Pickup', 'Dropoff']);
+    expect(calls).toHaveLength(2);
+    expect(calls.map(c => c.order)).toEqual([1, 2]);
+    expect(calls.map(c => c.stopPointName)).toEqual(['Pickup', 'Dropoff']);
   });
 
-  it('gives the anchor a departure time and no arrival commitment', () => {
-    const [anchor] = callsOf(baseForm());
+  // OTP refuses a tour whose first call has no departure time at all, so the first stop is sent
+  // one derived from its dwell — it is otherwise an ordinary booked stop with its own budget.
+  it('gives the first call a departure and marks it as boarding', () => {
+    const [first] = callsOf(baseForm());
 
-    expect(anchor.aimedDepartureTime).toBe('2026-08-03T09:00:00.000Z');
-    expect(anchor.expectedDepartureTime).toBe('2026-08-03T09:00:00.000Z');
-    // OTP forces the anchor's deviation budget to zero, so a latest arrival is meaningless.
-    expect(anchor.latestExpectedArrivalTime).toBeUndefined();
-    expect(anchor.aimedArrivalTime).toBeUndefined();
+    expect(first.aimedDepartureTime).toBe('2026-08-03T09:11:00.000Z');
+    expect(first.expectedDepartureTime).toBe('2026-08-03T09:11:00.000Z');
+    expect(first.departureBoardingActivity).toBe('boarding');
+    expect(first.aimedArrivalTime).toBe('2026-08-03T09:10:00.000Z');
+    expect(first.latestExpectedArrivalTime).toBe('2026-08-03T09:25:00.000Z');
   });
 
   it('encodes each deviation budget as latestExpectedArrivalTime', () => {
-    const [, pickup, dropoff] = callsOf(baseForm());
+    const [pickup, dropoff] = callsOf(baseForm());
 
     // OTP reads the budget back as latestExpectedArrivalTime − expectedArrivalTime.
     expect(pickup.expectedArrivalTime).toBe('2026-08-03T09:10:00.000Z');
@@ -110,8 +108,8 @@ describe('prepareFlexTourData', () => {
     expect(dropoff.latestExpectedArrivalTime).toBe('2026-08-03T09:55:00.000Z');
   });
 
-  it('derives intermediate departure times from the dwell time', () => {
-    const [, pickup] = callsOf(baseForm({ dwellMinutes: 3 }));
+  it('derives departure times from the dwell time', () => {
+    const [pickup] = callsOf(baseForm({ dwellMinutes: 3 }));
 
     expect(pickup.aimedDepartureTime).toBe('2026-08-03T09:13:00.000Z');
     expect(pickup.expectedDepartureTime).toBe('2026-08-03T09:13:00.000Z');
@@ -124,25 +122,27 @@ describe('prepareFlexTourData', () => {
     expect(last.aimedDepartureTime).toBeUndefined();
     expect(last.expectedDepartureTime).toBeUndefined();
     expect(last.arrivalBoardingActivity).toBe('alighting');
+    // Only the first call boards; the rest carry no boarding activity of their own.
+    expect(last.departureBoardingActivity).toBeUndefined();
   });
 
   it('encodes stop positions as a CircularArea with the sentinel radius', () => {
-    const [anchor, pickup] = callsOf(baseForm());
+    const [pickup, dropoff] = callsOf(baseForm());
 
-    expect(anchor.departureStopAssignment?.expectedFlexibleArea?.circularArea).toEqual({
-      longitude: 10.3951,
-      latitude: 63.4305,
-      radius: 1,
-    });
     expect(pickup.departureStopAssignment?.expectedFlexibleArea?.circularArea).toEqual({
       longitude: 10.4,
       latitude: 63.42,
       radius: 1,
     });
+    expect(dropoff.departureStopAssignment?.expectedFlexibleArea?.circularArea).toEqual({
+      longitude: 10.32,
+      latitude: 63.39,
+      radius: 1,
+    });
   });
 
   it('sends capacity and onboard counts on every booked stop', () => {
-    const [, pickup, dropoff] = callsOf(baseForm());
+    const [pickup, dropoff] = callsOf(baseForm());
 
     expect(pickup.expectedDepartureCapacities).toEqual([{ totalCapacity: 16 }]);
     expect(pickup.expectedDepartureOccupancy).toEqual([{ onboardCount: 2 }]);
@@ -150,7 +150,7 @@ describe('prepareFlexTourData', () => {
   });
 
   it('omits capacity rather than sending null when it is unset', () => {
-    const [, pickup] = callsOf(baseForm({ totalCapacity: null }));
+    const [pickup] = callsOf(baseForm({ totalCapacity: null }));
 
     expect(pickup.expectedDepartureCapacities).toEqual([{ totalCapacity: undefined }]);
   });
@@ -168,21 +168,23 @@ describe('prepareFlexTourData', () => {
     expect(journey.vehicleMode).toBe('bus');
   });
 
-  it('throws when the vehicle has no position', () => {
-    expect(() => prepareFlexTourData(baseForm({ anchorPosition: null }))).toThrow(
-      /position is required/
+  it('throws when there are no booked stops', () => {
+    expect(() => prepareFlexTourData(baseForm({ bookedStops: [] }))).toThrow(
+      /at least 2 booked stops/
     );
   });
 
-  it('throws when there are no booked stops', () => {
-    expect(() => prepareFlexTourData(baseForm({ bookedStops: [] }))).toThrow(
-      /at least one booked stop/
+  // A single call is not a tour: OTP drops it and falls back to the static flex behaviour, so
+  // building the payload at all would report a false success.
+  it('throws when there is only one booked stop', () => {
+    expect(() => prepareFlexTourData(baseForm({ bookedStops: [bookedStop()] }))).toThrow(
+      /at least 2 booked stops/
     );
   });
 
   it('throws when a booked stop was never placed on the map', () => {
     expect(() =>
-      prepareFlexTourData(baseForm({ bookedStops: [bookedStop({ position: null })] }))
+      prepareFlexTourData(baseForm({ bookedStops: [bookedStop({ position: null }), bookedStop()] }))
     ).toThrow(/booked stop 1 has no position/);
   });
 });

@@ -16,8 +16,12 @@ export const TOUR_EXPIRY_DAYS = 2;
  */
 export const MAX_TOUR_DURATION_HOURS = 24;
 
-/** OTP needs the anchor plus at least one booked stop; fewer means "no commitments to protect". */
-export const MINIMUM_BOOKED_STOPS = 1;
+/**
+ * OTP drops a tour with fewer than two calls and falls back to the static flex behaviour, so two
+ * stops is the smallest tour that does anything: the vehicle starts at the first and ends at the
+ * last.
+ */
+export const MINIMUM_BOOKED_STOPS = 2;
 
 declare module 'yup' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -98,11 +102,6 @@ export const flexTourDataSchema = Yup.object({
     .transform((value, original) => (original === '' ? null : value)),
   tourCancellation: Yup.boolean().required(),
 
-  anchorFeatureId: Yup.string().nullable().defined(),
-  anchorPosition: positionSchema.required("Place the vehicle's current position on the map."),
-  anchorStopName: Yup.string().min(1, 'Stop name is required').required(),
-  anchorDepartureDatetime: dateSchema.required('Tour start time is required'),
-
   dwellMinutes: Yup.number()
     .typeError('Must be a number')
     .integer('Must be an integer')
@@ -113,7 +112,7 @@ export const flexTourDataSchema = Yup.object({
     .of(bookedStopSchema)
     .min(
       MINIMUM_BOOKED_STOPS,
-      'A tour needs at least one booked stop — with fewer than two calls OTP removes the tour and falls back to the static flex behaviour.'
+      `A tour needs at least ${MINIMUM_BOOKED_STOPS} booked stops — with fewer calls OTP removes the tour and falls back to the static flex behaviour.`
     )
     .required()
     // The calls are sent in list order and OTP rejects a journey whose calls are out of order,
@@ -135,9 +134,10 @@ export const flexTourDataSchema = Yup.object({
 });
 
 /**
- * The tour's span as OTP measures it: from the anchor's departure to the last stop's *latest*
- * expected arrival, which is its expected arrival plus its remaining deviation budget. Returns
- * null while either end is missing or invalid.
+ * The tour's span as OTP measures it: from the first call's departure to the last stop's *latest*
+ * expected arrival, which is its expected arrival plus its remaining deviation budget. The first
+ * call's departure is its arrival plus the dwell, matching what the payload actually sends.
+ * Returns null while either end is missing or invalid.
  *
  * Kept out of the schema deliberately. OTP rejects a tour that ends before it starts or spans
  * more than {@link MAX_TOUR_DURATION_HOURS}, but tadmustum is a testing tool and sending such a
@@ -145,13 +145,39 @@ export const flexTourDataSchema = Yup.object({
  * preferring warnings over hard validation here).
  */
 export function tourSpanHours(
-  anchorDeparture: Dayjs | undefined,
-  bookedStops: { arrivalDatetime?: Dayjs; deviationBudget?: number }[] | undefined
+  bookedStops: { arrivalDatetime?: Dayjs; deviationBudget?: number }[] | undefined,
+  dwellMinutes: number | undefined
 ): number | null {
   const stops = bookedStops ?? [];
+  if (stops.length < 2) return null;
+  const first = stops[0];
   const last = stops[stops.length - 1];
+  const firstArrival = first?.arrivalDatetime;
   const lastArrival = last?.arrivalDatetime;
-  if (!anchorDeparture?.isValid?.() || !lastArrival?.isValid?.()) return null;
+  if (!firstArrival?.isValid?.() || !lastArrival?.isValid?.()) return null;
+  const start = firstArrival.add(dwellMinutes ?? 0, 'minute');
   const latestArrival = lastArrival.add(last?.deviationBudget ?? 0, 'minute');
-  return latestArrival.diff(anchorDeparture, 'hour', true);
+  return latestArrival.diff(start, 'hour', true);
+}
+
+/**
+ * Indices of stops the vehicle cannot reach in time because the previous stop's dwell has not
+ * finished: SIRI is sent a departure of arrival + dwell for every call but the last, and OTP
+ * rejects calls whose times are not increasing. Reported as a warning rather than blocked, for
+ * the same reason as {@link tourSpanHours}.
+ */
+export function stopsOverlappingDwell(
+  bookedStops: { arrivalDatetime?: Dayjs }[] | undefined,
+  dwellMinutes: number | undefined
+): number[] {
+  const stops = bookedStops ?? [];
+  const dwell = dwellMinutes ?? 0;
+  const overlapping: number[] = [];
+  for (let i = 1; i < stops.length; i++) {
+    const previous = stops[i - 1]?.arrivalDatetime;
+    const current = stops[i]?.arrivalDatetime;
+    if (!previous?.isValid?.() || !current?.isValid?.()) continue;
+    if (!current.isAfter(previous.add(dwell, 'minute'))) overlapping.push(i);
+  }
+  return overlapping;
 }

@@ -22,14 +22,18 @@ import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import { Add, Cancel, Replay } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useEffect, useMemo } from 'react';
-import { type Dayjs } from 'dayjs';
+import { useEffect, useMemo, useState } from 'react';
+import dayjs, { type Dayjs } from 'dayjs';
 import type { Position } from 'geojson';
 import { useAllowedCodespaces } from '../../../shared/hooks/useAllowedCodespaces.tsx';
+import { useStreetRoute } from '../../plan-trip/hooks/useStreetRoute.tsx';
+import { routeLegChain, type RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
 import type { FlexTourBookedStop, FlexTourFormData } from '../model/FlexTourFormData.tsx';
 import {
   flexTourDataSchema,
   MAX_TOUR_DURATION_HOURS,
+  MINIMUM_BOOKED_STOPS,
+  stopsOverlappingDwell,
   tourSpanHours,
 } from '../model/flexTourDataSchema.tsx';
 import {
@@ -43,7 +47,6 @@ import type { StopPlacedHandler } from '../hooks/useFlexTourStops.tsx';
 export interface FlexTourDataFormProps {
   onSubmitCallback: (formData: FlexTourFormData) => void;
   onResetCallback: () => void;
-  onAddAnchorClick: () => void;
   onAddBookedStopClick: (index: number) => void;
   onRemoveStop: (featureId: string | null) => void;
   onZoomToFeature: (id: string) => void;
@@ -51,6 +54,8 @@ export interface FlexTourDataFormProps {
   drawingStopsAllowed: boolean;
   /** Lets the parent hand completed map draws back to the matching form field. */
   registerStopPlacedHandler: (handler: StopPlacedHandler) => void;
+  /** Reports the driving route between the stops so the map can draw it. */
+  onRouteGeometryChange?: (legGeometries: RouteLegGeometries) => void;
 }
 
 /** A fresh booked stop, timed after the previous one so the tour stays in order by default. */
@@ -69,13 +74,13 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
   const {
     onSubmitCallback,
     onResetCallback,
-    onAddAnchorClick,
     onAddBookedStopClick,
     onRemoveStop,
     onZoomToFeature,
     onViewTourCallback,
     drawingStopsAllowed,
     registerStopPlacedHandler,
+    onRouteGeometryChange,
   } = props;
 
   // The form drives a mutation, so only offer codespaces the user can actually write to —
@@ -83,11 +88,14 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
   const { adminCodespaces } = useAllowedCodespaces();
   const noAdminAccess = adminCodespaces.length === 0;
 
+  const streetRoute = useStreetRoute();
+  const [streetRouteFailed, setStreetRouteFailed] = useState<boolean>(false);
+
   // Computed once so Reset returns to the same values.
   const defaults = useMemo(() => {
     const serviceDate = defaultServiceDate();
-    const anchorDeparture = serviceDate.hour(9).minute(0).second(0).millisecond(0);
-    return { serviceDate, anchorDeparture };
+    const tourStart = serviceDate.hour(9).minute(0).second(0).millisecond(0);
+    return { serviceDate, tourStart };
   }, []);
 
   const {
@@ -111,14 +119,12 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
       lineRef: TRONDHEIM_FLEX_LINE.lineRef,
       totalCapacity: TRONDHEIM_FLEX_LINE.totalCapacity,
       tourCancellation: false,
-      anchorFeatureId: null,
-      anchorPosition: null,
-      anchorStopName: 'Vehicle position',
-      anchorDepartureDatetime: defaults.anchorDeparture,
       dwellMinutes: 1,
+      // Two stops is the minimum a tour can have, so that is what a fresh form offers: the
+      // vehicle starts at the first and ends at the last.
       bookedStops: [
-        newBookedStop(defaults.anchorDeparture.add(10, 'minute'), 2),
-        newBookedStop(defaults.anchorDeparture.add(35, 'minute'), 1),
+        newBookedStop(defaults.tourStart.subtract(15, 'minute'), 2),
+        newBookedStop(defaults.tourStart.add(10, 'minute'), 1),
       ],
     },
   });
@@ -126,12 +132,10 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
   const dataSource = watch('dataSource');
   const serviceDate = watch('serviceDate');
   const serviceJourneyRef = watch('serviceJourneyRef');
-  const anchorPosition: Position | null = watch('anchorPosition');
-  const anchorFeatureId = watch('anchorFeatureId');
-  const anchorDepartureDatetime = watch('anchorDepartureDatetime');
   const bookedStops = watch('bookedStops');
   const tourCancellation = watch('tourCancellation');
   const totalCapacity = watch('totalCapacity');
+  const dwellMinutes = watch('dwellMinutes');
 
   // Default the data source to the codespace the flex line belongs to when the user has write
   // access to it, since every default id on the form carries that prefix. Otherwise pick the
@@ -145,16 +149,9 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
     }
   }, [dataSource, adminCodespaces, setValue]);
 
-  // Receive map draws into whichever slot asked for them.
+  // Receive map draws into whichever stop asked for them.
   useEffect(() => {
     registerStopPlacedHandler((target, featureId, position) => {
-      if (target.kind === 'anchor') {
-        const previous = getValues('anchorFeatureId');
-        if (previous && previous !== featureId) onRemoveStop(previous);
-        setValue('anchorFeatureId', featureId, { shouldValidate: false });
-        setValue('anchorPosition', position, { shouldValidate: true });
-        return;
-      }
       const stops = getValues('bookedStops');
       const stop = stops[target.index];
       if (!stop) return;
@@ -164,6 +161,50 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
     });
   }, [registerStopPlacedHandler, setValue, getValues, onRemoveStop]);
 
+  // The stop coordinates in visit order, as a stable string so the routing effect only refires
+  // when a position actually moves — a fresh array every render would loop.
+  const routeStopsKey = useMemo(() => {
+    const placed = (bookedStops ?? []).map(stop => stop.position).filter(p => p !== null);
+    if (placed.length < 2) return null;
+    return JSON.stringify(placed);
+  }, [bookedStops]);
+  const firstArrivalMs = bookedStops?.[0]?.arrivalDatetime?.isValid?.()
+    ? bookedStops[0].arrivalDatetime.valueOf()
+    : null;
+
+  useEffect(() => {
+    // Route the tour leg by leg so the map can draw the path the vehicle actually drives, the
+    // same way the carpool trip form does. Departure is the first stop's arrival: routing only
+    // needs a clock to plan against, and the tour's own times are what the user is editing.
+    if (routeStopsKey == null || firstArrivalMs == null) {
+      onRouteGeometryChange?.(null);
+      setStreetRouteFailed(false);
+      return;
+    }
+    const stops: Position[] = JSON.parse(routeStopsKey);
+    let cancelled = false;
+    routeLegChain(stops, dayjs(firstArrivalMs).toISOString(), streetRoute)
+      .then(chain => {
+        if (cancelled) return;
+        if (!chain) {
+          onRouteGeometryChange?.('failed');
+          setStreetRouteFailed(true);
+          return;
+        }
+        onRouteGeometryChange?.(chain.legGeometries);
+        setStreetRouteFailed(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          onRouteGeometryChange?.('failed');
+          setStreetRouteFailed(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeStopsKey, firstArrivalMs, streetRoute, onRouteGeometryChange]);
+
   // Every id the payload carries must sit in the tour's data source — nunamnir rejects a
   // mismatch outright, so say so before the user submits. A prefix check, not a derivation:
   // the data source is the user's choice, never computed from a reference.
@@ -171,16 +212,18 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
     !!dataSource && !!serviceJourneyRef && !serviceJourneyRef.startsWith(`${dataSource}:`);
 
   const notAnOperatingDay = serviceDate?.isValid?.() && !isOperatingDay(serviceDate);
+  const firstStop = bookedStops?.[0];
   const lastStop = bookedStops?.[bookedStops.length - 1];
-  const spanHours = tourSpanHours(anchorDepartureDatetime, bookedStops);
+  const spanHours = tourSpanHours(bookedStops, dwellMinutes);
+  const dwellOverlaps = stopsOverlappingDwell(bookedStops, dwellMinutes);
   const outsideBookingWindow =
-    (anchorDepartureDatetime?.isValid?.() && !isWithinBookingWindow(anchorDepartureDatetime)) ||
+    (firstStop?.arrivalDatetime?.isValid?.() &&
+      !isWithinBookingWindow(firstStop.arrivalDatetime)) ||
     (lastStop?.arrivalDatetime?.isValid?.() && !isWithinBookingWindow(lastStop.arrivalDatetime));
 
   const addBookedStop = () => {
     const stops = getValues('bookedStops');
-    const previousTime =
-      stops[stops.length - 1]?.arrivalDatetime ?? getValues('anchorDepartureDatetime');
+    const previousTime = stops[stops.length - 1]?.arrivalDatetime ?? defaults.tourStart;
     const onboard = stops[stops.length - 1]?.onboardCount ?? 1;
     setValue('bookedStops', [...stops, newBookedStop(previousTime, onboard)], {
       shouldValidate: false,
@@ -198,7 +241,6 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
   };
 
   const handleReset = () => {
-    onRemoveStop(getValues('anchorFeatureId'));
     getValues('bookedStops').forEach(stop => onRemoveStop(stop.featureId));
     reset();
     onResetCallback();
@@ -209,9 +251,9 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
       <Stack spacing={2}>
         <Typography variant="h6">Flex tour</Typography>
         <Typography variant="body2" color="text.secondary">
-          A booked tour for one flexible ServiceJourney on one service date: where the vehicle is
-          now, followed by the passenger stops it has already committed to. OTP inserts new
-          passengers into this tour only when every stop's deviation budget tolerates the delay.
+          A booked tour for one flexible ServiceJourney on one service date: the passenger stops the
+          vehicle has already committed to, in visit order. OTP inserts new passengers into this
+          tour only when every stop's deviation budget tolerates the delay.
         </Typography>
 
         {noAdminAccess && (
@@ -343,75 +385,6 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
         <Typography variant="subtitle2">Vehicle</Typography>
 
         <Controller
-          name="anchorStopName"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Vehicle position name"
-              fullWidth
-              error={!!errors.anchorStopName}
-              helperText={errors.anchorStopName?.message}
-            />
-          )}
-        />
-
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button
-            variant="outlined"
-            onClick={onAddAnchorClick}
-            disabled={!drawingStopsAllowed}
-            startIcon={<GpsFixedIcon />}
-          >
-            {anchorPosition ? 'Move on map' : 'Place on map'}
-          </Button>
-          {anchorPosition && (
-            <>
-              <Chip
-                label={`${anchorPosition[1].toFixed(4)}, ${anchorPosition[0].toFixed(4)}`}
-                onClick={() => anchorFeatureId && onZoomToFeature(anchorFeatureId)}
-                size="small"
-              />
-              <IconButton
-                size="small"
-                aria-label="Remove vehicle position"
-                onClick={() => {
-                  onRemoveStop(anchorFeatureId);
-                  setValue('anchorFeatureId', null);
-                  setValue('anchorPosition', null, { shouldValidate: true });
-                }}
-              >
-                <Cancel fontSize="small" />
-              </IconButton>
-            </>
-          )}
-        </Stack>
-        {errors.anchorPosition && (
-          <FormHelperText error>{errors.anchorPosition.message}</FormHelperText>
-        )}
-
-        <Controller
-          name="anchorDepartureDatetime"
-          control={control}
-          render={({ field }) => (
-            <DateTimePicker
-              {...field}
-              label="Tour start"
-              ampm={false}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  error: !!errors.anchorDepartureDatetime,
-                  helperText:
-                    errors.anchorDepartureDatetime?.message ??
-                    'The vehicle never waits: it cannot start earlier than this.',
-                },
-              }}
-            />
-          )}
-        />
-
-        <Controller
           name="totalCapacity"
           control={control}
           render={({ field }) => (
@@ -453,8 +426,9 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
           </Button>
         </Stack>
         <Typography variant="body2" color="text.secondary">
-          In visit order. Each stop's deviation budget is the slack it has left — OTP refuses an
-          insertion that would push any stop past it. The last stop is the end of the tour.
+          In visit order: the vehicle starts at the first stop and ends at the last, so a tour needs
+          at least {MINIMUM_BOOKED_STOPS}. Each stop's deviation budget is the slack it has left —
+          OTP refuses an insertion that would push any stop past it.
         </Typography>
         {typeof errors.bookedStops?.message === 'string' && (
           <FormHelperText error>{errors.bookedStops.message}</FormHelperText>
@@ -464,13 +438,33 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
           <Box key={index} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
             <Stack spacing={1.5}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" fontWeight={600}>
-                  {index + 1}. {index === (bookedStops?.length ?? 0) - 1 ? 'Tour end' : 'Stop'}
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="baseline">
+                  <Typography variant="body2" fontWeight={600}>
+                    {index + 1}. Stop
+                  </Typography>
+                  {/* Which end of the tour a stop is at follows from its position in the list,
+                      so it is a hint rather than a field of its own. */}
+                  {index === 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      tour starts here
+                    </Typography>
+                  )}
+                  {index === (bookedStops?.length ?? 0) - 1 && (
+                    <Typography variant="caption" color="text.secondary">
+                      tour ends here
+                    </Typography>
+                  )}
+                </Stack>
                 <IconButton
                   size="small"
                   aria-label={`Remove stop ${index + 1}`}
                   onClick={() => removeBookedStop(index)}
+                  disabled={(bookedStops?.length ?? 0) <= MINIMUM_BOOKED_STOPS}
+                  title={
+                    (bookedStops?.length ?? 0) <= MINIMUM_BOOKED_STOPS
+                      ? `A tour needs at least ${MINIMUM_BOOKED_STOPS} stops`
+                      : undefined
+                  }
                 >
                   <Cancel fontSize="small" />
                 </IconButton>
@@ -555,6 +549,20 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
             </Alert>
           )}
 
+        {dwellOverlaps.length > 0 && (
+          <Alert severity="warning">
+            Stop {dwellOverlaps.map(i => i + 1).join(', ')} arrives before the previous stop's dwell
+            of {dwellMinutes} min is over. Every call but the last is sent a departure of arrival +
+            dwell, and OTP rejects calls whose times do not increase.
+          </Alert>
+        )}
+        {streetRouteFailed && (
+          <Alert severity="info">
+            The journey planner could not route between these stops, so the map shows straight lines
+            instead of the driving path.
+          </Alert>
+        )}
+
         {spanHours !== null && spanHours <= 0 && (
           <Alert severity="warning">
             The tour ends before it starts — OTP rejects a tour whose end time is not after its
@@ -589,8 +597,8 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
 
         <Alert severity="info">
           The tour spans{' '}
-          {lastStop?.arrivalDatetime?.isValid?.() && anchorDepartureDatetime?.isValid?.()
-            ? `${lastStop.arrivalDatetime.diff(anchorDepartureDatetime, 'minute')} min`
+          {lastStop?.arrivalDatetime?.isValid?.() && firstStop?.arrivalDatetime?.isValid?.()
+            ? `${lastStop.arrivalDatetime.diff(firstStop.arrivalDatetime, 'minute')} min`
             : '—'}
           ; OTP rejects anything over {MAX_TOUR_DURATION_HOURS} h. Journey code will be{' '}
           <code>

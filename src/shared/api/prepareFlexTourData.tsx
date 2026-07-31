@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import type { FlexTourFormData } from '../../features/plan-flex-tour/model/FlexTourFormData.tsx';
 import type { Extrajourney } from '../model/Extrajourney.tsx';
 import { encodePointAsCircularArea } from '../model/circularAreaCodec.tsx';
+import { MINIMUM_BOOKED_STOPS } from '../../features/plan-flex-tour/model/flexTourDataSchema.tsx';
 
 /** SIRI's `DataFrameRef` for a flex tour is the plain service date. */
 const SERVICE_DATE_FORMAT = 'YYYY-MM-DD';
@@ -18,9 +19,10 @@ const SERVICE_DATE_FORMAT = 'YYYY-MM-DD';
  * 2. `extraJourney` is `false`. The tour is real-time state on a journey that already exists
  *    in the timetable, so claiming otherwise would be wrong; nunamnir accepts `false` only
  *    because the framed ref is present.
- * 3. The first call is the vehicle anchor (tour start) rather than a passenger stop, and
- *    every later call is an already-booked stop carrying its own remaining slack as
- *    `latestExpectedArrivalTime`.
+ * 3. Every call is an already-booked stop carrying its own remaining slack as
+ *    `latestExpectedArrivalTime`. The tour starts at the first stop and ends at the last, so the
+ *    only asymmetry is what OTP's mapper insists on: a departure time on the first call and an
+ *    arrival time on the last. Both are derived here, not modelled in the form.
  *
  * `estimatedVehicleJourneyCode` is minted as `<serviceJourney>:<serviceDate>` so one vehicle's
  * tour per service date gets one stable identity: nunamnir stores under it, subula keys its
@@ -31,19 +33,17 @@ const SERVICE_DATE_FORMAT = 'YYYY-MM-DD';
 function prepareFlexTourData(formData: FlexTourFormData): {
   input: Extrajourney;
 } {
-  if (!formData.anchorPosition) {
-    // The schema requires it; this guard narrows the type and turns a validation bug into a
-    // clear failure rather than an unrelated null deref while building calls.
-    throw new Error("Cannot prepare flex tour: the vehicle's position is required");
-  }
-  if (formData.bookedStops.length === 0) {
-    throw new Error('Cannot prepare flex tour: at least one booked stop is required');
+  if (formData.bookedStops.length < MINIMUM_BOOKED_STOPS) {
+    // The schema requires it; this guard turns a validation bug into a clear failure rather than
+    // a journey OTP silently drops for having too few calls.
+    throw new Error(
+      `Cannot prepare flex tour: at least ${MINIMUM_BOOKED_STOPS} booked stops are required`
+    );
   }
 
   const serviceDate = formData.serviceDate.format(SERVICE_DATE_FORMAT);
   const capacity = formData.totalCapacity ?? undefined;
 
-  const anchorDeparture = formData.anchorDepartureDatetime.toISOString();
   const lastIndex = formData.bookedStops.length - 1;
 
   const bookedCalls = formData.bookedStops.map((stop, index) => {
@@ -51,9 +51,11 @@ function prepareFlexTourData(formData: FlexTourFormData): {
       throw new Error(`Cannot prepare flex tour: booked stop ${index + 1} has no position`);
     }
     const arrival = stop.arrivalDatetime;
+    const isFirst = index === 0;
     const isLast = index === lastIndex;
+    const departure = arrival.add(formData.dwellMinutes, 'minutes').toISOString();
     return {
-      order: index + 2,
+      order: index + 1,
       stopPointRef: 'Mandatory for now', // TODO: Discuss to make optional in a Profile
       stopPointName: stop.stopName,
       destinationDisplay: stop.stopName,
@@ -63,13 +65,13 @@ function prepareFlexTourData(formData: FlexTourFormData): {
       // expected arrival, and refuses any insertion that would push this stop past it.
       latestExpectedArrivalTime: arrival.add(stop.deviationBudget, 'minutes').toISOString(),
       // SIRI needs a departure on every call except the last, and OTP validates call order
-      // using it. The last call is the tour end, so it only arrives.
+      // using it — it also refuses a tour whose first call has no departure at all. The last
+      // call is where the tour ends, so it only arrives.
       ...(isLast
         ? { arrivalBoardingActivity: 'alighting' }
-        : {
-            aimedDepartureTime: arrival.add(formData.dwellMinutes, 'minutes').toISOString(),
-            expectedDepartureTime: arrival.add(formData.dwellMinutes, 'minutes').toISOString(),
-          }),
+        : { aimedDepartureTime: departure, expectedDepartureTime: departure }),
+      // The vehicle picks up its first passengers where the tour starts.
+      ...(isFirst ? { departureBoardingActivity: 'boarding' } : {}),
       expectedDepartureOccupancy: [{ onboardCount: stop.onboardCount }],
       expectedDepartureCapacities: [{ totalCapacity: capacity }],
       departureStopAssignment: {
@@ -105,26 +107,7 @@ function prepareFlexTourData(formData: FlexTourFormData): {
         cancellation: formData.tourCancellation,
         isCompleteStopSequence: true,
         estimatedCalls: {
-          estimatedCall: [
-            {
-              // The vehicle anchor: where the vehicle is and when it can start. OTP forces
-              // this stop's deviation budget to zero, so no latestExpectedArrivalTime is sent.
-              order: 1,
-              stopPointRef: 'Mandatory for now',
-              stopPointName: formData.anchorStopName,
-              destinationDisplay: formData.anchorStopName,
-              aimedDepartureTime: anchorDeparture,
-              expectedDepartureTime: anchorDeparture,
-              departureBoardingActivity: 'boarding',
-              expectedDepartureCapacities: [{ totalCapacity: capacity }],
-              departureStopAssignment: {
-                expectedFlexibleArea: {
-                  circularArea: encodePointAsCircularArea(formData.anchorPosition),
-                },
-              },
-            },
-            ...bookedCalls,
-          ],
+          estimatedCall: bookedCalls,
         },
         publicContact: {
           phoneNumber: null,

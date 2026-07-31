@@ -7,6 +7,7 @@ import FlexTourDataForm from './FlexTourDataForm.tsx';
 import { useMutateFlexTour } from '../hooks/useMutateFlexTour.tsx';
 import { useFlexTourStops } from '../hooks/useFlexTourStops.tsx';
 import type { FlexTourFormData } from '../model/FlexTourFormData.tsx';
+import type { RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
 import { userFacingMessage } from '../../../shared/error-message/userFacingMessage.tsx';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
@@ -27,6 +28,7 @@ export interface FlexTourDataProps {
   onRemoveAllFlexibleStops: () => void;
   onZoomToFeature: (id: string) => void;
   onZoomToAllFeatures: () => void;
+  onRouteGeometryChange?: (legGeometries: RouteLegGeometries) => void;
 }
 
 export type FlexTourDataHandle = {
@@ -41,6 +43,7 @@ const FlexTourData = forwardRef<FlexTourDataHandle, FlexTourDataProps>((props, r
     onRemoveAllFlexibleStops,
     onZoomToFeature,
     onZoomToAllFeatures,
+    onRouteGeometryChange,
   } = props;
 
   const [snackbar, setSnackbar] = useState<SnackbarState>({
@@ -88,13 +91,13 @@ const FlexTourData = forwardRef<FlexTourDataHandle, FlexTourDataProps>((props, r
       <FlexTourDataForm
         onSubmitCallback={handleSubmit}
         onResetCallback={onRemoveAllFlexibleStops}
-        onAddAnchorClick={stops.startAddAnchor}
         onAddBookedStopClick={stops.startAddBookedStop}
         onRemoveStop={stops.removeStop}
         onZoomToFeature={onZoomToFeature}
         onViewTourCallback={onZoomToAllFeatures}
         drawingStopsAllowed={stops.drawingStopsAllowed}
         registerStopPlacedHandler={stops.setOnStopPlaced}
+        onRouteGeometryChange={onRouteGeometryChange}
       />
       <Snackbar
         open={snackbar.open}

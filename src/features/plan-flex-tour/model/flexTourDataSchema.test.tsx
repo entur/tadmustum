@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import dayjs from 'dayjs';
-import { flexTourDataSchema, tourSpanHours } from './flexTourDataSchema';
+import {
+  flexTourDataSchema,
+  MINIMUM_BOOKED_STOPS,
+  stopsOverlappingDwell,
+  tourSpanHours,
+} from './flexTourDataSchema';
 import type { FlexTourBookedStop, FlexTourFormData } from './FlexTourFormData';
 
 const bookedStop = (overrides: Partial<FlexTourBookedStop> = {}): FlexTourBookedStop => ({
@@ -21,10 +26,6 @@ const baseForm = (overrides: Partial<FlexTourFormData> = {}): FlexTourFormData =
   lineRef: 'MAL:FlexibleLine:5ca5e3c6-00fd-4224-95a5-ab8ff60c072e',
   totalCapacity: 16,
   tourCancellation: false,
-  anchorFeatureId: 'anchor',
-  anchorPosition: [10.3951, 63.4305],
-  anchorStopName: 'Vehicle position',
-  anchorDepartureDatetime: dayjs().add(1, 'day').hour(9).minute(0),
   dwellMinutes: 1,
   bookedStops: [
     bookedStop(),
@@ -65,20 +66,23 @@ describe('flexTourDataSchema', () => {
     expect(errors.join(' ')).not.toMatch(/expire immediately/);
   });
 
-  it('requires at least one booked stop', async () => {
+  // Two calls is OTP's own floor: with fewer it drops the tour and falls back to static flex.
+  it(`requires at least ${MINIMUM_BOOKED_STOPS} booked stops`, async () => {
     const errors = await errorFor(baseForm({ bookedStops: [] }));
 
-    expect(errors.join(' ')).toMatch(/at least one booked stop/);
+    expect(errors.join(' ')).toMatch(/at least 2 booked stops/);
   });
 
-  it('requires the vehicle position to be placed on the map', async () => {
-    const errors = await errorFor(baseForm({ anchorPosition: null }));
+  it('rejects a tour with a single stop', async () => {
+    const errors = await errorFor(baseForm({ bookedStops: [bookedStop()] }));
 
-    expect(errors.join(' ')).toMatch(/Place the vehicle/);
+    expect(errors.join(' ')).toMatch(/at least 2 booked stops/);
   });
 
   it('requires every booked stop to be placed on the map', async () => {
-    const errors = await errorFor(baseForm({ bookedStops: [bookedStop({ position: null })] }));
+    const errors = await errorFor(
+      baseForm({ bookedStops: [bookedStop({ position: null }), bookedStop()] })
+    );
 
     expect(errors.join(' ')).toMatch(/Place this stop on the map/);
   });
@@ -97,23 +101,43 @@ describe('flexTourDataSchema', () => {
   });
 
   it('rejects a negative deviation budget', async () => {
-    const errors = await errorFor(baseForm({ bookedStops: [bookedStop({ deviationBudget: -1 })] }));
+    const errors = await errorFor(
+      baseForm({ bookedStops: [bookedStop({ deviationBudget: -1 }), bookedStop()] })
+    );
 
     expect(errors.join(' ')).toMatch(/zero or a positive integer/);
   });
 });
 
 describe('tourSpanHours', () => {
-  it('measures to the last stop’s latest expected arrival, not its expected arrival', () => {
-    const start = dayjs('2026-08-03T09:00:00.000Z');
-    const stops = [{ arrivalDatetime: dayjs('2026-08-03T10:00:00.000Z'), deviationBudget: 30 }];
+  it('measures from the first call’s departure to the last stop’s latest expected arrival', () => {
+    const stops = [
+      { arrivalDatetime: dayjs('2026-08-03T09:00:00.000Z'), deviationBudget: 0 },
+      { arrivalDatetime: dayjs('2026-08-03T10:00:00.000Z'), deviationBudget: 30 },
+    ];
 
-    // 09:00 -> 10:00 arrival + 30 min budget = 1.5 h, the span OTP checks.
-    expect(tourSpanHours(start, stops)).toBeCloseTo(1.5);
+    // The first call departs at 09:00 + 1 min dwell; the last arrives 10:00 with 30 min of
+    // budget left, so OTP sees 10:30 - 09:01.
+    expect(tourSpanHours(stops, 1)).toBeCloseTo(1.4833, 3);
   });
 
-  it('returns null while either end is missing', () => {
-    expect(tourSpanHours(undefined, [])).toBeNull();
-    expect(tourSpanHours(dayjs(), [])).toBeNull();
+  it('returns null before there are two stops to span', () => {
+    expect(tourSpanHours(undefined, 1)).toBeNull();
+    expect(tourSpanHours([], 1)).toBeNull();
+    expect(tourSpanHours([{ arrivalDatetime: dayjs(), deviationBudget: 0 }], 1)).toBeNull();
+  });
+});
+
+describe('stopsOverlappingDwell', () => {
+  it('flags a stop reached before the previous stop’s dwell is over', () => {
+    const stops = [
+      { arrivalDatetime: dayjs('2026-08-03T09:00:00.000Z') },
+      // Only 5 min later, but the vehicle stands 10 min at every stop.
+      { arrivalDatetime: dayjs('2026-08-03T09:05:00.000Z') },
+      { arrivalDatetime: dayjs('2026-08-03T09:30:00.000Z') },
+    ];
+
+    expect(stopsOverlappingDwell(stops, 10)).toEqual([1]);
+    expect(stopsOverlappingDwell(stops, 1)).toEqual([]);
   });
 });

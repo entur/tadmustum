@@ -21,8 +21,13 @@ export type FlexTourBookedStop = {
 };
 
 /**
- * A booked tour for one flexible ServiceJourney on one service date: where the vehicle is now
- * (the anchor) followed by the passenger stops it has already committed to, in visit order.
+ * A booked tour for one flexible ServiceJourney on one service date: the passenger stops the
+ * vehicle has already committed to, in visit order.
+ *
+ * Every stop is the same kind of thing. The tour starts at the first stop and ends at the last,
+ * so neither needs its own field — the only difference is what SIRI is told about them (the
+ * first call carries a departure, the last an arrival), which is derived when the payload is
+ * built rather than modelled here.
  */
 export type FlexTourFormData = {
   /**
@@ -40,12 +45,6 @@ export type FlexTourFormData = {
   totalCapacity: number | null;
   /** Cancels the whole tour, which makes OTP drop it and fall back to static flex behaviour. */
   tourCancellation: boolean;
-
-  /** The vehicle's current position / tour start. Its deviation budget is always zero. */
-  anchorFeatureId: string | null;
-  anchorPosition: Position | null;
-  anchorStopName: string;
-  anchorDepartureDatetime: Dayjs;
 
   /**
    * How long the vehicle stands at each booked stop. Used to derive each stop's departure time

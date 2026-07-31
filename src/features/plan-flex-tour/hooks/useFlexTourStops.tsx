@@ -1,11 +1,8 @@
 import type { Feature, Point, Position } from 'geojson';
 import { useCallback, useState } from 'react';
 
-/**
- * Which slot a pending map draw belongs to: the vehicle anchor, or the booked stop at the
- * given index.
- */
-type PendingTarget = { kind: 'anchor' } | { kind: 'booked'; index: number };
+/** Which slot a pending map draw belongs to: the booked stop at the given index. */
+type PendingTarget = { kind: 'booked'; index: number };
 
 export interface UseFlexTourStopsOptions {
   onAddFlexibleStop: () => void;
@@ -14,8 +11,6 @@ export interface UseFlexTourStopsOptions {
 
 export interface FlexTourStopsController {
   drawingStopsAllowed: boolean;
-  /** Starts a draw whose result lands on the vehicle anchor. */
-  startAddAnchor: () => void;
   /** Starts a draw whose result lands on the booked stop at `index`. */
   startAddBookedStop: (index: number) => void;
   removeStop: (featureId: string | null) => void;
@@ -46,11 +41,6 @@ export function useFlexTourStops({
   const [pending, setPending] = useState<PendingTarget | null>(null);
   const [drawingStopsAllowed, setDrawingStopsAllowed] = useState<boolean>(true);
   const [onStopPlaced, setOnStopPlaced] = useState<StopPlacedHandler>(() => () => {});
-
-  const startAddAnchor = useCallback(() => {
-    setPending({ kind: 'anchor' });
-    onAddFlexibleStop();
-  }, [onAddFlexibleStop]);
 
   const startAddBookedStop = useCallback(
     (index: number) => {
@@ -91,7 +81,6 @@ export function useFlexTourStops({
 
   return {
     drawingStopsAllowed,
-    startAddAnchor,
     startAddBookedStop,
     removeStop,
     onStopCreated,
