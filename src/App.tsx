@@ -16,6 +16,8 @@ import { loadDevMessages, loadErrorMessages } from '@apollo/client/dev';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import CarPoolingTrip from './features/plan-trip/CarPoolingTrip.tsx';
 import FlexTour from './features/plan-flex-tour/FlexTour.tsx';
+import FlexTourBooking from './features/flex-booking/FlexTourBooking.tsx';
+import { FLEX_BOOKING_ROUTE } from './features/plan-flex-tour/model/flexTourIdentity.tsx';
 import CarPoolingTrips from './features/planned-trips/CarPoolingTrips.tsx';
 import NoAccessModal from './shared/components/auth/NoAccessModal.tsx';
 import { NoAccessProvider } from './contexts/NoAccessContext.tsx';
@@ -90,6 +92,12 @@ export default function App() {
                       <Route
                         path="/book-trip/:codespace/:tripId"
                         element={<ProtectedRoute element={<PassengerTripBooking />} />}
+                      />
+                      {/* Kept separate from /book-trip: a flex tour is booked against an existing
+                          timetabled journey, so the two flows share almost nothing but the map. */}
+                      <Route
+                        path={FLEX_BOOKING_ROUTE}
+                        element={<ProtectedRoute element={<FlexTourBooking />} />}
                       />
                     </Routes>
                   </Box>

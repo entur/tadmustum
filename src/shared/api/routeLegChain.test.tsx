@@ -45,6 +45,28 @@ describe('routeLegChain', () => {
     expect(chain?.legGeometries).toEqual([[A, B]]);
   });
 
+  it('departs each leg after the dwell, so arrivals leave room for the stop', async () => {
+    // 5 min dwell + 10 min driving per leg: the vehicle reaches B at 08:15 (dwelling at A first)
+    // and C at 08:30 (dwelling at B too). No dwell is added after the last stop.
+    const chain = await routeLegChain([A, B, C], '2026-06-01T08:00:00.000Z', tenMinPerLeg, 5);
+
+    expect(chain?.arrivals).toEqual([
+      '2026-06-01T08:00:00.000Z',
+      '2026-06-01T08:15:00.000Z',
+      '2026-06-01T08:30:00.000Z',
+    ]);
+  });
+
+  it('passes the departure through untouched when there is no dwell', async () => {
+    // A carpool trip passes no dwell, and its tests assert on the exact string it hands over —
+    // so 0 must not be round-tripped through a date library into a different-but-equal format.
+    const leg = vi.fn<RouteLeg>().mockImplementation(tenMinPerLeg);
+
+    await routeLegChain([A, B], '2026-06-01T08:00:00+00:00', leg, 0);
+
+    expect(leg).toHaveBeenCalledWith(A, B, '2026-06-01T08:00:00+00:00');
+  });
+
   it('returns null when any leg cannot be planned', async () => {
     const failsSecondLeg = vi
       .fn<RouteLeg>()

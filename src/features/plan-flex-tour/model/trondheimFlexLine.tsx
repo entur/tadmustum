@@ -50,14 +50,19 @@ export const TRONDHEIM_FLEX_LINE = {
 } as const;
 
 /**
- * The first service date the tour can sensibly default to: tomorrow at the earliest (a tour
- * in the past is rejected by nunamnir's expiry validator), never before the line's validity
- * starts, and always on an operating weekday. Returns the validity end when the whole window
- * is already in the past, leaving the form to warn rather than silently picking a dead date.
+ * The service date the tour defaults to: a week out, matching the carpool trip form, which
+ * defaults to departing exactly a week from now. Far enough ahead that the tour is never near
+ * nunamnir's expiry validator, and a realistic lead time for a booked tour.
+ *
+ * Constrained the same way as before: never before the line's validity starts, and always on an
+ * operating weekday. A week from now falls on the same weekday as today, so the step-forward loop
+ * below is what moves a weekend default onto the following Monday. Returns the validity end when
+ * the whole window is already in the past, leaving the form to warn rather than silently picking
+ * a dead date.
  */
 export function defaultServiceDate(now: Dayjs = dayjs()): Dayjs {
   const validTo = dayjs(TRONDHEIM_FLEX_LINE.validTo);
-  let candidate = now.add(1, 'day').startOf('day');
+  let candidate = now.add(1, 'week').startOf('day');
   const validFrom = dayjs(TRONDHEIM_FLEX_LINE.validFrom);
   if (candidate.isBefore(validFrom)) {
     candidate = validFrom;

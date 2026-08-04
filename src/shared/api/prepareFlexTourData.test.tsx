@@ -187,4 +187,34 @@ describe('prepareFlexTourData', () => {
       prepareFlexTourData(baseForm({ bookedStops: [bookedStop({ position: null }), bookedStop()] }))
     ).toThrow(/booked stop 1 has no position/);
   });
+
+  // The booking URL is what OTP reports on the flex leg, in place of the line's static NeTEx one.
+  it('sends the booking URL as PublicContact/Url', () => {
+    const url = 'http://localhost:5000/book-flex/MAL/' + SERVICE_JOURNEY + ':2026-08-03';
+
+    const { input } = prepareFlexTourData(baseForm({ contactUrl: url }));
+
+    expect(input.estimatedVehicleJourney.publicContact?.url).toBe(url);
+  });
+
+  it('sends no url when the booking URL was cleared', () => {
+    expect(
+      prepareFlexTourData(baseForm({ contactUrl: '' })).input.estimatedVehicleJourney.publicContact
+        ?.url
+    ).toBeNull();
+    expect(
+      prepareFlexTourData(baseForm({ contactUrl: null })).input.estimatedVehicleJourney
+        .publicContact?.url
+    ).toBeNull();
+  });
+
+  // The journey code the URL embeds has to be the one the payload is stored under, or the link
+  // opens a booking page for a tour that does not exist.
+  it('mints the journey code the booking URL is built from', () => {
+    const { input } = prepareFlexTourData(baseForm());
+
+    expect(input.estimatedVehicleJourney.estimatedVehicleJourneyCode).toBe(
+      `${SERVICE_JOURNEY}:2026-08-03`
+    );
+  });
 });

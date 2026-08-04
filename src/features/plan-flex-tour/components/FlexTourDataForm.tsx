@@ -42,6 +42,7 @@ import {
   isWithinBookingWindow,
   TRONDHEIM_FLEX_LINE,
 } from '../model/trondheimFlexLine.tsx';
+import { flexBookingUrl } from '../model/flexTourIdentity.tsx';
 import type { StopPlacedHandler } from '../hooks/useFlexTourStops.tsx';
 
 export interface FlexTourDataFormProps {
@@ -57,6 +58,9 @@ export interface FlexTourDataFormProps {
   /** Reports the driving route between the stops so the map can draw it. */
   onRouteGeometryChange?: (legGeometries: RouteLegGeometries) => void;
 }
+
+/** A stop that has been placed on the map, tagged with the form row it belongs to. */
+type PlacedStop = { index: number; position: Position };
 
 /** A fresh booked stop, timed after the previous one so the tour stays in order by default. */
 function newBookedStop(previousTime: Dayjs, onboardCount: number): FlexTourBookedStop {
@@ -90,6 +94,8 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
 
   const streetRoute = useStreetRoute();
   const [streetRouteFailed, setStreetRouteFailed] = useState<boolean>(false);
+  // Once the booking URL has been typed into, stop re-deriving it from the journey and date.
+  const [contactUrlEdited, setContactUrlEdited] = useState<boolean>(false);
 
   // Computed once so Reset returns to the same values.
   const defaults = useMemo(() => {
@@ -120,6 +126,9 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
       totalCapacity: TRONDHEIM_FLEX_LINE.totalCapacity,
       tourCancellation: false,
       dwellMinutes: 1,
+      estimateArrivalAutomatically: true,
+      // Filled in by the effect below, once the data source is known.
+      contactUrl: null,
       // Two stops is the minimum a tour can have, so that is what a fresh form offers: the
       // vehicle starts at the first and ends at the last.
       bookedStops: [
@@ -136,6 +145,7 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
   const tourCancellation = watch('tourCancellation');
   const totalCapacity = watch('totalCapacity');
   const dwellMinutes = watch('dwellMinutes');
+  const estimateArrivalAutomatically = watch('estimateArrivalAutomatically');
 
   // Default the data source to the codespace the flex line belongs to when the user has write
   // access to it, since every default id on the form carries that prefix. Otherwise pick the
@@ -149,6 +159,23 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
     }
   }, [dataSource, adminCodespaces, setValue]);
 
+  // Keep the booking URL pointing at this tour. Unlike a carpool trip's code — a uuid minted once —
+  // a flex tour's journey code contains its service date, so the link goes stale the moment the
+  // date changes; it is re-derived rather than filled in once. A user edit switches that off, so a
+  // hand-written link is never clobbered.
+  useEffect(() => {
+    if (contactUrlEdited || !dataSource || !serviceJourneyRef || !serviceDate?.isValid?.()) return;
+    const derived = flexBookingUrl(
+      window.location.origin,
+      dataSource,
+      serviceJourneyRef,
+      serviceDate
+    );
+    if (getValues('contactUrl') !== derived) {
+      setValue('contactUrl', derived, { shouldValidate: false });
+    }
+  }, [contactUrlEdited, dataSource, serviceJourneyRef, serviceDate, setValue, getValues]);
+
   // Receive map draws into whichever stop asked for them.
   useEffect(() => {
     registerStopPlacedHandler((target, featureId, position) => {
@@ -161,10 +188,14 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
     });
   }, [registerStopPlacedHandler, setValue, getValues, onRemoveStop]);
 
-  // The stop coordinates in visit order, as a stable string so the routing effect only refires
-  // when a position actually moves — a fresh array every render would loop.
+  // The placed stops in visit order, each tagged with the form row it came from so a routed
+  // arrival can be written back to the right stop even when some rows have no position yet.
+  // A stable string, so the routing effect only refires when a position actually moves — a fresh
+  // array every render would loop, and so would the arrival writes below.
   const routeStopsKey = useMemo(() => {
-    const placed = (bookedStops ?? []).map(stop => stop.position).filter(p => p !== null);
+    const placed = (bookedStops ?? [])
+      .map((stop, index) => ({ index, position: stop.position }))
+      .filter((stop): stop is PlacedStop => stop.position !== null);
     if (placed.length < 2) return null;
     return JSON.stringify(placed);
   }, [bookedStops]);
@@ -181,9 +212,16 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
       setStreetRouteFailed(false);
       return;
     }
-    const stops: Position[] = JSON.parse(routeStopsKey);
+    const placed: PlacedStop[] = JSON.parse(routeStopsKey);
     let cancelled = false;
-    routeLegChain(stops, dayjs(firstArrivalMs).toISOString(), streetRoute)
+    routeLegChain(
+      placed.map(stop => stop.position),
+      dayjs(firstArrivalMs).toISOString(),
+      streetRoute,
+      // The vehicle stands at each stop before driving on, so the chain must dwell too —
+      // otherwise the arrivals it produces would trip the form's own dwell-overlap warning.
+      Number(dwellMinutes) || 0
+    )
       .then(chain => {
         if (cancelled) return;
         if (!chain) {
@@ -193,6 +231,23 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
         }
         onRouteGeometryChange?.(chain.legGeometries);
         setStreetRouteFailed(false);
+        if (!estimateArrivalAutomatically) return;
+        // Re-time every routed stop but the first. arrivals[0] is the time the chain was planned
+        // from — the first stop's own arrival — so writing it back would be a no-op at best and
+        // would fight the user's input at worst. That stop anchors the tour; the rest follow from
+        // the driving time.
+        //
+        // Each arrival is written to its own leaf path rather than by replacing the whole
+        // `bookedStops` array: setting the parent path updates the form state, but each stop's
+        // DateTimePicker keeps rendering its previous value until some unrelated render comes
+        // along, so the estimate would not show up until the user touched something else.
+        placed.slice(1).forEach((stop, leg) => {
+          const arrival = chain.arrivals[leg + 1];
+          if (!arrival) return;
+          setValue(`bookedStops.${stop.index}.arrivalDatetime`, dayjs(arrival), {
+            shouldValidate: true,
+          });
+        });
       })
       .catch(() => {
         if (!cancelled) {
@@ -203,7 +258,15 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
     return () => {
       cancelled = true;
     };
-  }, [routeStopsKey, firstArrivalMs, streetRoute, onRouteGeometryChange]);
+  }, [
+    routeStopsKey,
+    firstArrivalMs,
+    streetRoute,
+    onRouteGeometryChange,
+    dwellMinutes,
+    estimateArrivalAutomatically,
+    setValue,
+  ]);
 
   // Every id the payload carries must sit in the tour's data source — nunamnir rejects a
   // mismatch outright, so say so before the user submits. A prefix check, not a derivation:
@@ -243,6 +306,8 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
   const handleReset = () => {
     getValues('bookedStops').forEach(stop => onRemoveStop(stop.featureId));
     reset();
+    // Let the effect above derive the link again, matching what a fresh form would show.
+    setContactUrlEdited(false);
     onResetCallback();
   };
 
@@ -357,6 +422,28 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
           )}
         />
 
+        <Controller
+          name="contactUrl"
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              value={field.value ?? ''}
+              onChange={event => {
+                setContactUrlEdited(true);
+                field.onChange(event.target.value);
+              }}
+              label="Booking URL"
+              fullWidth
+              error={!!errors.contactUrl}
+              helperText={
+                errors.contactUrl?.message ??
+                "tadmustum's flex booking page for this tour. Sent as SIRI PublicContact/Url, and takes precedence over the line's NeTEx booking URL in the journey planner. Clear it to send none."
+              }
+            />
+          )}
+        />
+
         {codespaceMismatch && (
           <Alert severity="error">
             The ServiceJourney <strong>{serviceJourneyRef}</strong> is not in codespace{' '}
@@ -434,6 +521,29 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
           <FormHelperText error>{errors.bookedStops.message}</FormHelperText>
         )}
 
+        <Box>
+          <Controller
+            name="estimateArrivalAutomatically"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={!!field.value}
+                    onChange={event => field.onChange(event.target.checked)}
+                  />
+                }
+                label="Estimate arrival times automatically"
+              />
+            )}
+          />
+          <FormHelperText>
+            {estimateArrivalAutomatically
+              ? "Stop 1's arrival anchors the tour; every later stop follows from the driving time between the stops plus the dwell."
+              : 'Each stop keeps the arrival time you type in.'}
+          </FormHelperText>
+        </Box>
+
         {(bookedStops ?? []).map((stop, index) => (
           <Box key={index} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
             <Stack spacing={1.5}>
@@ -502,7 +612,14 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
                 render={({ field }) => (
                   <DateTimePicker
                     {...field}
-                    label="Expected arrival"
+                    // Only the first stop's arrival is the user's to set while estimating; the
+                    // rest are driven by the route, so editing them would just be overwritten.
+                    label={
+                      index > 0 && estimateArrivalAutomatically
+                        ? 'Expected arrival (estimated)'
+                        : 'Expected arrival'
+                    }
+                    disabled={index > 0 && !!estimateArrivalAutomatically}
                     ampm={false}
                     slotProps={{ textField: { size: 'small', fullWidth: true } }}
                   />
@@ -559,7 +676,10 @@ export default function FlexTourDataForm(props: FlexTourDataFormProps) {
         {streetRouteFailed && (
           <Alert severity="info">
             The journey planner could not route between these stops, so the map shows straight lines
-            instead of the driving path.
+            instead of the driving path
+            {estimateArrivalAutomatically
+              ? ', and the arrival times could not be estimated automatically.'
+              : '.'}
           </Alert>
         )}
 

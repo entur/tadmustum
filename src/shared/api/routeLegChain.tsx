@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import type { Position } from 'geojson';
 import type { StreetRouteResult } from './journeyPlannerStreetRoute.tsx';
 
@@ -26,20 +27,30 @@ export interface RoutedLegChain {
   legGeometries: Position[][];
 }
 
-// Routes each consecutive leg of a multi-stop sequence in turn, departing each
-// stop the moment the vehicle arrives (no dwell), and accumulates arrival
-// times and street geometries. All-or-nothing: returns null when any leg
+// Routes each consecutive leg of a multi-stop sequence in turn and accumulates
+// arrival times and street geometries. All-or-nothing: returns null when any leg
 // can't be planned, so callers never get a half-routed chain.
+//
+// `dwellMinutes` is how long the vehicle stands at each stop before driving on,
+// so every leg departs at the previous stop's arrival plus the dwell. It applies
+// at each stop the vehicle leaves — every stop but the last. Defaults to 0,
+// which departs the moment the vehicle arrives; a carpool trip has no dwell, and
+// at 0 the leg's departure string is passed through untouched rather than
+// round-tripped through a date library.
 export async function routeLegChain(
   coords: Position[],
   departureTime: string,
-  routeLeg: RouteLeg
+  routeLeg: RouteLeg,
+  dwellMinutes: number = 0
 ): Promise<RoutedLegChain | null> {
   const arrivals: string[] = [departureTime];
   const legGeometries: Position[][] = [];
+  const dwell = Number(dwellMinutes) || 0;
   let currentTime = departureTime;
   for (let i = 0; i < coords.length - 1; i++) {
-    const route = await routeLeg(coords[i], coords[i + 1], currentTime);
+    const departAt =
+      dwell > 0 ? dayjs(currentTime).add(dwell, 'minute').toISOString() : currentTime;
+    const route = await routeLeg(coords[i], coords[i + 1], departAt);
     if (!route) return null;
     arrivals.push(route.expectedEndTime);
     legGeometries.push(

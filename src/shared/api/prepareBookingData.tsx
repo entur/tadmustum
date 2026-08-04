@@ -22,6 +22,12 @@ export interface PassengerBookingData {
   dropoffTime?: string;
   numberOfPassengers: number;
   passengerDeviationBudget?: number;
+  /**
+   * How long the vehicle stands at each stop before driving on. A carpool trip has none (the
+   * default), so its stops keep departing the moment they are reached; a flex vehicle's booked
+   * tour has one, and re-timing without it would silently collapse every dwell to zero.
+   */
+  dwellMinutes?: number;
 }
 
 export async function prepareBookingData(
@@ -75,9 +81,11 @@ async function routeAssembledCalls(
     return applyRoutedTimes(
       assembled.orderedCalls,
       assembled.coords as LngLat[],
+      assembled.originReady,
       assembled.originDeparture,
       routeLeg,
-      bookingData.passengerDeviationBudget
+      bookingData.passengerDeviationBudget,
+      bookingData.dwellMinutes
     );
   }
   return { calls: assembled.orderedCalls, legGeometries: null };
@@ -157,6 +165,13 @@ interface AssembledBooking {
   coords: (LngLat | null)[];
   canOrderByPath: boolean;
   originDeparture: string | undefined;
+  /**
+   * When the vehicle is first ready to drive on — the origin's arrival if it has one, else its
+   * departure. The chain is anchored here rather than on the departure, because a dwelling tour's
+   * first departure is already its arrival plus the dwell; anchoring on it would add the dwell to
+   * the first leg twice. Equal to `originDeparture` for a carpool origin, which only departs.
+   */
+  originReady: string | undefined;
   exceededAt: ExceededAt;
   pickupStopRef: string;
   dropoffStopRef: string;
@@ -320,6 +335,11 @@ function assembleBooking(
     coords: orderedEntries.map(entry => entry.coord),
     canOrderByPath,
     originDeparture: firstCall.aimedDepartureTime || firstCall.expectedDepartureTime,
+    originReady:
+      firstCall.aimedArrivalTime ||
+      firstCall.expectedArrivalTime ||
+      firstCall.aimedDepartureTime ||
+      firstCall.expectedDepartureTime,
     exceededAt: occupancy.exceededAt,
     pickupStopRef: pickupStop.stopPointRef,
     dropoffStopRef: dropoffStop.stopPointRef,
@@ -410,13 +430,16 @@ function applyOccupancy(
 async function applyRoutedTimes(
   orderedCalls: EstimatedCall[],
   coords: LngLat[],
+  originReady: string | undefined,
   originDeparture: string | undefined,
   routeLeg: RouteLeg,
-  passengerDeviationBudget?: number
+  passengerDeviationBudget?: number,
+  dwellMinutes?: number
 ): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
-  if (!originDeparture) return { calls: orderedCalls, legGeometries: null };
+  if (!originReady) return { calls: orderedCalls, legGeometries: null };
 
-  const chain = await routeLegChain(coords, originDeparture, routeLeg);
+  const dwell = Number(dwellMinutes) || 0;
+  const chain = await routeLegChain(coords, originReady, routeLeg, dwell);
   if (!chain) return { calls: orderedCalls, legGeometries: null };
   const { arrivals, legGeometries } = chain;
 
@@ -438,9 +461,10 @@ async function applyRoutedTimes(
       latestExpectedArrivalTime: shiftLatest(call, arrival, passengerDeviationBudget),
     };
     if (index !== lastIndex) {
-      // No dwell: depart as soon as the vehicle arrives.
-      updated.aimedDepartureTime = arrival;
-      updated.expectedDepartureTime = arrival;
+      // Depart after the dwell — the moment of arrival when there is none.
+      const departure = dwell > 0 ? dayjs(arrival).add(dwell, 'minute').toISOString() : arrival;
+      updated.aimedDepartureTime = departure;
+      updated.expectedDepartureTime = departure;
     }
     return updated;
   });

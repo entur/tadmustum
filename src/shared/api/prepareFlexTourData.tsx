@@ -3,9 +3,10 @@ import type { FlexTourFormData } from '../../features/plan-flex-tour/model/FlexT
 import type { Extrajourney } from '../model/Extrajourney.tsx';
 import { encodePointAsCircularArea } from '../model/circularAreaCodec.tsx';
 import { MINIMUM_BOOKED_STOPS } from '../../features/plan-flex-tour/model/flexTourDataSchema.tsx';
-
-/** SIRI's `DataFrameRef` for a flex tour is the plain service date. */
-const SERVICE_DATE_FORMAT = 'YYYY-MM-DD';
+import {
+  flexTourJourneyCode,
+  SERVICE_DATE_FORMAT,
+} from '../../features/plan-flex-tour/model/flexTourIdentity.tsx';
 
 /**
  * Builds the `createOrUpdateExtrajourney` variables for a flex booked tour.
@@ -92,7 +93,10 @@ function prepareFlexTourData(formData: FlexTourFormData): {
           dataFrameRef: serviceDate,
           datedVehicleJourneyRef: formData.serviceJourneyRef,
         },
-        estimatedVehicleJourneyCode: `${formData.serviceJourneyRef}:${serviceDate}`,
+        estimatedVehicleJourneyCode: flexTourJourneyCode(
+          formData.serviceJourneyRef,
+          formData.serviceDate
+        ),
         // Not an extra journey: the ServiceJourney this tour belongs to is already in the
         // timetable. nunamnir permits false here only because framedVehicleJourneyRef is set.
         extraJourney: false,
@@ -109,9 +113,12 @@ function prepareFlexTourData(formData: FlexTourFormData): {
         estimatedCalls: {
           estimatedCall: bookedCalls,
         },
+        // The tour's own booking link. OTP reads this into the flex leg's booking info and lets
+        // it win over the flexible line's static NeTEx BookingArrangements url: a booked tour is
+        // live state, so its link is the current one.
         publicContact: {
           phoneNumber: null,
-          url: null,
+          url: formData.contactUrl || null,
         },
       },
     },

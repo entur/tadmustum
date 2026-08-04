@@ -35,6 +35,12 @@ describe('defaultServiceDate', () => {
     expect(defaultServiceDate(now).isAfter(now.startOf('day'))).toBe(true);
   });
 
+  it('defaults a week out, matching the carpool trip form', () => {
+    // 2026-09-07 is a Monday, so a week on is a Monday too — an operating day, left as-is.
+    const monday = dayjs('2026-09-07T12:00:00');
+    expect(defaultServiceDate(monday).format('YYYY-MM-DD')).toBe('2026-09-14');
+  });
+
   it('lands on an operating day', () => {
     // Step through a full week of "now" values; every default must be a valid service date.
     for (let i = 0; i < 7; i++) {
@@ -44,9 +50,10 @@ describe('defaultServiceDate', () => {
   });
 
   it('skips the weekend', () => {
-    // Friday -> the following Monday, since Saturday and Sunday are not operating days.
-    const friday = dayjs('2026-09-11T12:00:00');
-    expect(defaultServiceDate(friday).format('YYYY-MM-DD')).toBe('2026-09-14');
+    // A week from a Saturday is another Saturday, so the default steps on to the Monday. (A week
+    // out always lands on the same weekday, so this is the only way a weekend comes up at all.)
+    const saturday = dayjs('2026-09-12T12:00:00');
+    expect(defaultServiceDate(saturday).format('YYYY-MM-DD')).toBe('2026-09-21');
   });
 
   it('clamps to the start of the validity window when it has not begun yet', () => {
