@@ -33,10 +33,6 @@ vi.mock('@mui/x-date-pickers/DateTimePicker', () => ({
 }));
 
 vi.mock('../hooks/useStreetRoute', () => ({ useStreetRoute: () => streetRoute }));
-vi.mock('../hooks/useOperators', () => {
-  const operators = [{ id: 'ENT:Operator:1', name: 'Entur' }];
-  return { useOperators: () => operators };
-});
 // Two authorities in different codespaces, so the Authority picker is rendered.
 // Stable reference (built once) to avoid re-firing the effect on every render.
 vi.mock('../../../shared/hooks/useAuthorities', () => {
