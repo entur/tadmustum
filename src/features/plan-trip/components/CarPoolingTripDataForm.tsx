@@ -25,10 +25,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
-import { useOperators } from '../hooks/useOperators.tsx';
 import { useStreetRoute } from '../hooks/useStreetRoute.tsx';
 import type { Feature, Point, Position } from 'geojson';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
+import { ENTUR_OPERATOR } from '../model/enturOperator.tsx';
 import {
   carPoolingTripDataSchema,
   MAX_TRIP_DURATION_MINUTES,
@@ -96,7 +96,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   // original (and nunamnir now rejects the mismatch outright). So the authority
   // is fixed once a trip exists — lock the picker when editing.
   const isEditing = !!initialState;
-  const operators = useOperators();
 
   // New trips default to departing exactly a week from now. Computed once so it
   // stays stable across renders (and so Reset returns to the same value).
@@ -117,7 +116,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     mode: 'onBlur', // or "onChange", depending on UX preference
     defaultValues: {
       authority: '',
-      operator: '',
+      operator: ENTUR_OPERATOR.id,
       departureStopName: 'Origin',
       departureDatetime: defaultDeparture,
       estimateArrivalAutomatically: true,
@@ -184,21 +183,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${code}`);
     }
 
-    if (operators.length && !operator) {
-      // Prefer an Entur operator when one exists; otherwise fall back to the
-      // first operator belonging to the selected authority's codespace (operator
-      // ids look like `<codespace>:Operator:<X>`), so staging environments that
-      // have no Entur operator still get a sensible default instead of a blank,
-      // required field.
-      const enturOperator = operators.find(o => o.name.toLowerCase().includes('entur'));
-      const codespace = authority ? authority.split(':')[0] : undefined;
-      const codespaceOperator = codespace
-        ? operators.find(o => o.id.split(':')[0] === codespace)
-        : undefined;
-      const defaultOperator = enturOperator ?? codespaceOperator;
-      if (defaultOperator) {
-        setValue('operator', defaultOperator.id);
-      }
+    // The operator is hardcoded to Entur, so re-assert it after an existing trip
+    // has been loaded: a trip created earlier can carry another codespace's
+    // operatorRef, and with the picker locked that value would fail validation
+    // with no way for the user to correct it.
+    if (operator !== ENTUR_OPERATOR.id) {
+      setValue('operator', ENTUR_OPERATOR.id);
     }
 
     if (mapDepartureFlexibleStop) {
@@ -244,7 +234,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     authorities,
     authority,
     contactUrl,
-    operators,
     operator,
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
@@ -653,21 +642,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           render={({ field }) => {
             return (
               // Only Entur is accepted as the operator for now and the field has
-              // no downstream consumer yet (see the notice below), so the picker
-              // is locked to the auto-selected Entur operator rather than letting
-              // the choice drift to a value the backend would reject.
+              // no downstream consumer yet (see the notice below), so the operator
+              // is hardcoded (ENTUR_OPERATOR) instead of being picked out of the
+              // journey planner's per-environment operator list. Kept as a locked
+              // Select so the value stays visible in the form.
               <Select {...field} labelId="operator-label" label="Operator" disabled>
-                <MenuItem value="" disabled>
-                  <em>Operator</em>
-                </MenuItem>
-                {field.value && !operators.some(o => o.id === field.value) && (
-                  <MenuItem value={field.value}>{field.value}</MenuItem>
-                )}
-                {operators.map(operator => (
-                  <MenuItem key={operator.id} value={operator.id}>
-                    {operator.name}
-                  </MenuItem>
-                ))}
+                <MenuItem value={ENTUR_OPERATOR.id}>{ENTUR_OPERATOR.name}</MenuItem>
               </Select>
             );
           }}

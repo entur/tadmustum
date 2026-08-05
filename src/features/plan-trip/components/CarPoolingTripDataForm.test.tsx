@@ -37,15 +37,11 @@ vi.mock('@mui/x-date-pickers/DateTimePicker', () => ({
 }));
 
 vi.mock('../hooks/useStreetRoute', () => ({ useStreetRoute: () => streetRoute }));
-// The hooks below must return STABLE references: the component lists the
-// operators/authorities arrays in a useEffect dependency array, so handing back
-// a fresh array literal on every render would re-fire the effect (which calls
-// setValue) and spin into an infinite render loop. The real hooks memoize their
-// results; the mocks build the arrays once and reuse them.
-vi.mock('../hooks/useOperators', () => {
-  const operators = [{ id: 'ENT:Operator:1', name: 'Entur' }];
-  return { useOperators: () => operators };
-});
+// The hook below must return a STABLE reference: the component lists the
+// authorities array in a useEffect dependency array, so handing back a fresh
+// array literal on every render would re-fire the effect (which calls setValue)
+// and spin into an infinite render loop. The real hook memoizes its result; the
+// mock builds the array once and reuses it.
 vi.mock('../../../shared/hooks/useAuthorities', () => {
   const adminAuthorities = [{ id: 'ENT:Authority:ENT', name: 'Entur' }];
   return { useAuthorities: () => ({ adminAuthorities }) };
@@ -312,8 +308,18 @@ describe('CarPoolingTripDataForm — operator is locked to Entur', () => {
     const operator = screen.getByRole('combobox', { name: 'Operator' });
     expect(operator).toHaveAttribute('aria-disabled', 'true');
 
-    // It is still auto-populated with the Entur operator, so the required field
-    // passes validation despite being read-only.
+    // The value is hardcoded rather than fetched, so the required field passes
+    // validation immediately — no journey-planner round trip to wait for.
+    await waitFor(() => expect(operator).toHaveTextContent('Entur'));
+  });
+
+  it('replaces another codespace operator on an existing trip with Entur', async () => {
+    // A trip created before the operator was locked down can carry any codespace's
+    // operatorRef. Entur is the only accepted value and the picker is disabled, so
+    // the form must overwrite it — otherwise the trip could never be saved again.
+    renderForm({ initialState: { ...editingState(), operator: 'GOA:Operator:GOA' } });
+
+    const operator = screen.getByRole('combobox', { name: 'Operator' });
     await waitFor(() => expect(operator).toHaveTextContent('Entur'));
   });
 });
