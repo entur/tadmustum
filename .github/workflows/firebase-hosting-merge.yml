@@ -67,3 +67,37 @@ jobs:
           # Pinned: firebase-tools 15.22.1-15.22.3 hit "premature close" on every
           # API call, and the non-idempotent retries fail deploys (409/400).
           firebaseToolsVersion: "15.22.0"
+
+  # Deploys to production after staging succeeds. The `environment: prd` reference is
+  # what makes this job wait: required reviewers on the 'prd' GitHub Environment
+  # (Settings > Environments) hold the run until someone approves it.
+  deploy_prd:
+    needs: deploy_tst
+    environment: prd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Pinned: Node 22.23.0 / 24.17.0 carry nodejs/node#63989, a keep-alive
+          # socket bug that makes firebase-tools fail with "Premature close" when
+          # authenticating to googleapis. 22.22.3 predates it.
+          node-version: 22.22.3
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Copy bootstrap config
+        run: cp .github/environments/config-prd.json dist/config.json
+      - name: Copy theme config
+        run: cp .github/environments/theme-prd.json dist/theme-prd.json
+      - uses: FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c # v0.10.0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENT_TADMUSTUM_PRD }}
+          channelId: live
+          projectId: ent-tadmustum-prd
+          # Pinned: firebase-tools 15.22.1-15.22.3 hit "premature close" on every
+          # API call, and the non-idempotent retries fail deploys (409/400).
+          firebaseToolsVersion: "15.22.0"
