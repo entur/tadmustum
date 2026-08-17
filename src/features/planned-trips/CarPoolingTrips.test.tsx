@@ -31,10 +31,18 @@ vi.mock('../plan-trip/hooks/useCancelExtrajourney.tsx', () => ({
 // runs once instead of re-fetching on every render and clobbering local state.
 const AUTHORITIES = [{ id: 'ENT:Authority:ENT', name: 'Entur' }];
 const ALLOWED_CODESPACES = [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }];
+// Per-test overrides for the hook's result, so the tests covering the hook's
+// loading/error states don't need their own module mock. Reset in beforeEach.
+const { authoritiesOverride } = vi.hoisted(() => ({
+  authoritiesOverride: {} as Record<string, unknown>,
+}));
 vi.mock('../../shared/hooks/useAuthorities.tsx', () => ({
   useAuthorities: () => ({
     authorities: AUTHORITIES,
     allowedCodespaces: ALLOWED_CODESPACES,
+    isLoading: false,
+    error: null,
+    ...authoritiesOverride,
   }),
 }));
 
@@ -75,6 +83,7 @@ describe('CarPoolingTrips', () => {
     queryExtraJourneys.mockReset();
     cancelExtrajourney.mockReset();
     navigateMock.mockReset();
+    for (const key of Object.keys(authoritiesOverride)) delete authoritiesOverride[key];
     nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-20T00:00:00.000Z').valueOf());
   });
   afterEach(() => {
@@ -416,5 +425,42 @@ describe('CarPoolingTrips', () => {
     renderInRouter();
 
     expect(await screen.findByText('boom')).toBeInTheDocument();
+  });
+
+  // The trip fan-out is the only thing that clears the page's own loading flag, so
+  // every path that skips it has to settle that flag itself. Regression cover for
+  // /trips hanging on "Loading..." forever whenever userContext failed.
+  describe('when authorities never produce a list', () => {
+    it('reports an authorities failure rather than loading forever', async () => {
+      authoritiesOverride.authorities = [];
+      authoritiesOverride.error = 'The server returned no user context.';
+
+      renderInRouter();
+
+      expect(await screen.findByText('The server returned no user context.')).toBeInTheDocument();
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+      expect(queryExtraJourneys).not.toHaveBeenCalled();
+    });
+
+    it('settles into an empty grid when the user holds no authorities', async () => {
+      authoritiesOverride.authorities = [];
+
+      renderInRouter();
+
+      await waitFor(() => expect(screen.queryByText('Loading...')).not.toBeInTheDocument());
+      expect(await screen.findByRole('grid')).toBeInTheDocument();
+      expect(queryExtraJourneys).not.toHaveBeenCalled();
+    });
+
+    it('keeps loading while the authorities lookup is still in flight', () => {
+      authoritiesOverride.authorities = [];
+      authoritiesOverride.isLoading = true;
+
+      renderInRouter();
+
+      // Still genuinely pending — a spinner is correct here, unlike the cases above.
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(queryExtraJourneys).not.toHaveBeenCalled();
+    });
   });
 });

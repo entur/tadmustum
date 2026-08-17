@@ -20,20 +20,39 @@ export const useAuthorities: () => {
   authorities: CodespaceAuthority[];
   adminAuthorities: CodespaceAuthority[];
   allowedCodespaces: Codespace[];
+  isLoading: boolean;
+  error: string | null;
 } = () => {
   const auth = useAuth();
   const config = useConfig();
   const [codespaceAuthorities, setCodespaceAuthorities] = useState<CodespaceAuthority[]>([]);
   const [allowedCodespaces, setAllowedCodespaces] = useState<Codespace[]>([]);
+  // Callers need to tell "still resolving" apart from "resolved to nothing" —
+  // otherwise an empty `authorities` is indistinguishable from a failure and they
+  // can only wait forever. `isLoading` starts true because the first run is
+  // already pending by the time anyone reads it.
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { triggerNoAccess } = useNoAccess();
 
   useEffect(() => {
+    if (!auth.user?.access_token) {
+      // Auth is still settling. Stay loading; the run that follows the token
+      // arriving is what resolves this.
+      return;
+    }
+
     const fetchAuthorities = async () => {
-      if (!auth.user?.access_token) {
-        return;
-      }
+      setError(null);
+      // `api` resolves *with* the error object instead of rejecting when a query
+      // fails, so a missing payload is the only signal that anything went wrong.
       const userContextResponse = await api(config, auth).getUserContext();
-      const userContext = userContextResponse.data['userContext'];
+      const userContext = userContextResponse?.data?.['userContext'];
+      if (!userContext) {
+        throw userContextResponse instanceof Error
+          ? userContextResponse
+          : new Error('The server returned no user context.');
+      }
       const allowedCodespaces: Codespace[] = userContext.allowedCodespaces;
 
       const noOrganizations = allowedCodespaces.length <= 0;
@@ -41,7 +60,13 @@ export const useAuthorities: () => {
         triggerNoAccess();
       } else {
         const response = await api(config).getAuthorities();
-        const authorities = response.data.authorities;
+        const authorities = response?.data?.authorities;
+
+        if (!authorities) {
+          throw response instanceof Error
+            ? response
+            : new Error('The server returned no authorities.');
+        }
 
         if (!(authorities.length > 0)) {
           triggerNoAccess();
@@ -68,7 +93,15 @@ export const useAuthorities: () => {
       }
     };
 
-    fetchAuthorities().then();
+    // Without this catch the rejection is swallowed: `authorities` stays empty,
+    // `triggerNoAccess` is never reached, and callers are left waiting on a
+    // result that will never arrive.
+    fetchAuthorities()
+      .catch(err => {
+        const fallback = 'Could not load your authorities.';
+        setError(err instanceof Error ? err.message : typeof err === 'string' ? err : fallback);
+      })
+      .finally(() => setIsLoading(false));
   }, [auth, config, triggerNoAccess]);
 
   // Codespaces with write permission. Use this for surfaces that lead to a
@@ -83,5 +116,11 @@ export const useAuthorities: () => {
     return codespaceAuthorities.filter(a => adminCodespaceIds.has(a.id.split(':')[0]));
   }, [allowedCodespaces, codespaceAuthorities]);
 
-  return { authorities: codespaceAuthorities, adminAuthorities, allowedCodespaces };
+  return {
+    authorities: codespaceAuthorities,
+    adminAuthorities,
+    allowedCodespaces,
+    isLoading,
+    error,
+  };
 };

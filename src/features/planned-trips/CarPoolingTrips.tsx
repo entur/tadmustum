@@ -33,6 +33,15 @@ const isTripCancelled = (trip: Extrajourney): boolean => {
   return Boolean(journey?.cancellation) || (calls.length > 0 && calls.every(c => c.cancellation));
 };
 
+// Errors reach the alert below as raw JSX children, so they have to be reduced to a
+// string first — an Error object rendered directly throws. Strings pass through
+// untouched; anything else falls back to a generic message rather than "[object Object]".
+const toMessage = (err: unknown, fallback: string): string => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return fallback;
+};
+
 const recordedAtMs = (trip: Extrajourney): number => {
   const recordedAt = trip.estimatedVehicleJourney?.recordedAtTime;
   return recordedAt ? dayjs(recordedAt).valueOf() : 0;
@@ -96,7 +105,12 @@ export default function CarPoolingTrips() {
 
   const queryExtraJourneys = useQueryExtraJourney();
   const cancelExtrajourney = useCancelExtrajourney();
-  const { authorities, allowedCodespaces } = useAuthorities();
+  const {
+    authorities,
+    allowedCodespaces,
+    isLoading: authoritiesLoading,
+    error: authoritiesError,
+  } = useAuthorities();
   const adminCodespaceIds = new Set(
     allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
   );
@@ -127,7 +141,26 @@ export default function CarPoolingTrips() {
   }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
-    if (!authorities.length) return;
+    // The three exits below all have to settle `loading` themselves: the fan-out
+    // is the only other thing that clears it, so returning early without doing so
+    // leaves the page on "Loading..." for good.
+    if (authoritiesLoading) {
+      // Authorities are still resolving — keep waiting rather than deciding on a
+      // list that hasn't arrived yet.
+      return;
+    }
+    if (authoritiesError) {
+      // Nothing to fan out over, and the render below reports why.
+      setLoading(false);
+      return;
+    }
+    if (!authorities.length) {
+      // Resolved, but the user holds no authorities: an empty list is the honest
+      // answer here, not a spinner.
+      setPlannedTrips([]);
+      setLoading(false);
+      return;
+    }
     // Fan out across every authority the user has access to and merge the
     // results. Each trip carries its own codespace in its lineRef, so callers
     // (edit/book navigation) can identify which tenant a row belongs to.
@@ -151,10 +184,13 @@ export default function CarPoolingTrips() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err);
+        // Keep this a string: the render path below drops `error` straight into
+        // JSX, so an Error object there throws. A rejection that is already a
+        // string is shown as-is, which is what callers rely on.
+        setError(toMessage(err, 'Could not load trips.'));
         setLoading(false);
       });
-  }, [authorities, queryExtraJourneys]);
+  }, [authorities, authoritiesLoading, authoritiesError, queryExtraJourneys]);
 
   const rows = useMemo(() => {
     if (!plannedTrips) return plannedTrips;
@@ -233,8 +269,11 @@ export default function CarPoolingTrips() {
     return <div className="alert alert-info">Loading...</div>;
   }
 
-  if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+  // An authorities failure means we never got as far as querying trips, so report
+  // it in preference to anything the fan-out might have set.
+  const fatalError = authoritiesError ?? error;
+  if (fatalError) {
+    return <div className="alert alert-danger">{fatalError}</div>;
   }
 
   const columns: GridColDef[] = [
@@ -489,7 +528,7 @@ export default function CarPoolingTrips() {
           (which would shove the fixed header/menu around). */}
       <Box sx={{ width: tableWidth, maxWidth: '100%', mx: 'auto' }}>
         <DataGrid
-          rows={rows}
+          rows={rows ?? []}
           columns={columns}
           columnVisibilityModel={columnVisibilityModel}
           apiRef={apiRef}
