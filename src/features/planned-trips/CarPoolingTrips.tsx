@@ -3,7 +3,7 @@ import { DataGrid, useGridApiRef, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import { useCancelExtrajourney } from '../plan-trip/hooks/useCancelExtrajourney.tsx';
-import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
+import { useAllowedCodespaces } from '../../shared/hooks/useAllowedCodespaces.tsx';
 import { usePersistentState } from '../../shared/hooks/usePersistentState.tsx';
 import { isClientError } from '../../shared/error-message/userFacingMessage.tsx';
 import Button from '@mui/material/Button';
@@ -101,21 +101,12 @@ export default function CarPoolingTrips() {
   const queryExtraJourneys = useQueryExtraJourney();
   const cancelExtrajourney = useCancelExtrajourney();
   const {
-    authorities,
     allowedCodespaces,
-    isLoading: authoritiesLoading,
-    error: authoritiesError,
-  } = useAuthorities();
-  const adminCodespaceIds = new Set(
-    allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
-  );
-  // Trips don't carry the authority name; resolve it from the codespace prefix
-  // of lineRef against the authorities the user has access to. Trips can only
-  // appear in the list if their codespace was queried, so a hit is guaranteed.
-  const authorityNameByCodespace = useMemo(
-    () => new Map(authorities.map(a => [a.id.split(':')[0], a.name])),
-    [authorities]
-  );
+    adminCodespaces,
+    isLoading: codespacesLoading,
+    error: codespacesError,
+  } = useAllowedCodespaces();
+  const adminCodespaceIds = new Set(adminCodespaces);
 
   useEffect(() => {
     const state = location.state as { savedMessage?: string; savedTripId?: string } | null;
@@ -132,17 +123,17 @@ export default function CarPoolingTrips() {
     // The three exits below all have to settle `loading` themselves: the trips
     // query is the only other thing that clears it, so returning early without
     // doing so leaves the page on "Loading..." for good.
-    if (authoritiesLoading) {
+    if (codespacesLoading) {
       // The user context is still resolving — keep waiting rather than deciding
       // on a list that hasn't arrived yet.
       return;
     }
-    if (authoritiesError) {
+    if (codespacesError) {
       // No usable user context, and the render below reports why.
       setLoading(false);
       return;
     }
-    if (!authorities.length) {
+    if (!allowedCodespaces.length) {
       // Resolved, but the user holds no codespaces: an empty list is the honest
       // answer here, not a spinner (and the server would return nothing anyway).
       setPlannedTrips([]);
@@ -169,7 +160,7 @@ export default function CarPoolingTrips() {
         setError(toMessage(err, 'Could not load trips.'));
         setLoading(false);
       });
-  }, [authorities, authoritiesLoading, authoritiesError, queryExtraJourneys]);
+  }, [allowedCodespaces, codespacesLoading, codespacesError, queryExtraJourneys]);
 
   const rows = useMemo(() => {
     if (!plannedTrips) return plannedTrips;
@@ -242,9 +233,9 @@ export default function CarPoolingTrips() {
     return <div className="alert alert-info">Loading...</div>;
   }
 
-  // An authorities failure means we never got as far as querying trips, so report
-  // it in preference to anything the fan-out might have set.
-  const fatalError = authoritiesError ?? error;
+  // A user-context failure means we never got as far as querying trips, so
+  // report it in preference to anything the trips query might have set.
+  const fatalError = codespacesError ?? error;
   if (fatalError) {
     return <div className="alert alert-danger">{fatalError}</div>;
   }
@@ -321,15 +312,6 @@ export default function CarPoolingTrips() {
       field: 'id',
       headerName: 'ID',
       width: 240,
-    },
-    {
-      field: 'authority',
-      headerName: 'Authority',
-      width: 150,
-      valueGetter: (_value: string, row: Extrajourney) => {
-        const codespace = row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
-        return authorityNameByCodespace.get(codespace) ?? codespace;
-      },
     },
     {
       field: 'cancellation',
@@ -431,7 +413,6 @@ export default function CarPoolingTrips() {
   // Hidden-field columns are toggled on demand; everything else is always shown.
   const columnVisibilityModel = {
     id: showHiddenFields,
-    authority: showHiddenFields,
     latestExpectedArrivalTime: showHiddenFields,
   };
 

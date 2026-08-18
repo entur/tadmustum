@@ -24,25 +24,25 @@ vi.mock('../plan-trip/hooks/useCancelExtrajourney.tsx', () => ({
   useCancelExtrajourney: () => cancelExtrajourney,
 }));
 
-// useAuthorities drives the fan-out across allowed codespaces; the test pretends
-// the user only has access to ENT so the existing single-tenant assertions hold.
-// The returned arrays are stable module-level constants (mirroring the real
-// hook's memoized output) so the trip-loading effect — keyed on `authorities` —
-// runs once instead of re-fetching on every render and clobbering local state.
-const AUTHORITIES = [{ id: 'ENT:Authority:ENT', name: 'Entur' }];
+// useAllowedCodespaces gates the trips query; the test pretends the user only
+// has access to ENT so the existing single-tenant assertions hold. The returned
+// arrays are stable module-level constants (mirroring the real hook's memoized
+// output) so the trip-loading effect — keyed on `allowedCodespaces` — runs once
+// instead of re-fetching on every render and clobbering local state.
 const ALLOWED_CODESPACES = [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }];
+const ADMIN_CODESPACES = ['ENT'];
 // Per-test overrides for the hook's result, so the tests covering the hook's
 // loading/error states don't need their own module mock. Reset in beforeEach.
-const { authoritiesOverride } = vi.hoisted(() => ({
-  authoritiesOverride: {} as Record<string, unknown>,
+const { codespacesOverride } = vi.hoisted(() => ({
+  codespacesOverride: {} as Record<string, unknown>,
 }));
-vi.mock('../../shared/hooks/useAuthorities.tsx', () => ({
-  useAuthorities: () => ({
-    authorities: AUTHORITIES,
+vi.mock('../../shared/hooks/useAllowedCodespaces.tsx', () => ({
+  useAllowedCodespaces: () => ({
     allowedCodespaces: ALLOWED_CODESPACES,
+    adminCodespaces: ADMIN_CODESPACES,
     isLoading: false,
     error: null,
-    ...authoritiesOverride,
+    ...codespacesOverride,
   }),
 }));
 
@@ -83,7 +83,7 @@ describe('CarPoolingTrips', () => {
     queryExtraJourneys.mockReset();
     cancelExtrajourney.mockReset();
     navigateMock.mockReset();
-    for (const key of Object.keys(authoritiesOverride)) delete authoritiesOverride[key];
+    for (const key of Object.keys(codespacesOverride)) delete codespacesOverride[key];
     nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-20T00:00:00.000Z').valueOf());
   });
   afterEach(() => {
@@ -279,10 +279,10 @@ describe('CarPoolingTrips', () => {
     expect(within(row).queryByText('Partially cancelled')).not.toBeInTheDocument();
   });
 
-  it('collapses the same trip returned twice (fan-out) to its latest snapshot', async () => {
-    // The same trip can come back from more than one authority's query — once as
-    // a stale *active* snapshot, once as the newer *cancelled* one. They share an
-    // id, which the grid keys on, so the duplicate must be collapsed (keeping the
+  it('collapses the same trip returned twice to its latest snapshot', async () => {
+    // Should the server ever return the same trip twice — once as a stale
+    // *active* snapshot, once as the newer *cancelled* one — they share an id,
+    // which the grid keys on, so the duplicate must be collapsed (keeping the
     // newest) before rendering or the cancelled copy lingers after the filter.
     const sharedId = 'TRI:ServiceJourney:dup';
     const sharedCalls = {
@@ -426,13 +426,13 @@ describe('CarPoolingTrips', () => {
     expect(await screen.findByText('boom')).toBeInTheDocument();
   });
 
-  // The trip fan-out is the only thing that clears the page's own loading flag, so
+  // The trips query is the only thing that clears the page's own loading flag, so
   // every path that skips it has to settle that flag itself. Regression cover for
   // /trips hanging on "Loading..." forever whenever userContext failed.
-  describe('when authorities never produce a list', () => {
-    it('reports an authorities failure rather than loading forever', async () => {
-      authoritiesOverride.authorities = [];
-      authoritiesOverride.error = 'The server returned no user context.';
+  describe('when the user context never produces codespaces', () => {
+    it('reports a user-context failure rather than loading forever', async () => {
+      codespacesOverride.allowedCodespaces = [];
+      codespacesOverride.error = 'The server returned no user context.';
 
       renderInRouter();
 
@@ -441,8 +441,8 @@ describe('CarPoolingTrips', () => {
       expect(queryExtraJourneys).not.toHaveBeenCalled();
     });
 
-    it('settles into an empty grid when the user holds no authorities', async () => {
-      authoritiesOverride.authorities = [];
+    it('settles into an empty grid when the user holds no codespaces', async () => {
+      codespacesOverride.allowedCodespaces = [];
 
       renderInRouter();
 
@@ -451,9 +451,9 @@ describe('CarPoolingTrips', () => {
       expect(queryExtraJourneys).not.toHaveBeenCalled();
     });
 
-    it('keeps loading while the authorities lookup is still in flight', () => {
-      authoritiesOverride.authorities = [];
-      authoritiesOverride.isLoading = true;
+    it('keeps loading while the user context is still in flight', () => {
+      codespacesOverride.allowedCodespaces = [];
+      codespacesOverride.isLoading = true;
 
       renderInRouter();
 

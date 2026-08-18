@@ -38,24 +38,6 @@ const createClient = (uri: string, auth?: AuthState) => {
   });
 };
 
-const getAuthorities = (uri: string) => async () => {
-  const client = createClient(uri);
-
-  const query = gql`
-    query GetAuthorities {
-      authorities {
-        id
-        name
-      }
-    }
-  `;
-
-  return client
-    .query({ query })
-    .catch(error => error)
-    .then(response => response);
-};
-
 const getOperators = (uri: string) => async () => {
   const client = createClient(uri);
 
@@ -421,7 +403,6 @@ const bookPassengerRide =
 const api = (config: Config, auth?: AuthState) => {
   const streetRoute = getStreetRoute(config['journey-planner-api'] as string);
   return {
-    getAuthorities: getAuthorities(config['journey-planner-api'] as string),
     getOperators: getOperators(config['journey-planner-api'] as string),
     getUserContext: getUserContext(config['carpool-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>

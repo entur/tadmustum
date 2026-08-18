@@ -10,13 +10,18 @@ const flexAreaToPosition = (flexArea: ExpectedFlexibleArea | undefined): Positio
   return feature ? feature.geometry.coordinates : null;
 };
 
-const mapToFormData = (journey: Extrajourney, authority: string): CarPoolingTripDataFormData => {
+const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
   const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
   const firstCall = calls[0];
   const lastCall = calls[calls.length - 1];
 
   return {
-    authority,
+    // The journey's dataSource IS its codespace; fall back to the lineRef prefix
+    // for trips stored before dataSource became mandatory.
+    dataSource:
+      journey.estimatedVehicleJourney.dataSource ||
+      journey.estimatedVehicleJourney.lineRef?.split(':')[0] ||
+      '',
     operator: journey.estimatedVehicleJourney.operatorRef,
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,

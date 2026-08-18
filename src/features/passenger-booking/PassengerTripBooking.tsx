@@ -37,7 +37,7 @@ import { useStreetRoute } from '../plan-trip/hooks/useStreetRoute';
 import PassengerBookingMap from './components/PassengerBookingMap';
 import { useBookPassengerRide } from './hooks/useBookPassengerRide';
 import { userFacingMessage } from '../../shared/error-message/userFacingMessage.tsx';
-import { useAuthorities } from '../../shared/hooks/useAuthorities';
+import { useAllowedCodespaces } from '../../shared/hooks/useAllowedCodespaces';
 
 interface PassengerBookingFormData {
   origin: string;
@@ -91,7 +91,7 @@ function StopMarker({
 
 export default function PassengerTripBooking() {
   const { codespace, tripId } = useParams<{ codespace: string; tripId: string }>();
-  const { allowedCodespaces } = useAuthorities();
+  const { allowedCodespaces } = useAllowedCodespaces();
   // Booking writes the trip back, so requires adminCarpoolingData on the
   // codespace — surface that as a disabled button rather than letting the
   // user fill in the form and hit a 403 on submit.

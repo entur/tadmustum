@@ -22,7 +22,6 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
 import mapToFormData from '../util/mapToFormData.tsx';
-import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
 import { userFacingMessage } from '../../../shared/error-message/userFacingMessage.tsx';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
@@ -74,7 +73,6 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       onArrivalStopChange,
       onRouteGeometryChange,
     } = stops;
-    const { authorities } = useAuthorities();
     const [snackbar, setSnackbar] = useState<SnackbarState>({
       open: false,
       message: '',
@@ -187,17 +185,12 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     useEffect(() => {
       const loadInitialState = (id?: string) => {
         if (initializing.current || !id || !codespace) return;
-        // Wait for the authority list before loading — the form's authority
-        // field needs the id matching the codespace from the URL, not a
-        // fabricated one. The query itself takes no arguments.
-        const authority = authorities.find(a => a.id.startsWith(`${codespace}:`));
-        if (!authority) return;
         initializing.current = true;
         queryOneExtraJourney(id)
           .then(result => {
             if (result.data?.extraJourney) {
               const journey = result.data.extraJourney as Extrajourney;
-              const state = mapToFormData(journey, authority.id);
+              const state = mapToFormData(journey);
               if (duplicate) {
                 // A duplicate copies every field of the source trip but is a new
                 // trip, so it needs its own identity: drop the source id and mint
@@ -224,7 +217,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       // source id here would make "save" overwrite the original trip instead.
       setCurrentTripId(duplicate ? undefined : tripId);
       loadInitialState(tripId);
-    }, [authorities, codespace, duplicate, loadStopsFromJourney, queryOneExtraJourney, tripId]);
+    }, [codespace, duplicate, loadStopsFromJourney, queryOneExtraJourney, tripId]);
 
     useImperativeHandle(
       ref,

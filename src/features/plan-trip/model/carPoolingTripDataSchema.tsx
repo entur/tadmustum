@@ -42,7 +42,7 @@ const positionSchema = Yup.mixed<Position>()
 const dateSchema = Yup.mixed<Dayjs>().dayjs('Not a valid date');
 
 export const carPoolingTripDataSchema = Yup.object({
-  authority: Yup.string().required(),
+  dataSource: Yup.string().required(),
   operator: Yup.string()
     .required()
     // The operator field is currently dead data downstream (see ROR pipeline:

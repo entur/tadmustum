@@ -7,7 +7,6 @@ schema {
 directive @timingData on FIELD_DEFINITION
 
 type Query {
-  authorities: [Authority]! @timingData
   operators: [Operator]! @timingData
 
   userContext: UserContext
@@ -16,17 +15,6 @@ type Query {
   # holds a carpooling role on.
   situationElements: [SituationElement]
   extrajourneys: [Extrajourney]
-}
-
-"Authority involved in public transportation. An organisation under which the responsibility of organising the transport service in a certain area is placed."
-type Authority {
-  fareUrl: String
-  id: ID!
-  lang: String
-  name: String!
-  phone: String
-  timezone: String!
-  url: String
 }
 
 type Operator {

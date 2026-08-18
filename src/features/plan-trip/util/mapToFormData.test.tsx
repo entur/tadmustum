@@ -14,7 +14,7 @@ const toComparable = (form: CarPoolingTripDataFormData) => ({
 describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('round-trips every form field through the SIRI payload', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -37,14 +37,14 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(toComparable(roundTripped)).toEqual(toComparable(original));
   });
 
   it('round-trips cancellation flags on departure and destination', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -67,7 +67,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(roundTripped.departureCancellation).toBe(true);
     expect(roundTripped.destinationCancellation).toBe(true);
@@ -75,7 +75,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
 
   it('round-trips tripCancellation through estimatedVehicleJourney.cancellation', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -100,13 +100,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     const payload = prepareCarpoolingFormData(original);
     expect(payload.input.estimatedVehicleJourney.cancellation).toBe(true);
 
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
     expect(roundTripped.tripCancellation).toBe(true);
   });
 
   it('preserves intermediate calls and their cancellation flags through round-trip', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -152,7 +152,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(roundTripped.intermediateCalls).toHaveLength(2);
     expect(roundTripped.intermediateCalls[0]).toMatchObject({
@@ -167,7 +167,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
 
   it('round-trips when optional numeric/url fields are null', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -190,7 +190,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(toComparable(roundTripped)).toEqual(toComparable(original));
   });

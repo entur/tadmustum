@@ -23,12 +23,12 @@ vi.mock('../plan-trip/hooks/useStreetRoute', () => ({
   useStreetRoute: () => async () => null,
 }));
 
-// The component looks up the trip's authority via the codespace from the URL.
-// Provide a matching entry so the trip query and booking submission proceed.
-vi.mock('../../shared/hooks/useAuthorities', () => ({
-  useAuthorities: () => ({
-    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
+// The component gates booking on admin permission for the codespace from the
+// URL. Provide a matching entry so the booking submission proceeds.
+vi.mock('../../shared/hooks/useAllowedCodespaces', () => ({
+  useAllowedCodespaces: () => ({
     allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
+    adminCodespaces: ['ENT'],
   }),
 }));
 
