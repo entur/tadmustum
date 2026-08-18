@@ -91,10 +91,7 @@ function StopMarker({
 
 export default function PassengerTripBooking() {
   const { codespace, tripId } = useParams<{ codespace: string; tripId: string }>();
-  const { authorities, allowedCodespaces } = useAuthorities();
-  const tripAuthority = codespace
-    ? authorities.find(a => a.id.startsWith(`${codespace}:`))
-    : undefined;
+  const { allowedCodespaces } = useAuthorities();
   // Booking writes the trip back, so requires adminCarpoolingData on the
   // codespace — surface that as a disabled button rather than letting the
   // user fill in the form and hit a 403 on submit.
@@ -208,9 +205,9 @@ export default function PassengerTripBooking() {
   };
 
   useEffect(() => {
-    if (!tripId || !codespace || !tripAuthority) return;
+    if (!tripId) return;
 
-    queryExtraJourney(codespace, tripAuthority.id, tripId)
+    queryExtraJourney(tripId)
       .then(response => {
         if (response.error) {
           setError('Failed to load trip details');
@@ -223,7 +220,7 @@ export default function PassengerTripBooking() {
         setError('Failed to load trip details');
         setLoading(false);
       });
-  }, [codespace, tripAuthority, tripId, queryExtraJourney]);
+  }, [tripId, queryExtraJourney]);
 
   // Initialize form with URL parameters
   useEffect(() => {
@@ -316,11 +313,6 @@ export default function PassengerTripBooking() {
       return;
     }
 
-    if (!tripAuthority) {
-      setBookingError('Could not resolve the authority for this trip');
-      return;
-    }
-
     setIsBookingInProgress(true);
     setBookingError(null);
 
@@ -333,7 +325,7 @@ export default function PassengerTripBooking() {
         passengerDeviationBudget: bookingData.passengerDeviationBudget,
       };
 
-      const result = await bookPassengerRide(trip, bookingPayload, tripAuthority.id);
+      const result = await bookPassengerRide(trip, bookingPayload);
 
       if (result.error) {
         setBookingError(

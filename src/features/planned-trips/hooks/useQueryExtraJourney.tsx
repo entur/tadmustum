@@ -11,23 +11,17 @@ export const useQueryExtraJourney = () => {
   const auth = useAuth();
 
   // Memoize the function to stabilize its reference
-  return useCallback(
-    async (
-      codespace: string,
-      authority: string
-    ): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
-      if (!auth.user?.access_token) {
-        return {
-          error: {
-            message: 'Access token missing',
-            code: 'ACCESS_TOKEN_MISSING',
-            details: 'no auth.user.access_token',
-          },
-        };
-      }
+  return useCallback(async (): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
+    if (!auth.user?.access_token) {
+      return {
+        error: {
+          message: 'Access token missing',
+          code: 'ACCESS_TOKEN_MISSING',
+          details: 'no auth.user.access_token',
+        },
+      };
+    }
 
-      return await api(config, auth).queryExtraJourney(codespace, authority).apply(this);
-    },
-    [auth, config]
-  );
+    return await api(config, auth).queryExtraJourney().apply(this);
+  }, [auth, config]);
 };

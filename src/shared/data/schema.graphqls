@@ -11,8 +11,11 @@ type Query {
   operators: [Operator]! @timingData
 
   userContext: UserContext
-  situationElements(codespace: String!, authority: String!): [SituationElement]
-  extrajourneys(codespace: String!, authority: String!): [Extrajourney]
+
+  # Scoped server-side: each returns only the data in codespaces the caller
+  # holds a carpooling role on.
+  situationElements: [SituationElement]
+  extrajourneys: [Extrajourney]
 }
 
 "Authority involved in public transportation. An organisation under which the responsibility of organising the transport service in a certain area is placed."
@@ -49,16 +52,10 @@ enum Permission {
 }
 
 type Mutation {
-  createOrUpdateSituationElement(
-    codespace: String!
-    authority: String!
-    input: SituationElementInput!
-  ): String
-  createOrUpdateExtrajourney(
-    codespace: String!
-    authority: String!
-    input: ExtrajourneyInput!
-  ): String
+  # The tenant is named inside the payload: participantRef (SX) / the journey's
+  # dataSource (ET) IS the codespace, and authorization gates on it.
+  createOrUpdateSituationElement(input: SituationElementInput!): String
+  createOrUpdateExtrajourney(input: ExtrajourneyInput!): String
 }
 
 type SituationElement {

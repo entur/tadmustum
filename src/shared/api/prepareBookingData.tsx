@@ -27,11 +27,8 @@ export interface PassengerBookingData {
 export async function prepareBookingData(
   originalTrip: Extrajourney,
   bookingData: PassengerBookingData,
-  authority: string,
   routeLeg?: RouteLeg
 ): Promise<{
-  codespace: string;
-  authority: string;
   input: Extrajourney;
 }> {
   // The booking re-submits the trip as an upsert keyed on its
@@ -58,8 +55,6 @@ export async function prepareBookingData(
   };
 
   return {
-    codespace: assembled.codespace,
-    authority,
     input: updatedTrip,
   };
 }
@@ -176,8 +171,8 @@ function assembleBooking(
   originalTrip: Extrajourney,
   bookingData: PassengerBookingData
 ): AssembledBooking {
-  // Codespace is the prefix of the trip's lineRef (`<CODESPACE>:CarPooling:<uuid>`).
-  // It must match the supplied authority — nunamnir enforces this server-side.
+  // Codespace is the prefix of the trip's lineRef (`<CODESPACE>:CarPooling:<uuid>`) —
+  // nunamnir validates it against the journey's own references server-side.
   const codespace = originalTrip.estimatedVehicleJourney.lineRef?.split(':')[0];
   if (!codespace) {
     throw new Error('Original trip is missing a lineRef; cannot determine codespace');

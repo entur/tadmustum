@@ -5,8 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodePointAsCircularArea } from '../model/circularAreaCodec.tsx';
 
 function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
-  codespace: string;
-  authority: string;
   input: Extrajourney;
 } {
   if (!formData.departureFlexibleStop || !formData.destinationFlexibleStop) {
@@ -15,9 +13,10 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
     // an unrelated null deref further down.
     throw new Error('Cannot prepare carpooling form: departure and destination stops are required');
   }
-  // Codespace is the NeTEx authority id prefix: `<CODESPACE>:Authority:<X>`.
-  // The form only carries the authority — derive the codespace from it so the
-  // two cannot drift apart (nunamnir now rejects mismatched pairs).
+  // The form carries the picked authority (`<CODESPACE>:Authority:<X>`) for
+  // display; the codespace derived from its prefix is minted into the journey's
+  // ids and its dataSource — the dataSource IS the codespace, and it is what
+  // nunamnir authorizes the write on and pins the other references to.
   const codespace = formData.authority.split(':')[0];
   const intermediateCalls = formData.intermediateCalls.map((call, index) => ({
     ...call,
@@ -25,8 +24,6 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
   }));
   const destinationOrder = intermediateCalls.length + 2;
   const variables = {
-    codespace,
-    authority: formData.authority,
     input: {
       estimatedVehicleJourney: {
         recordedAtTime: dayjs().toISOString(),
@@ -117,8 +114,6 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
 
   if (formData.id) {
     return {
-      codespace: variables.codespace,
-      authority: variables.authority,
       input: {
         id: formData.id,
         ...variables.input,

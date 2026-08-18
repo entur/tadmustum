@@ -207,9 +207,8 @@ describe('PassengerTripBooking', () => {
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
 
     await waitFor(() => expect(bookPassengerRide).toHaveBeenCalledTimes(1));
-    const [submittedTrip, payload, submittedAuthority] = bookPassengerRide.mock.calls[0];
+    const [submittedTrip, payload] = bookPassengerRide.mock.calls[0];
     expect(submittedTrip).toBe(trip);
-    expect(submittedAuthority).toBe('ENT:Authority:ENT');
     expect(payload).toMatchObject({
       tripId: 'ENT:ServiceJourney:1',
       pickupCoordinates: [10.7522, 59.9139],

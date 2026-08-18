@@ -13,13 +13,9 @@ export const useQueryExtraJourney = () => {
   // Memoize the function to stabilize its reference
   return useCallback(
     async (
-      codespace: string,
-      authority: string,
       id: string
     ): Promise<{
       data?: {
-        codespace: string;
-        authority: string;
         extraJourney?: Extrajourney;
       };
       error?: AppError;
@@ -34,14 +30,12 @@ export const useQueryExtraJourney = () => {
         };
       }
 
-      const trips = await api(config, auth).queryExtraJourney(codespace, authority).apply(this);
+      const trips = await api(config, auth).queryExtraJourney().apply(this);
 
       if (!trips.error) {
         const filtered = trips.data?.filter(journey => journey.id === id);
         return {
           data: {
-            codespace,
-            authority,
             extraJourney: filtered?.length ? filtered[0] : undefined,
           },
         };

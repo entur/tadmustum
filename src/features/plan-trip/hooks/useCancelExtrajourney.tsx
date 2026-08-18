@@ -8,10 +8,7 @@ export const useCancelExtrajourney = () => {
   const config = useConfig();
   const auth = useAuth();
 
-  return async (
-    originalTrip: Extrajourney,
-    authority: string
-  ): Promise<{ data?: string; error?: AppError }> => {
+  return async (originalTrip: Extrajourney): Promise<{ data?: string; error?: AppError }> => {
     if (!auth.user?.access_token)
       return {
         error: {
@@ -21,6 +18,6 @@ export const useCancelExtrajourney = () => {
         },
       };
 
-    return await api(config, auth).cancelExtrajourney(originalTrip, authority).apply(this);
+    return await api(config, auth).cancelExtrajourney(originalTrip).apply(this);
   };
 };

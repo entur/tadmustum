@@ -359,8 +359,7 @@ describe('CarPoolingTrips', () => {
 
     await waitFor(() =>
       expect(cancelExtrajourney).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'ENT:ServiceJourney:1' }),
-        'ENT:Authority:ENT'
+        expect.objectContaining({ id: 'ENT:ServiceJourney:1' })
       )
     );
 

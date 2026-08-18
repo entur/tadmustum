@@ -187,12 +187,13 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
     useEffect(() => {
       const loadInitialState = (id?: string) => {
         if (initializing.current || !id || !codespace) return;
-        // Wait for the authority list before issuing the query — we need the
-        // authority id matching the codespace from the URL, not a fabricated one.
+        // Wait for the authority list before loading — the form's authority
+        // field needs the id matching the codespace from the URL, not a
+        // fabricated one. The query itself takes no arguments.
         const authority = authorities.find(a => a.id.startsWith(`${codespace}:`));
         if (!authority) return;
         initializing.current = true;
-        queryOneExtraJourney(codespace, authority.id, id)
+        queryOneExtraJourney(id)
           .then(result => {
             if (result.data?.extraJourney) {
               const journey = result.data.extraJourney as Extrajourney;
