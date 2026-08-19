@@ -7,21 +7,12 @@ schema {
 directive @timingData on FIELD_DEFINITION
 
 type Query {
-  operators: [Operator]! @timingData
-
   userContext: UserContext
 
   # Scoped server-side: each returns only the data in codespaces the caller
   # holds a carpooling role on.
   situationElements: [SituationElement]
   extrajourneys: [Extrajourney]
-}
-
-type Operator {
-  id: ID!
-  name: String!
-  phone: String
-  url: String
 }
 
 type UserContext {

@@ -22,7 +22,7 @@ import type { EstimatedCall } from '../model/EstimatedCall.tsx';
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
-    'ET-Client-Name': 'entur - deviation-messages',
+    'ET-Client-Name': 'entur - tadmustum',
   } as Record<string, string>;
 
   if (auth?.user?.access_token) {
@@ -36,24 +36,6 @@ const createClient = (uri: string, auth?: AuthState) => {
     link: ApolloLink.from([removeTypenameFromVariables(), new HttpLink({ uri, headers })]),
     cache: new InMemoryCache(),
   });
-};
-
-const getOperators = (uri: string) => async () => {
-  const client = createClient(uri);
-
-  const query = gql`
-    query GetOperators {
-      operators {
-        id
-        name
-      }
-    }
-  `;
-
-  return client
-    .query({ query })
-    .catch(error => error)
-    .then(response => response);
 };
 
 const getUserContext = (uri: string, auth: AuthState) => async () => {
@@ -403,7 +385,6 @@ const bookPassengerRide =
 const api = (config: Config, auth?: AuthState) => {
   const streetRoute = getStreetRoute(config['journey-planner-api'] as string);
   return {
-    getOperators: getOperators(config['journey-planner-api'] as string),
     getUserContext: getUserContext(config['carpool-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
       mutateExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, formData),
