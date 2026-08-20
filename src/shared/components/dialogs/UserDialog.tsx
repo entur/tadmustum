@@ -15,7 +15,7 @@ import {
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
-import { useAuthorities } from '../../hooks/useAuthorities.tsx';
+import { useAllowedCodespaces } from '../../hooks/useAllowedCodespaces.tsx';
 
 interface UserDialogProps {
   open: boolean;
@@ -25,7 +25,7 @@ interface UserDialogProps {
 
 export default function UserDialog({ open, onClose, onLogout }: UserDialogProps) {
   const { t } = useTranslation();
-  const { allowedCodespaces } = useAuthorities();
+  const { allowedCodespaces } = useAllowedCodespaces();
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

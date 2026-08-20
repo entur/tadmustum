@@ -18,16 +18,6 @@ vi.mock('../hooks/useMutateExtrajourney', () => ({
   useMutateExtrajourney: () => mutate,
 }));
 
-// useAuthorities pairs codespaces to NeTEx authority ids; the component waits
-// for the matching authority before issuing the trip query, so the test needs
-// to supply one. Real lookups go through OIDC + GraphQL.
-vi.mock('../../../shared/hooks/useAuthorities', () => ({
-  useAuthorities: () => ({
-    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
-    allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
-  }),
-}));
-
 // Stub the heavy form (MUI fields, date pickers, schema). The reset/identity
 // logic lives in CarPoolingTripData, so we expose the pre-filled initialState
 // and a way to fire onReset/onSubmit, plus whether a trip was loaded.
@@ -57,7 +47,7 @@ const TRIP_ID = 'ENT:ServiceJourney:42';
 // through the real SIRI mapper so the flexible areas decode back into features.
 const journeyFixture = (): Extrajourney => {
   const form: CarPoolingTripDataFormData = {
-    authority: 'ENT:Authority:ENT',
+    dataSource: 'ENT',
     operator: 'ENT:Operator:1',
     id: TRIP_ID,
     departureStopName: 'Oslo S',
@@ -98,7 +88,7 @@ describe('CarPoolingTripData reset behaviour', () => {
     queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} {...props} />);
 
     // Initial load draws the trip's stops onto the map.
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
@@ -137,7 +127,7 @@ describe('CarPoolingTripData duplicate behaviour', () => {
     queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" duplicate {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} duplicate {...props} />);
 
     // The source trip is still loaded (its stops are drawn) to pre-fill the form.
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
@@ -157,7 +147,7 @@ describe('CarPoolingTripData duplicate behaviour', () => {
     mutate.mockResolvedValue({ data: 'ENT:ServiceJourney:new' });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" duplicate {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} duplicate {...props} />);
 
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
     const code = screen.getByTestId('code').textContent ?? '';

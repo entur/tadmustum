@@ -38,13 +38,13 @@ vi.mock('@mui/x-date-pickers/DateTimePicker', () => ({
 
 vi.mock('../hooks/useStreetRoute', () => ({ useStreetRoute: () => streetRoute }));
 // The hook below must return a STABLE reference: the component lists the
-// authorities array in a useEffect dependency array, so handing back a fresh
+// adminCodespaces array in a useEffect dependency array, so handing back a fresh
 // array literal on every render would re-fire the effect (which calls setValue)
 // and spin into an infinite render loop. The real hook memoizes its result; the
 // mock builds the array once and reuses it.
-vi.mock('../../../shared/hooks/useAuthorities', () => {
-  const adminAuthorities = [{ id: 'ENT:Authority:ENT', name: 'Entur' }];
-  return { useAuthorities: () => ({ adminAuthorities }) };
+vi.mock('../../../shared/hooks/useAllowedCodespaces', () => {
+  const adminCodespaces = ['ENT'];
+  return { useAllowedCodespaces: () => ({ adminCodespaces }) };
 });
 
 import CarPoolingTripDataForm from './CarPoolingTripDataForm';
@@ -71,7 +71,7 @@ const point = (lng: number, lat: number): Feature<Point> => ({
 });
 
 const editingState = (): CarPoolingTripDataFormData => ({
-  authority: 'ENT:Authority:ENT',
+  dataSource: 'ENT',
   operator: 'ENT:Operator:1',
   id: 'ENT:ServiceJourney:42',
   departureStopName: 'Oslo S',

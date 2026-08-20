@@ -22,7 +22,7 @@ import type { EstimatedCall } from '../model/EstimatedCall.tsx';
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
-    'ET-Client-Name': 'entur - deviation-messages',
+    'ET-Client-Name': 'entur - tadmustum',
   } as Record<string, string>;
 
   if (auth?.user?.access_token) {
@@ -36,42 +36,6 @@ const createClient = (uri: string, auth?: AuthState) => {
     link: ApolloLink.from([removeTypenameFromVariables(), new HttpLink({ uri, headers })]),
     cache: new InMemoryCache(),
   });
-};
-
-const getAuthorities = (uri: string) => async () => {
-  const client = createClient(uri);
-
-  const query = gql`
-    query GetAuthorities {
-      authorities {
-        id
-        name
-      }
-    }
-  `;
-
-  return client
-    .query({ query })
-    .catch(error => error)
-    .then(response => response);
-};
-
-const getOperators = (uri: string) => async () => {
-  const client = createClient(uri);
-
-  const query = gql`
-    query GetOperators {
-      operators {
-        id
-        name
-      }
-    }
-  `;
-
-  return client
-    .query({ query })
-    .catch(error => error)
-    .then(response => response);
 };
 
 const getUserContext = (uri: string, auth: AuthState) => async () => {
@@ -107,12 +71,8 @@ const mutateExtrajourney =
     const client = createClient(uri, auth);
 
     const mutation = gql`
-      mutation CreateOrUpdateExtrajourney(
-        $codespace: String!
-        $authority: String!
-        $input: ExtrajourneyInput!
-      ) {
-        createOrUpdateExtrajourney(codespace: $codespace, authority: $authority, input: $input)
+      mutation CreateOrUpdateExtrajourney($input: ExtrajourneyInput!) {
+        createOrUpdateExtrajourney(input: $input)
       }
     `;
 
@@ -154,21 +114,22 @@ const mutateExtrajourney =
   };
 
 const cancelExtrajourney =
-  (uri: string, auth: AuthState, originalTrip: Extrajourney, authority: string) =>
+  (uri: string, auth: AuthState, originalTrip: Extrajourney) =>
   async (): Promise<{ data?: string; error?: AppError }> => {
     if (!auth.user?.access_token) {
       throw new Error('Access token is missing');
     }
 
-    // Codespace is the prefix of the trip's lineRef (`<CODESPACE>:CarPooling:<uuid>`)
-    // and must match the supplied authority — nunamnir enforces this server-side.
-    const codespace = originalTrip.estimatedVehicleJourney.lineRef?.split(':')[0];
-    if (!codespace) {
+    // The journey's dataSource IS the codespace — nunamnir authorizes the write on
+    // it and validates the journey's own references against it server-side. The
+    // re-submitted journey carries it via the spread below; guard here so a trip
+    // without one fails with a clear message instead of a server-side denial.
+    if (!originalTrip.estimatedVehicleJourney.dataSource) {
       return {
         error: {
-          message: 'Trip is missing a lineRef; cannot determine codespace',
+          message: 'Trip is missing a dataSource; cannot determine codespace',
           code: 'MISSING_CODESPACE',
-          details: 'no estimatedVehicleJourney.lineRef',
+          details: 'no estimatedVehicleJourney.dataSource',
         },
       };
     }
@@ -176,12 +137,8 @@ const cancelExtrajourney =
     const client = createClient(uri, auth);
 
     const mutation = gql`
-      mutation CreateOrUpdateExtrajourney(
-        $codespace: String!
-        $authority: String!
-        $input: ExtrajourneyInput!
-      ) {
-        createOrUpdateExtrajourney(codespace: $codespace, authority: $authority, input: $input)
+      mutation CreateOrUpdateExtrajourney($input: ExtrajourneyInput!) {
+        createOrUpdateExtrajourney(input: $input)
       }
     `;
 
@@ -202,7 +159,7 @@ const cancelExtrajourney =
     try {
       const result = await client.mutate({
         mutation,
-        variables: { codespace, authority, input },
+        variables: { input },
         errorPolicy: 'all',
       });
 
@@ -235,7 +192,7 @@ const cancelExtrajourney =
   };
 
 const queryExtraJourney =
-  (uri: string, auth: AuthState, codespace: string, authority: string) =>
+  (uri: string, auth: AuthState) =>
   async (): Promise<{ data?: Extrajourney[]; error?: AppError }> => {
     if (!auth.user?.access_token) {
       return {
@@ -248,9 +205,11 @@ const queryExtraJourney =
     }
     const client = createClient(uri, auth);
 
+    // No arguments: nunamnir scopes the result server-side to the codespaces the
+    // caller's role assignments allow.
     const query = gql`
-      query ExtraJourneysQuery($codespace: String!, $authority: String!) {
-        extrajourneys(codespace: $codespace, authority: $authority) {
+      query ExtraJourneysQuery {
+        extrajourneys {
           id
           estimatedVehicleJourney {
             cancellation
@@ -319,15 +278,9 @@ const queryExtraJourney =
       }
     `;
 
-    const variables = {
-      codespace,
-      authority,
-    };
-
     try {
       const result = await client.query({
         query,
-        variables,
         errorPolicy: 'all',
       });
 
@@ -378,7 +331,6 @@ const bookPassengerRide =
     auth: AuthState,
     originalTrip: Extrajourney,
     bookingData: PassengerBookingData,
-    authority: string,
     routeLeg: RouteLeg
   ) =>
   async (): Promise<{ data?: string; error?: AppError }> => {
@@ -388,17 +340,13 @@ const bookPassengerRide =
     const client = createClient(uri, auth);
 
     const mutation = gql`
-      mutation CreateOrUpdateExtrajourney(
-        $codespace: String!
-        $authority: String!
-        $input: ExtrajourneyInput!
-      ) {
-        createOrUpdateExtrajourney(codespace: $codespace, authority: $authority, input: $input)
+      mutation CreateOrUpdateExtrajourney($input: ExtrajourneyInput!) {
+        createOrUpdateExtrajourney(input: $input)
       }
     `;
 
     try {
-      const variables = await prepareBookingData(originalTrip, bookingData, authority, routeLeg);
+      const variables = await prepareBookingData(originalTrip, bookingData, routeLeg);
 
       const result = await client.mutate({
         mutation,
@@ -437,36 +385,19 @@ const bookPassengerRide =
 const api = (config: Config, auth?: AuthState) => {
   const streetRoute = getStreetRoute(config['journey-planner-api'] as string);
   return {
-    getAuthorities: getAuthorities(config['journey-planner-api'] as string),
-    getOperators: getOperators(config['journey-planner-api'] as string),
     getUserContext: getUserContext(config['carpool-messages-api'] as string, auth as AuthState),
     mutateExtrajourney: (formData: CarPoolingTripDataFormData) =>
       mutateExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, formData),
-    cancelExtrajourney: (originalTrip: Extrajourney, authority: string) =>
-      cancelExtrajourney(
-        config['carpool-messages-api'] as string,
-        auth as AuthState,
-        originalTrip,
-        authority
-      ),
-    queryExtraJourney: (codespace: string, authority: string) =>
-      queryExtraJourney(
-        config['carpool-messages-api'] as string,
-        auth as AuthState,
-        codespace,
-        authority
-      ),
-    bookPassengerRide: (
-      originalTrip: Extrajourney,
-      bookingData: PassengerBookingData,
-      authority: string
-    ) =>
+    cancelExtrajourney: (originalTrip: Extrajourney) =>
+      cancelExtrajourney(config['carpool-messages-api'] as string, auth as AuthState, originalTrip),
+    queryExtraJourney: () =>
+      queryExtraJourney(config['carpool-messages-api'] as string, auth as AuthState),
+    bookPassengerRide: (originalTrip: Extrajourney, bookingData: PassengerBookingData) =>
       bookPassengerRide(
         config['carpool-messages-api'] as string,
         auth as AuthState,
         originalTrip,
         bookingData,
-        authority,
         streetRoute
       ),
     getStreetRoute: streetRoute,

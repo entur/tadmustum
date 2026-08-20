@@ -12,7 +12,10 @@ import type { Feature } from 'geojson';
 import type { RouteLegGeometries } from '../../shared/api/routeLegChain.tsx';
 
 export default function CarPoolingTrip() {
-  const { codespace, id } = useParams();
+  // The route also carries a codespace segment, but the loaded trip's own
+  // dataSource is the source of truth for its codespace — nothing reads the
+  // URL segment here.
+  const { id } = useParams();
   // `?duplicate=true` reuses the edit route but tells the form to clone the
   // loaded trip into a brand-new one (fresh id/code) instead of editing it.
   const [searchParams] = useSearchParams();
@@ -23,21 +26,12 @@ export default function CarPoolingTrip() {
     <CarPoolingTripView
       key={`${id ?? 'new'}${duplicate ? ':duplicate' : ''}`}
       id={id}
-      codespace={codespace}
       duplicate={duplicate}
     />
   );
 }
 
-function CarPoolingTripView({
-  id,
-  codespace,
-  duplicate,
-}: {
-  id?: string;
-  codespace?: string;
-  duplicate?: boolean;
-}) {
+function CarPoolingTripView({ id, duplicate }: { id?: string; duplicate?: boolean }) {
   const theme = useTheme();
 
   const editableMapRef = useRef<EditableMapHandle>(null);
@@ -88,7 +82,6 @@ function CarPoolingTripView({
       >
         <CarPoolingTripData
           tripId={id}
-          codespace={codespace}
           duplicate={duplicate}
           ref={dataHandle}
           onAddFlexibleStop={() => editableMapRef.current?.drawFeature()}

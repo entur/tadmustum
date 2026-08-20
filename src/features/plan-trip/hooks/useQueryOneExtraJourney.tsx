@@ -1,58 +1,22 @@
-// Updated useQueryExtraJourney.tsx
 import { useCallback } from 'react';
-import { useConfig } from '../../../contexts/ConfigContext.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
-import api from '../../../shared/api/api.tsx';
-import { useAuth } from 'react-oidc-context'; // Add this import
+import { useQueryExtraJourney as useQueryExtraJourneys } from '../../planned-trips/hooks/useQueryExtraJourney.tsx';
 
+// One-journey variant of the trips query. nunamnir has no by-id lookup — the
+// argless query returns everything the caller may read — so this delegates to
+// the list hook and picks the requested journey out of the result client-side.
 export const useQueryExtraJourney = () => {
-  const config = useConfig();
-  const auth = useAuth();
+  const queryExtraJourneys = useQueryExtraJourneys();
 
-  // Memoize the function to stabilize its reference
   return useCallback(
-    async (
-      codespace: string,
-      authority: string,
-      id: string
-    ): Promise<{
-      data?: {
-        codespace: string;
-        authority: string;
-        extraJourney?: Extrajourney;
-      };
-      error?: AppError;
-    }> => {
-      if (!auth.user?.access_token) {
-        return {
-          error: {
-            message: 'Access token missing',
-            code: 'ACCESS_TOKEN_MISSING',
-            details: 'no auth.user.access_token',
-          },
-        };
+    async (id: string): Promise<{ data?: { extraJourney?: Extrajourney }; error?: AppError }> => {
+      const trips = await queryExtraJourneys();
+      if (trips.error) {
+        return { error: trips.error };
       }
-
-      const trips = await api(config, auth).queryExtraJourney(codespace, authority).apply(this);
-
-      if (!trips.error) {
-        const filtered = trips.data?.filter(journey => journey.id === id);
-        return {
-          data: {
-            codespace,
-            authority,
-            extraJourney: filtered?.length ? filtered[0] : undefined,
-          },
-        };
-      } else {
-        return {
-          error: {
-            ...trips.error,
-          },
-        };
-      }
+      return { data: { extraJourney: trips.data?.find(journey => journey.id === id) } };
     },
-    [auth, config]
+    [queryExtraJourneys]
   );
 };

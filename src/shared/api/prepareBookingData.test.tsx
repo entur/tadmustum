@@ -22,6 +22,7 @@ const baseTrip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
       lineRef: 'ENT:CarPooling:trip-1',
+      dataSource: 'ENT',
       estimatedVehicleJourneyCode: 'ENT:ServiceJourney:1',
       publishedLineName: 'Carpooling trip',
       estimatedCalls: {
@@ -65,7 +66,7 @@ describe('prepareBookingData', () => {
     delete (trip.estimatedVehicleJourney as { estimatedVehicleJourneyCode?: string })
       .estimatedVehicleJourneyCode;
 
-    await expect(prepareBookingData(trip, baseBooking(), 'ENT:Authority:ENT')).rejects.toThrow(
+    await expect(prepareBookingData(trip, baseBooking())).rejects.toThrow(
       /estimatedVehicleJourneyCode/
     );
   });
@@ -75,13 +76,11 @@ describe('prepareBookingData', () => {
     trip.estimatedVehicleJourney.estimatedCalls.estimatedCall =
       trip.estimatedVehicleJourney.estimatedCalls.estimatedCall.slice(0, 1);
 
-    await expect(prepareBookingData(trip, baseBooking(), 'ENT:Authority:ENT')).rejects.toThrow(
-      /at least 2 stops/
-    );
+    await expect(prepareBookingData(trip, baseBooking())).rejects.toThrow(/at least 2 stops/);
   });
 
   it('does not echo back the server id and preserves the estimatedVehicleJourneyCode', async () => {
-    const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
+    const result = await prepareBookingData(baseTrip(), baseBooking());
 
     expect(result.input).not.toHaveProperty('id');
     expect(result.input.estimatedVehicleJourney.estimatedVehicleJourneyCode).toBe(
@@ -90,7 +89,7 @@ describe('prepareBookingData', () => {
   });
 
   it('inserts pickup and dropoff between the original first and last stops and reorders them', async () => {
-    const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
+    const result = await prepareBookingData(baseTrip(), baseBooking());
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls).toHaveLength(4);
@@ -105,7 +104,7 @@ describe('prepareBookingData', () => {
   });
 
   it('formats pickup and dropoff stop names with lat,lng to 4 decimals', async () => {
-    const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
+    const result = await prepareBookingData(baseTrip(), baseBooking());
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].stopPointName).toBe('Passenger Pickup (59.9139, 10.7522)');
@@ -114,7 +113,7 @@ describe('prepareBookingData', () => {
 
   it('places pickup at 1/3 and dropoff at 2/3 of the journey when no router is provided', async () => {
     // Journey is 09:00 -> 15:00 = 6h. 1/3 = 11:00, 2/3 = 13:00.
-    const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
+    const result = await prepareBookingData(baseTrip(), baseBooking());
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].aimedDepartureTime).toBe('2026-06-01T11:00:00.000Z');
@@ -129,8 +128,7 @@ describe('prepareBookingData', () => {
       baseBooking({
         pickupTime: '2026-06-01T10:15:00.000Z',
         dropoffTime: '2026-06-01T14:45:00.000Z',
-      }),
-      'ENT:Authority:ENT'
+      })
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -141,8 +139,7 @@ describe('prepareBookingData', () => {
   it('adds passengerDeviationBudget to derive latestExpectedArrivalTime', async () => {
     const result = await prepareBookingData(
       baseTrip(),
-      baseBooking({ passengerDeviationBudget: 15 }),
-      'ENT:Authority:ENT'
+      baseBooking({ passengerDeviationBudget: 15 })
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -153,8 +150,7 @@ describe('prepareBookingData', () => {
   it('omits latestExpectedArrivalTime when passengerDeviationBudget is not provided', async () => {
     const result = await prepareBookingData(
       baseTrip(),
-      baseBooking({ passengerDeviationBudget: undefined }),
-      'ENT:Authority:ENT'
+      baseBooking({ passengerDeviationBudget: undefined })
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -163,18 +159,14 @@ describe('prepareBookingData', () => {
   });
 
   it('increments the onboard count by the number of passengers at pickup', async () => {
-    const result = await prepareBookingData(
-      baseTrip(),
-      baseBooking({ numberOfPassengers: 3 }),
-      'ENT:Authority:ENT'
-    );
+    const result = await prepareBookingData(baseTrip(), baseBooking({ numberOfPassengers: 3 }));
 
     const pickup = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall[1];
     expect(pickup.expectedDepartureOccupancy?.[0].onboardCount).toBe(4); // 1 (existing) + 3
   });
 
   it('inherits totalCapacity from the original first stop', async () => {
-    const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
+    const result = await prepareBookingData(baseTrip(), baseBooking());
 
     const pickup = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall[1];
     const dropoff = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall[2];
@@ -183,7 +175,7 @@ describe('prepareBookingData', () => {
   });
 
   it('inherits destinationDisplay from the original last stop', async () => {
-    const result = await prepareBookingData(baseTrip(), baseBooking(), 'ENT:Authority:ENT');
+    const result = await prepareBookingData(baseTrip(), baseBooking());
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
     expect(calls[1].destinationDisplay).toBe('Bergen');
@@ -209,6 +201,7 @@ describe('prepareBookingData', () => {
       estimatedVehicleJourney: {
         recordedAtTime: '2026-05-20T09:00:00.000Z',
         lineRef: 'ENT:CarPooling:trip-1',
+        dataSource: 'ENT',
         publishedLineName: 'Carpooling trip',
         estimatedVehicleJourneyCode: 'ENT:ServiceJourney:1',
         estimatedCalls: {
@@ -234,8 +227,7 @@ describe('prepareBookingData', () => {
     // pickup at 10.3 (between A and B), dropoff at 10.7 (between B and destination).
     const result = await prepareBookingData(
       tripWithIntermediates(),
-      baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] }),
-      'ENT:Authority:ENT'
+      baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] })
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -260,8 +252,7 @@ describe('prepareBookingData', () => {
         pickupCoordinates: [10.3, 60],
         dropoffCoordinates: [10.7, 60],
         numberOfPassengers: 1,
-      }),
-      'ENT:Authority:ENT'
+      })
     );
 
     // Feed the updated trip back in, as the real flow does, and book again.
@@ -271,8 +262,7 @@ describe('prepareBookingData', () => {
         pickupCoordinates: [10.1, 60],
         dropoffCoordinates: [10.9, 60],
         numberOfPassengers: 1,
-      }),
-      'ENT:Authority:ENT'
+      })
     );
 
     const calls = secondBooking.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -293,8 +283,7 @@ describe('prepareBookingData', () => {
         pickupCoordinates: [10.3, 60],
         dropoffCoordinates: [10.7, 60],
         numberOfPassengers: 2,
-      }),
-      'ENT:Authority:ENT'
+      })
     );
 
     // Order: Origin, Inter A, Pickup, Inter B, Dropoff, Destination.
@@ -314,8 +303,7 @@ describe('prepareBookingData', () => {
         pickupCoordinates: [10.3, 60],
         dropoffCoordinates: [10.7, 60],
         numberOfPassengers: 4,
-      }),
-      'ENT:Authority:ENT'
+      })
     );
 
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -341,7 +329,6 @@ describe('prepareBookingData', () => {
         dropoffCoordinates: [10.7, 60],
         passengerDeviationBudget: 10,
       }),
-      'ENT:Authority:ENT',
       tenMinPerLeg
     );
 
@@ -365,7 +352,6 @@ describe('prepareBookingData', () => {
     const result = await prepareBookingData(
       tripWithIntermediates(),
       baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] }),
-      'ENT:Authority:ENT',
       failingRouter
     );
 
@@ -446,6 +432,7 @@ describe('prepareBookingData', () => {
         estimatedVehicleJourney: {
           recordedAtTime: '2026-05-20T09:00:00.000Z',
           lineRef: 'ENT:CarPooling:trip-1',
+          dataSource: 'ENT',
           publishedLineName: 'Carpooling trip',
           estimatedCalls: {
             estimatedCall: [

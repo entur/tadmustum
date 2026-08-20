@@ -5,7 +5,8 @@ export interface Config {
   'carpool-messages-api'?: string;
   applicationEnv?: string;
   preferredNameNamespace?: string;
-  claimsNamespace?: string;
+  // OidcClientSettings.authority is the OIDC issuer URL — oidc-client-ts's
+  // standard setting name, unrelated to transit authorities or codespaces.
   oidcConfig?: OidcClientSettings;
   'journey-planner-api'?: string;
   showErrorDetails: boolean;

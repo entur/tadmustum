@@ -13,8 +13,7 @@ export const useBookPassengerRide = () => {
   return useCallback(
     async (
       originalTrip: Extrajourney,
-      bookingData: PassengerBookingData,
-      authority: string
+      bookingData: PassengerBookingData
     ): Promise<{ data?: string; error?: AppError }> => {
       if (!auth.user?.access_token) {
         return {
@@ -27,11 +26,7 @@ export const useBookPassengerRide = () => {
       }
 
       try {
-        const result = await api(config, auth).bookPassengerRide(
-          originalTrip,
-          bookingData,
-          authority
-        )();
+        const result = await api(config, auth).bookPassengerRide(originalTrip, bookingData)();
 
         return result;
       } catch (error) {

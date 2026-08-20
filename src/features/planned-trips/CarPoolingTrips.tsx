@@ -3,7 +3,7 @@ import { DataGrid, useGridApiRef, type GridColDef } from '@mui/x-data-grid';
 import type { Extrajourney } from '../../shared/model/Extrajourney.tsx';
 import { useQueryExtraJourney } from './hooks/useQueryExtraJourney.tsx';
 import { useCancelExtrajourney } from '../plan-trip/hooks/useCancelExtrajourney.tsx';
-import { useAuthorities } from '../../shared/hooks/useAuthorities.tsx';
+import { useAllowedCodespaces } from '../../shared/hooks/useAllowedCodespaces.tsx';
 import { usePersistentState } from '../../shared/hooks/usePersistentState.tsx';
 import { isClientError } from '../../shared/error-message/userFacingMessage.tsx';
 import Button from '@mui/material/Button';
@@ -47,15 +47,11 @@ const recordedAtMs = (trip: Extrajourney): number => {
   return recordedAt ? dayjs(recordedAt).valueOf() : 0;
 };
 
-// The backend keys trips by dataSource rather than codespace, so the same trip
-// can come back from more than one authority's query during the fan-out — and
-// the copies can disagree (e.g. one authority returns a stale *active* snapshot
-// while another returns the newer *cancelled* one). Concatenating the responses
-// blindly then hands the grid two rows with the same id, which corrupts its row
-// identity: React/MUI can't tell the copies apart, so a cancelled row lingers in
-// the DOM even after the "Show cancelled trips" filter should have dropped it.
-// Collapse duplicates by id, keeping the most recently recorded snapshot as the
-// source of truth. (The grid sorts client-side, so the emitted order is moot.)
+// Defensive: the grid keys rows by id, and two rows with the same id corrupt its
+// row identity — React/MUI can't tell the copies apart, so a cancelled row can
+// linger in the DOM even after the "Show cancelled trips" filter should have
+// dropped it. The single server-scoped query shouldn't return duplicates, but if
+// it ever does, collapse them by id and keep the most recently recorded snapshot.
 const dedupeTripsByLatest = (trips: Extrajourney[]): Extrajourney[] => {
   const latestById = new Map<string, Extrajourney>();
   const withoutId: Extrajourney[] = [];
@@ -100,34 +96,17 @@ export default function CarPoolingTrips() {
   // highlight so paging away and back doesn't re-trigger the blink.
   const [hasPulsed, setHasPulsed] = useState(false);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
-  const [failedCodespaces, setFailedCodespaces] = useState<string[]>([]);
   const apiRef = useGridApiRef();
 
   const queryExtraJourneys = useQueryExtraJourney();
   const cancelExtrajourney = useCancelExtrajourney();
   const {
-    authorities,
     allowedCodespaces,
-    isLoading: authoritiesLoading,
-    error: authoritiesError,
-  } = useAuthorities();
-  const adminCodespaceIds = new Set(
-    allowedCodespaces.filter(c => c.permissions.includes('ADMIN_CARPOOLING_DATA')).map(c => c.id)
-  );
-  // Trips don't carry the authority name; resolve it from the codespace prefix
-  // of lineRef against the authorities the user has access to. Trips can only
-  // appear in the list if their codespace was queried, so a hit is guaranteed.
-  const authorityNameByCodespace = useMemo(
-    () => new Map(authorities.map(a => [a.id.split(':')[0], a.name])),
-    [authorities]
-  );
-  // Cancelling re-submits the journey and must send the full authority id, not
-  // just the codespace prefix; resolve it from the trip's codespace the same way
-  // the name lookup above does.
-  const authorityIdByCodespace = useMemo(
-    () => new Map(authorities.map(a => [a.id.split(':')[0], a.id])),
-    [authorities]
-  );
+    adminCodespaces,
+    isLoading: codespacesLoading,
+    error: codespacesError,
+  } = useAllowedCodespaces();
+  const adminCodespaceIds = new Set(adminCodespaces);
 
   useEffect(() => {
     const state = location.state as { savedMessage?: string; savedTripId?: string } | null;
@@ -141,46 +120,38 @@ export default function CarPoolingTrips() {
   }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
-    // The three exits below all have to settle `loading` themselves: the fan-out
-    // is the only other thing that clears it, so returning early without doing so
-    // leaves the page on "Loading..." for good.
-    if (authoritiesLoading) {
-      // Authorities are still resolving — keep waiting rather than deciding on a
-      // list that hasn't arrived yet.
+    // The three exits below all have to settle `loading` themselves: the trips
+    // query is the only other thing that clears it, so returning early without
+    // doing so leaves the page on "Loading..." for good.
+    if (codespacesLoading) {
+      // The user context is still resolving — keep waiting rather than deciding
+      // on a list that hasn't arrived yet.
       return;
     }
-    if (authoritiesError) {
-      // Nothing to fan out over, and the render below reports why.
+    if (codespacesError) {
+      // No usable user context, and the render below reports why.
       setLoading(false);
       return;
     }
-    if (!authorities.length) {
-      // Resolved, but the user holds no authorities: an empty list is the honest
-      // answer here, not a spinner.
+    if (!allowedCodespaces.length) {
+      // Resolved, but the user holds no codespaces: an empty list is the honest
+      // answer here, not a spinner (and the server would return nothing anyway).
       setPlannedTrips([]);
       setLoading(false);
       return;
     }
-    // Fan out across every authority the user has access to and merge the
-    // results. Each trip carries its own codespace in its lineRef, so callers
-    // (edit/book navigation) can identify which tenant a row belongs to.
-    // Track per-codespace failures so we can surface a non-fatal warning rather
-    // than silently returning fewer trips than the user expects.
-    Promise.all(
-      authorities.map(authority => queryExtraJourneys(authority.id.split(':')[0], authority.id))
-    )
-      .then(responses => {
-        const merged: Extrajourney[] = [];
-        const failed: string[] = [];
-        responses.forEach((response, index) => {
-          if (response.data) {
-            merged.push(...response.data);
-          } else if (response.error) {
-            failed.push(authorities[index].id.split(':')[0]);
-          }
-        });
-        setPlannedTrips(dedupeTripsByLatest(merged));
-        setFailedCodespaces(failed);
+    // One argless query: nunamnir scopes the result server-side to the codespaces
+    // the caller may read, so there is nothing to fan out over. Clear any error
+    // from a previous run first, so a successful refetch (the effect refires on
+    // token renewal) recovers instead of sticking on the error page.
+    setError(null);
+    queryExtraJourneys()
+      .then(response => {
+        if (response.error) {
+          setError(response.error.message || 'Could not load trips.');
+        } else {
+          setPlannedTrips(dedupeTripsByLatest(response.data ?? []));
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -190,7 +161,7 @@ export default function CarPoolingTrips() {
         setError(toMessage(err, 'Could not load trips.'));
         setLoading(false);
       });
-  }, [authorities, authoritiesLoading, authoritiesError, queryExtraJourneys]);
+  }, [allowedCodespaces, codespacesLoading, codespacesError, queryExtraJourneys]);
 
   const rows = useMemo(() => {
     if (!plannedTrips) return plannedTrips;
@@ -208,14 +179,8 @@ export default function CarPoolingTrips() {
   }, [plannedTrips, showPastArrivals, showCancelled]);
 
   const handleCancelTrip = async (trip: Extrajourney) => {
-    const codespace = trip.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
-    const authority = authorityIdByCodespace.get(codespace);
-    if (!authority) {
-      setActionError('Could not resolve the authority for this trip; cannot cancel it.');
-      return;
-    }
     setCancellingTripId(trip.id ?? null);
-    const { error } = await cancelExtrajourney(trip, authority);
+    const { error } = await cancelExtrajourney(trip);
     setCancellingTripId(null);
     if (error) {
       // Show the server's reason only for client errors (e.g. validation); hide internal
@@ -269,9 +234,9 @@ export default function CarPoolingTrips() {
     return <div className="alert alert-info">Loading...</div>;
   }
 
-  // An authorities failure means we never got as far as querying trips, so report
-  // it in preference to anything the fan-out might have set.
-  const fatalError = authoritiesError ?? error;
+  // A user-context failure means we never got as far as querying trips, so
+  // report it in preference to anything the trips query might have set.
+  const fatalError = codespacesError ?? error;
   if (fatalError) {
     return <div className="alert alert-danger">{fatalError}</div>;
   }
@@ -284,10 +249,9 @@ export default function CarPoolingTrips() {
       sortable: false,
       filterable: false,
       renderCell: params => {
-        // Codespace is encoded in the trip's lineRef as `<CODESPACE>:CarPooling:<uuid>`.
-        // It identifies which Firestore partition the trip lives in, so it must
-        // be in the URL for the edit/book pages to know which tenant to query.
-        const codespace = params.row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
+        // The journey's dataSource IS its codespace — read it directly, never
+        // derived from lineRef or any other reference.
+        const codespace = params.row.estimatedVehicleJourney.dataSource ?? '';
         // Edit and Book both go through write mutations on nunamnir, so only
         // show them when the user actually has admin on that codespace —
         // otherwise the buttons just lead to a 403.
@@ -348,15 +312,6 @@ export default function CarPoolingTrips() {
       field: 'id',
       headerName: 'ID',
       width: 240,
-    },
-    {
-      field: 'authority',
-      headerName: 'Authority',
-      width: 150,
-      valueGetter: (_value: string, row: Extrajourney) => {
-        const codespace = row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
-        return authorityNameByCodespace.get(codespace) ?? codespace;
-      },
     },
     {
       field: 'cancellation',
@@ -458,7 +413,6 @@ export default function CarPoolingTrips() {
   // Hidden-field columns are toggled on demand; everything else is always shown.
   const columnVisibilityModel = {
     id: showHiddenFields,
-    authority: showHiddenFields,
     latestExpectedArrivalTime: showHiddenFields,
   };
 
@@ -477,12 +431,6 @@ export default function CarPoolingTrips() {
 
   return (
     <Box sx={{ width: '100%', mx: 'auto', p: { xs: 1, sm: 2 } }}>
-      {failedCodespaces.length > 0 && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          Could not load trips from: {failedCodespaces.join(', ')}. The list below may be
-          incomplete.
-        </Alert>
-      )}
       <Stack
         direction="row"
         spacing={2}

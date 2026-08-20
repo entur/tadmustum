@@ -27,11 +27,8 @@ export interface PassengerBookingData {
 export async function prepareBookingData(
   originalTrip: Extrajourney,
   bookingData: PassengerBookingData,
-  authority: string,
   routeLeg?: RouteLeg
 ): Promise<{
-  codespace: string;
-  authority: string;
   input: Extrajourney;
 }> {
   // The booking re-submits the trip as an upsert keyed on its
@@ -58,8 +55,6 @@ export async function prepareBookingData(
   };
 
   return {
-    codespace: assembled.codespace,
-    authority,
     input: updatedTrip,
   };
 }
@@ -156,7 +151,6 @@ export async function routedBookingPreview(
 }
 
 interface AssembledBooking {
-  codespace: string;
   // Ordered calls with occupancy applied, NOT yet renumbered or re-timed.
   orderedCalls: EstimatedCall[];
   // Map coordinate per call, aligned by index with orderedCalls.
@@ -176,11 +170,12 @@ function assembleBooking(
   originalTrip: Extrajourney,
   bookingData: PassengerBookingData
 ): AssembledBooking {
-  // Codespace is the prefix of the trip's lineRef (`<CODESPACE>:CarPooling:<uuid>`).
-  // It must match the supplied authority — nunamnir enforces this server-side.
-  const codespace = originalTrip.estimatedVehicleJourney.lineRef?.split(':')[0];
+  // The journey's dataSource IS its codespace — nunamnir authorizes the booking
+  // write on it and validates the journey's own references against it. Never
+  // derived from lineRef or any other reference.
+  const codespace = originalTrip.estimatedVehicleJourney.dataSource;
   if (!codespace) {
-    throw new Error('Original trip is missing a lineRef; cannot determine codespace');
+    throw new Error('Original trip is missing a dataSource; cannot determine codespace');
   }
 
   const originalCalls = originalTrip.estimatedVehicleJourney.estimatedCalls.estimatedCall;
@@ -321,7 +316,6 @@ function assembleBooking(
   );
 
   return {
-    codespace,
     orderedCalls: occupancy.calls,
     coords: orderedEntries.map(entry => entry.coord),
     canOrderByPath,

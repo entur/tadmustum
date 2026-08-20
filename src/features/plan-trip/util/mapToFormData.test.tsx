@@ -14,7 +14,7 @@ const toComparable = (form: CarPoolingTripDataFormData) => ({
 describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('round-trips every form field through the SIRI payload', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -37,14 +37,14 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(toComparable(roundTripped)).toEqual(toComparable(original));
   });
 
   it('round-trips cancellation flags on departure and destination', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -67,7 +67,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(roundTripped.departureCancellation).toBe(true);
     expect(roundTripped.destinationCancellation).toBe(true);
@@ -75,7 +75,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
 
   it('round-trips tripCancellation through estimatedVehicleJourney.cancellation', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -100,13 +100,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     const payload = prepareCarpoolingFormData(original);
     expect(payload.input.estimatedVehicleJourney.cancellation).toBe(true);
 
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
     expect(roundTripped.tripCancellation).toBe(true);
   });
 
   it('preserves intermediate calls and their cancellation flags through round-trip', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -152,7 +152,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(roundTripped.intermediateCalls).toHaveLength(2);
     expect(roundTripped.intermediateCalls[0]).toMatchObject({
@@ -165,9 +165,42 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     });
   });
 
+  it('maps a missing dataSource to an empty string — never derived from lineRef', () => {
+    const original: CarPoolingTripDataFormData = {
+      dataSource: 'ENT',
+      operator: 'ENT:Operator:1',
+      id: 'ENT:ServiceJourney:42',
+      lineRef: 'ENT:Line:existing',
+      estimatedVehicleJourneyCode: 'EVJ-42',
+      departureStopName: 'Oslo S',
+      departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
+      estimateArrivalAutomatically: false,
+      departureFlexibleStop: [10.7522, 59.9139],
+      departureCancellation: false,
+      destinationStopName: 'Bergen stasjon',
+      destinationDatetime: dayjs('2026-06-01T15:00:00.000Z'),
+      destinationFlexibleStop: [5.3221, 60.3913],
+      destinationCancellation: false,
+      intermediateCalls: [],
+      tripCancellation: false,
+      driverDeviationBudget: 30,
+      contactUrl: null,
+      totalCapacity: null,
+      onboardCount: null,
+    };
+
+    const payload = prepareCarpoolingFormData(original);
+    delete (payload.input.estimatedVehicleJourney as { dataSource?: string }).dataSource;
+
+    // The lineRef still carries an ENT prefix, but the codespace must not be
+    // reconstructed from it (ADR 0001): an absent dataSource maps to '' and is
+    // caught by form validation instead.
+    expect(mapToFormData(payload.input).dataSource).toBe('');
+  });
+
   it('round-trips when optional numeric/url fields are null', () => {
     const original: CarPoolingTripDataFormData = {
-      authority: 'ENT:Authority:ENT',
+      dataSource: 'ENT',
       operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
@@ -190,7 +223,7 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
     };
 
     const payload = prepareCarpoolingFormData(original);
-    const roundTripped = mapToFormData(payload.input, 'ENT:Authority:ENT');
+    const roundTripped = mapToFormData(payload.input);
 
     expect(toComparable(roundTripped)).toEqual(toComparable(original));
   });

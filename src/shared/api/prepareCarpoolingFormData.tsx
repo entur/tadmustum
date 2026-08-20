@@ -5,8 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodePointAsCircularArea } from '../model/circularAreaCodec.tsx';
 
 function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
-  codespace: string;
-  authority: string;
   input: Extrajourney;
 } {
   if (!formData.departureFlexibleStop || !formData.destinationFlexibleStop) {
@@ -15,18 +13,16 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
     // an unrelated null deref further down.
     throw new Error('Cannot prepare carpooling form: departure and destination stops are required');
   }
-  // Codespace is the NeTEx authority id prefix: `<CODESPACE>:Authority:<X>`.
-  // The form only carries the authority — derive the codespace from it so the
-  // two cannot drift apart (nunamnir now rejects mismatched pairs).
-  const codespace = formData.authority.split(':')[0];
+  // The form's dataSource IS the codespace: it is minted into the journey's ids
+  // and carried as the SIRI DataSource, which nunamnir authorizes the write on
+  // and pins the other references to.
+  const codespace = formData.dataSource;
   const intermediateCalls = formData.intermediateCalls.map((call, index) => ({
     ...call,
     order: index + 2,
   }));
   const destinationOrder = intermediateCalls.length + 2;
   const variables = {
-    codespace,
-    authority: formData.authority,
     input: {
       estimatedVehicleJourney: {
         recordedAtTime: dayjs().toISOString(),
@@ -41,7 +37,7 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         extraJourney: true,
         vehicleMode: 'bus', // TODO: Needs to add car as vehicle mode
         routeRef: '', // TODO: Mandatory in profile. Unused. Check to see if mandatory in schema.
-        publishedLineName: `Carpooling trip ${formData.authority}`,
+        publishedLineName: `Carpooling trip ${codespace}`,
         groupOfLinesRef: '', // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
         externalLineRef: '', // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
         operatorRef: formData.operator,
@@ -117,8 +113,6 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
 
   if (formData.id) {
     return {
-      codespace: variables.codespace,
-      authority: variables.authority,
       input: {
         id: formData.id,
         ...variables.input,

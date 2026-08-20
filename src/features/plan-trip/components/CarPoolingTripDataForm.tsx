@@ -24,7 +24,7 @@ import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { useAuthorities } from '../../../shared/hooks/useAuthorities.tsx';
+import { useAllowedCodespaces } from '../../../shared/hooks/useAllowedCodespaces.tsx';
 import { useStreetRoute } from '../hooks/useStreetRoute.tsx';
 import type { Feature, Point, Position } from 'geojson';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
@@ -80,21 +80,21 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     onRouteGeometryChange,
   } = props;
   // The form drives mutations (createOrUpdateExtrajourney), so restrict the
-  // authority dropdown to codespaces where the user actually has write rights.
-  // Without this filter, a view-only user would see authorities they can't
+  // data-source dropdown to codespaces where the user actually has write rights.
+  // Without this filter, a view-only user would see codespaces they can't
   // submit to and only learn of the rejection on a 403 from the server.
-  const { adminAuthorities: authorities } = useAuthorities();
+  const { adminCodespaces } = useAllowedCodespaces();
   // A view-only user opening the new-trip page has no codespace they can
   // submit to. Surface that up front rather than letting them fill out the
-  // form only to fail Yup's authority-required validation on submit.
-  const noAdminAccess = !tripData && authorities.length === 0;
-  // A trip's codespace (derived from its authority) is baked into its stable
-  // identity — the estimatedVehicleJourneyCode, lineRef and booking URL all carry
-  // it, and nunamnir stores the trip under codespaces/{codespace}/authorities/
-  // {authority}/…/{code}. There is no move operation: re-submitting an existing
-  // trip under a different authority writes a *new* document and orphans the
-  // original (and nunamnir now rejects the mismatch outright). So the authority
-  // is fixed once a trip exists — lock the picker when editing.
+  // form only to fail Yup's dataSource-required validation on submit.
+  const noAdminAccess = !tripData && adminCodespaces.length === 0;
+  // A trip's codespace (its dataSource) is baked into its stable identity — the
+  // estimatedVehicleJourneyCode, lineRef and booking URL all carry it, and
+  // nunamnir stores the trip under codespaces/{codespace}/…/{code}. There is no
+  // move operation: re-submitting an existing trip under a different codespace
+  // writes a *new* document and orphans the original (and nunamnir rejects the
+  // mismatch outright). So the data source is fixed once a trip exists — lock
+  // the picker when editing.
   const isEditing = !!initialState;
 
   // New trips default to departing exactly a week from now. Computed once so it
@@ -115,7 +115,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     resolver: yupResolver(carPoolingTripDataSchema) as Resolver<CarPoolingTripDataFormData>,
     mode: 'onBlur', // or "onChange", depending on UX preference
     defaultValues: {
-      authority: '',
+      dataSource: '',
       operator: ENTUR_OPERATOR.id,
       departureStopName: 'Origin',
       departureDatetime: defaultDeparture,
@@ -134,7 +134,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     },
   });
 
-  const authority = watch('authority');
+  const dataSource = watch('dataSource');
   const contactUrl = watch('contactUrl');
   const operator = watch('operator');
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
@@ -156,31 +156,29 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
 
   useEffect(() => {
-    if (authorities.length && !authority) {
-      // Prefer an ENT-prefixed authority when several are available; otherwise
-      // just take the first. New trips default to whichever codespace the user
-      // is most likely to act in.
-      const enturAuthority = authorities.find(a => a.id.startsWith('ENT:'));
-      setValue('authority', (enturAuthority ?? authorities[0]).id);
+    if (adminCodespaces.length && !dataSource) {
+      // Prefer ENT when several codespaces are available; otherwise just take
+      // the first. New trips default to whichever codespace the user is most
+      // likely to act in.
+      setValue('dataSource', adminCodespaces.includes('ENT') ? 'ENT' : adminCodespaces[0]);
     }
 
-    // Fill in the default booking URL once the authority (and therefore the
-    // codespace) is known. Skip if the user has already entered something — we
-    // never want to clobber a manual edit or an edited trip's existing URL.
+    // Fill in the default booking URL once the codespace is known. Skip if the
+    // user has already entered something — we never want to clobber a manual
+    // edit or an edited trip's existing URL.
     // The booking page (/book-trip/{codespace}/{tripId}) looks a trip up by its
     // estimatedVehicleJourneyCode — nunamnir keys storage on the code and
     // returns it as the journey id — so the URL must carry the code, not the
     // form's local `id`. Generate the code here (matching prepareCarpoolingFormData)
     // when it's absent so a new trip's URL and stored id are identical; when
     // editing, the code was filled in from the existing journey by mapToFormData.
-    if (authority && !contactUrl) {
-      const codespace = authority.split(':')[0];
+    if (dataSource && !contactUrl) {
       let code = getValues('estimatedVehicleJourneyCode');
       if (!code) {
-        code = `${codespace}:ServiceJourney:${uuidv4()}`;
+        code = `${dataSource}:ServiceJourney:${uuidv4()}`;
         setValue('estimatedVehicleJourneyCode', code);
       }
-      setValue('contactUrl', `${window.location.origin}/book-trip/${codespace}/${code}`);
+      setValue('contactUrl', `${window.location.origin}/book-trip/${dataSource}/${code}`);
     }
 
     // The operator is hardcoded to Entur, so re-assert it after an existing trip
@@ -231,8 +229,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     setInitialStateSet,
     initialState,
     reset,
-    authorities,
-    authority,
+    adminCodespaces,
+    dataSource,
     contactUrl,
     operator,
     mapDepartureFlexibleStop,
@@ -579,31 +577,31 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           <Divider sx={{ mt: 2 }} />
         </Box>
       )}
-      {/* Most users have access to a single authority, so showing a single-option
+      {/* Most users have access to a single codespace, so showing a single-option
           dropdown is just noise. When there is more than one we render the picker. */}
-      {authorities.length > 1 && (
-        <FormControl fullWidth required error={!!errors.authority} margin="normal">
-          <InputLabel id="authority-label">Authority</InputLabel>
+      {adminCodespaces.length > 1 && (
+        <FormControl fullWidth required error={!!errors.dataSource} margin="normal">
+          <InputLabel id="datasource-label">Data source</InputLabel>
           <Controller
-            name="authority"
+            name="dataSource"
             control={control}
             render={({ field }) => {
               return (
                 <Select
                   {...field}
-                  labelId="authority-label"
-                  label="Authority"
-                  // The authority is the trip's codespace, which is part of its fixed
+                  labelId="datasource-label"
+                  label="Data source"
+                  // The data source is the trip's codespace, which is part of its fixed
                   // identity — it can only be chosen while creating the trip (see isEditing).
                   disabled={isEditing}
                   onChange={event => {
                     field.onChange(event);
-                    // The journey code and booking URL are derived from the authority's codespace.
-                    // Re-mint them when the authority changes so the published booking URL
+                    // The journey code and booking URL are derived from the codespace.
+                    // Re-mint them when it changes so the published booking URL
                     // (/book-trip/{codespace}/{code}) and the stored code match the codespace the
                     // trip is actually saved under. This only runs while creating a trip — the
                     // picker is disabled once editing, so the code stays the trip's fixed identity.
-                    const newCodespace = String(event.target.value).split(':')[0];
+                    const newCodespace = String(event.target.value);
                     const newCode = `${newCodespace}:ServiceJourney:${uuidv4()}`;
                     setValue('estimatedVehicleJourneyCode', newCode);
                     setValue(
@@ -613,14 +611,14 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                   }}
                 >
                   <MenuItem value="" disabled>
-                    <em>Authority</em>
+                    <em>Data source</em>
                   </MenuItem>
-                  {field.value && !authorities.some(a => a.id === field.value) && (
+                  {field.value && !adminCodespaces.includes(field.value) && (
                     <MenuItem value={field.value}>{field.value}</MenuItem>
                   )}
-                  {authorities.map(authority => (
-                    <MenuItem key={authority.id} value={authority.id}>
-                      {authority.name}
+                  {adminCodespaces.map(codespace => (
+                    <MenuItem key={codespace} value={codespace}>
+                      {codespace}
                     </MenuItem>
                   ))}
                 </Select>
@@ -629,8 +627,8 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           />
           <FormHelperText>
             {isEditing
-              ? "A trip's authority is fixed once it's created. To use a different one, create a new trip."
-              : errors.authority?.message}
+              ? "A trip's data source (codespace) is fixed once it's created. To use a different one, create a new trip."
+              : errors.dataSource?.message}
           </FormHelperText>
         </FormControl>
       )}

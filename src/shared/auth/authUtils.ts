@@ -16,7 +16,6 @@ export interface Auth {
   user?: {
     name?: string;
   };
-  roleAssignments?: string[] | null;
   getAccessToken: () => Promise<string>;
   logout: ({ returnTo }: { returnTo?: string }) => Promise<void>;
   /**
@@ -32,7 +31,7 @@ export interface Auth {
 export const useAuth = (): Auth => {
   const { isLoading, isAuthenticated, user, signoutRedirect, signinRedirect } = useOidcAuth();
 
-  const { claimsNamespace, preferredNameNamespace } = useConfig();
+  const { preferredNameNamespace } = useConfig();
 
   const getAccessToken = useCallback(() => {
     return new Promise<string>((resolve, reject) => {
@@ -72,7 +71,6 @@ export const useAuth = (): Auth => {
     user: {
       name: user?.profile[preferredNameNamespace!] as string,
     },
-    roleAssignments: user?.profile[claimsNamespace!] as string[],
     getAccessToken,
     logout,
     login,

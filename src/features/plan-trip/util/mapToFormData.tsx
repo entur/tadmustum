@@ -10,13 +10,16 @@ const flexAreaToPosition = (flexArea: ExpectedFlexibleArea | undefined): Positio
   return feature ? feature.geometry.coordinates : null;
 };
 
-const mapToFormData = (journey: Extrajourney, authority: string): CarPoolingTripDataFormData => {
+const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
   const calls = journey.estimatedVehicleJourney.estimatedCalls.estimatedCall;
   const firstCall = calls[0];
   const lastCall = calls[calls.length - 1];
 
   return {
-    authority,
+    // The journey's dataSource IS its codespace — never derived from lineRef or
+    // any other reference. Every stored trip carries one; if it were ever
+    // missing, the empty value fails form validation rather than guessing.
+    dataSource: journey.estimatedVehicleJourney.dataSource || '',
     operator: journey.estimatedVehicleJourney.operatorRef,
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,

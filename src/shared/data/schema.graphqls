@@ -3,38 +3,20 @@ schema {
   mutation: Mutation
 }
 
-"Add timing data to prometheus, if Actuator API is enabled"
-directive @timingData on FIELD_DEFINITION
-
 type Query {
-  authorities: [Authority]! @timingData
-  operators: [Operator]! @timingData
-
   userContext: UserContext
-  situationElements(codespace: String!, authority: String!): [SituationElement]
-  extrajourneys(codespace: String!, authority: String!): [Extrajourney]
-}
 
-"Authority involved in public transportation. An organisation under which the responsibility of organising the transport service in a certain area is placed."
-type Authority {
-  fareUrl: String
-  id: ID!
-  lang: String
-  name: String!
-  phone: String
-  timezone: String!
-  url: String
-}
-
-type Operator {
-  id: ID!
-  name: String!
-  phone: String
-  url: String
+  # Scoped server-side: each returns only the data in codespaces the caller
+  # holds a carpooling role on. No codespace argument — the caller cannot ask
+  # for more than their role assignments allow.
+  situationElements: [SituationElement]
+  extrajourneys: [Extrajourney]
 }
 
 type UserContext {
-  # Codespaces that the current user has access to
+  # Codespaces that the current user has access to, with the permissions
+  # they hold on each. Carpooling roles (viewCarpoolingData / adminCarpoolingData)
+  # are codespace-scoped — there is no global admin concept.
   allowedCodespaces: [Codespace]
 }
 
@@ -49,16 +31,13 @@ enum Permission {
 }
 
 type Mutation {
-  createOrUpdateSituationElement(
-    codespace: String!
-    authority: String!
-    input: SituationElementInput!
-  ): String
-  createOrUpdateExtrajourney(
-    codespace: String!
-    authority: String!
-    input: ExtrajourneyInput!
-  ): String
+  # The tenant is named inside the payload — there is no codespace argument.
+  # For situation elements the SIRI ParticipantRef IS the codespace; for extra
+  # journeys the journey's DataSource IS the codespace. Authorization gates on
+  # that field, and the journey's own references (estimatedVehicleJourneyCode,
+  # lineRef) must carry it as their prefix.
+  createOrUpdateSituationElement(input: SituationElementInput!): String
+  createOrUpdateExtrajourney(input: ExtrajourneyInput!): String
 }
 
 type SituationElement {
@@ -257,16 +236,6 @@ input ExtrajourneyInput {
   estimatedVehicleJourney: EstimatedVehicleJourneyInput!
 }
 
-type SimpleContactStructure {
-  phoneNumber: String
-  url: String
-}
-
-input SimpleContactStructureInput {
-  phoneNumber: String
-  url: String
-}
-
 type EstimatedVehicleJourney {
   recordedAtTime: String
   lineRef: String
@@ -279,11 +248,13 @@ type EstimatedVehicleJourney {
   routeRef: String
   publishedLineName: String
   groupOfLinesRef: String
+  externalLineRef: String
   operatorRef: String
   monitored: Boolean
   dataSource: String
   estimatedCalls: EstimatedCalls
   isCompleteStopSequence: Boolean
+  extensions: String
   publicContact: SimpleContactStructure
 }
 
@@ -305,7 +276,18 @@ input EstimatedVehicleJourneyInput {
   dataSource: String
   estimatedCalls: EstimatedCallsInput
   isCompleteStopSequence: Boolean
+  extensions: String
   publicContact: SimpleContactStructureInput
+}
+
+type SimpleContactStructure {
+  phoneNumber: String
+  url: String
+}
+
+input SimpleContactStructureInput {
+  phoneNumber: String
+  url: String
 }
 
 type EstimatedCalls {
@@ -333,6 +315,8 @@ type EstimatedCall {
   departureStatus: String
   departureBoardingActivity: String
   departureStopAssignment: DepartureStopAssignment
+  expectedDepartureOccupancy: [VehicleOccupancyStructure]
+  expectedDepartureCapacities: [PassengerCapacityStructure]
 }
 
 input EstimatedCallInput {
@@ -352,6 +336,24 @@ input EstimatedCallInput {
   departureStatus: String
   departureBoardingActivity: String
   departureStopAssignment: DepartureStopAssignmentInput
+  expectedDepartureOccupancy: [VehicleOccupancyStructureInput]
+  expectedDepartureCapacities: [PassengerCapacityStructureInput]
+}
+
+type VehicleOccupancyStructure {
+  onboardCount: Int
+}
+
+input VehicleOccupancyStructureInput {
+  onboardCount: Int
+}
+
+type PassengerCapacityStructure {
+  totalCapacity: Int
+}
+
+input PassengerCapacityStructureInput {
+  totalCapacity: Int
 }
 
 type DepartureStopAssignment {
@@ -367,16 +369,9 @@ type ExpectedFlexibleArea {
   polygon: Polygon
 }
 
-type Polygon {
-  exterior: LinearRing
-}
-
-type LinearRing {
-  posList: String
-}
-
 input ExpectedFlexibleAreaInput {
   circularArea: CircularAreaInput
+  polygon: PolygonInput
 }
 
 type CircularArea {
@@ -389,4 +384,20 @@ input CircularAreaInput {
   radius: Int
   longitude: Float
   latitude: Float
+}
+
+type Polygon {
+  exterior: LinearRing
+}
+
+input PolygonInput {
+  exterior: LinearRingInput
+}
+
+type LinearRing {
+  posList: String
+}
+
+input LinearRingInput {
+  posList: String
 }

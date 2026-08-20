@@ -3,7 +3,9 @@ import type { Position } from 'geojson';
 import type { EstimatedCall } from '../../../shared/model/EstimatedCall.tsx';
 
 export type CarPoolingTripDataFormData = {
-  authority: string;
+  // Bare codespace (e.g. 'ENT'). Becomes the journey's SIRI DataSource — the
+  // tenant key nunamnir authorizes the write on.
+  dataSource: string;
   operator: string;
   id?: string;
   lineRef?: string;

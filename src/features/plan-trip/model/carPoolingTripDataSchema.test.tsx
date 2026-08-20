@@ -6,7 +6,7 @@ import { carPoolingTripDataSchema, TRIP_EXPIRY_DAYS } from './carPoolingTripData
 // instantly in the backend), so base fixtures on the current time rather than a
 // fixed calendar date that would drift into the past as the suite ages.
 const validInput = () => ({
-  authority: 'ENT:Authority:ENT',
+  dataSource: 'ENT',
   operator: 'ENT:Operator:1',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs().add(1, 'day'),
@@ -38,7 +38,7 @@ describe('carPoolingTripDataSchema', () => {
     }
   );
 
-  it.each(['authority', 'operator'])('requires %s', async field => {
+  it.each(['dataSource', 'operator'])('requires %s', async field => {
     const input = { ...validInput(), [field]: undefined };
     await expect(carPoolingTripDataSchema.validate(input)).rejects.toThrow();
   });

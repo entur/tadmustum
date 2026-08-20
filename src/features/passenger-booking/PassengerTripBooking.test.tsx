@@ -23,12 +23,12 @@ vi.mock('../plan-trip/hooks/useStreetRoute', () => ({
   useStreetRoute: () => async () => null,
 }));
 
-// The component looks up the trip's authority via the codespace from the URL.
-// Provide a matching entry so the trip query and booking submission proceed.
-vi.mock('../../shared/hooks/useAuthorities', () => ({
-  useAuthorities: () => ({
-    authorities: [{ id: 'ENT:Authority:ENT', name: 'Entur' }],
+// The component gates booking on admin permission for the codespace from the
+// URL. Provide a matching entry so the booking submission proceeds.
+vi.mock('../../shared/hooks/useAllowedCodespaces', () => ({
+  useAllowedCodespaces: () => ({
     allowedCodespaces: [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }],
+    adminCodespaces: ['ENT'],
   }),
 }));
 
@@ -58,7 +58,8 @@ const trip: Extrajourney = {
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
     lineRef: 'ENT:CarPooling:trip-1',
-    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    dataSource: 'ENT',
+    publishedLineName: 'Carpooling trip ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
       estimatedCall: [
@@ -85,7 +86,8 @@ const tripWithCapacity = {
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
     lineRef: 'ENT:CarPooling:trip-1',
-    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    dataSource: 'ENT',
+    publishedLineName: 'Carpooling trip ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
       estimatedCall: [
@@ -114,7 +116,8 @@ const tripWithIntermediate = {
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
     lineRef: 'ENT:CarPooling:trip-1',
-    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    dataSource: 'ENT',
+    publishedLineName: 'Carpooling trip ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
       estimatedCall: [
@@ -207,9 +210,8 @@ describe('PassengerTripBooking', () => {
     await user.click(screen.getByRole('button', { name: 'Book Ride' }));
 
     await waitFor(() => expect(bookPassengerRide).toHaveBeenCalledTimes(1));
-    const [submittedTrip, payload, submittedAuthority] = bookPassengerRide.mock.calls[0];
+    const [submittedTrip, payload] = bookPassengerRide.mock.calls[0];
     expect(submittedTrip).toBe(trip);
-    expect(submittedAuthority).toBe('ENT:Authority:ENT');
     expect(payload).toMatchObject({
       tripId: 'ENT:ServiceJourney:1',
       pickupCoordinates: [10.7522, 59.9139],
