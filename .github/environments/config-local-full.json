@@ -1,6 +1,6 @@
 {
   "carpool-messages-api": "http://localhost:8082/graphql",
-  "journey-planner-api": "http://localhost:8080/otp/routers/default/transmodel/index/graphql",
+  "journey-planner-api": "https://api.dev.entur.io/journey-planner/v3/graphql",
   "applicationEnv": "development",
   "claimsNamespace": "https://ror.entur.io/role_assignments",
   "preferredNameNamespace": "https://ror.entur.io/preferred_name",
