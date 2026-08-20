@@ -22,6 +22,7 @@ const baseTrip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
       lineRef: 'ENT:CarPooling:trip-1',
+      dataSource: 'ENT',
       estimatedVehicleJourneyCode: 'ENT:ServiceJourney:1',
       publishedLineName: 'Carpooling trip',
       estimatedCalls: {
@@ -200,6 +201,7 @@ describe('prepareBookingData', () => {
       estimatedVehicleJourney: {
         recordedAtTime: '2026-05-20T09:00:00.000Z',
         lineRef: 'ENT:CarPooling:trip-1',
+        dataSource: 'ENT',
         publishedLineName: 'Carpooling trip',
         estimatedVehicleJourneyCode: 'ENT:ServiceJourney:1',
         estimatedCalls: {
@@ -430,6 +432,7 @@ describe('prepareBookingData', () => {
         estimatedVehicleJourney: {
           recordedAtTime: '2026-05-20T09:00:00.000Z',
           lineRef: 'ENT:CarPooling:trip-1',
+          dataSource: 'ENT',
           publishedLineName: 'Carpooling trip',
           estimatedCalls: {
             estimatedCall: [

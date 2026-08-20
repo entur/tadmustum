@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import { renderWithRouter } from '../../test/renderWithRouter';
 import CarPoolingTrips from './CarPoolingTrips';
@@ -52,6 +53,7 @@ const trip = (overrides: Partial<Extrajourney> = {}): Extrajourney =>
     estimatedVehicleJourney: {
       recordedAtTime: '2026-05-20T09:00:00.000Z',
       lineRef: 'ENT:CarPooling:trip-1',
+      dataSource: 'ENT',
       estimatedCalls: {
         estimatedCall: [
           {
@@ -378,6 +380,7 @@ describe('CarPoolingTrips', () => {
         estimatedVehicleJourney: {
           recordedAtTime: '2099-01-01T09:00:00.000Z',
           lineRef: 'ENT:CarPooling:trip',
+          dataSource: 'ENT',
           estimatedCalls: {
             estimatedCall: [
               {
@@ -424,6 +427,39 @@ describe('CarPoolingTrips', () => {
     renderInRouter();
 
     expect(await screen.findByText('boom')).toBeInTheDocument();
+  });
+
+  it('shows an error message when the query resolves with an error payload', async () => {
+    // api() maps GraphQL/network failures into a resolved `{ error }` rather
+    // than rejecting — this path must land on the error page too.
+    queryExtraJourneys.mockResolvedValue({ error: { message: 'GraphQL boom' } });
+
+    renderInRouter();
+
+    expect(await screen.findByText('GraphQL boom')).toBeInTheDocument();
+  });
+
+  it('recovers from a failed load when a refetch succeeds', async () => {
+    // First run fails; the second run (the effect refires when the user context
+    // resolves to a fresh array identity, as happens on token renewal) succeeds.
+    // The error page must give way to the grid — not stick until a remount.
+    queryExtraJourneys
+      .mockResolvedValueOnce({ error: { message: 'transient boom' } })
+      .mockResolvedValueOnce({ data: [trip()] });
+
+    const { rerender } = renderInRouter();
+
+    expect(await screen.findByText('transient boom')).toBeInTheDocument();
+
+    codespacesOverride.allowedCodespaces = [{ id: 'ENT', permissions: ['ADMIN_CARPOOLING_DATA'] }];
+    rerender(
+      <MemoryRouter>
+        <CarPoolingTrips />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('row', { name: /Oslo S/ });
+    expect(screen.queryByText('transient boom')).not.toBeInTheDocument();
   });
 
   // The trips query is the only thing that clears the page's own loading flag, so

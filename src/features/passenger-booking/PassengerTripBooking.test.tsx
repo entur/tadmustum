@@ -58,7 +58,8 @@ const trip: Extrajourney = {
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
     lineRef: 'ENT:CarPooling:trip-1',
-    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    dataSource: 'ENT',
+    publishedLineName: 'Carpooling trip ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
       estimatedCall: [
@@ -85,7 +86,8 @@ const tripWithCapacity = {
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
     lineRef: 'ENT:CarPooling:trip-1',
-    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    dataSource: 'ENT',
+    publishedLineName: 'Carpooling trip ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
       estimatedCall: [
@@ -114,7 +116,8 @@ const tripWithIntermediate = {
   estimatedVehicleJourney: {
     recordedAtTime: '2026-05-20T09:00:00.000Z',
     lineRef: 'ENT:CarPooling:trip-1',
-    publishedLineName: 'Carpooling trip ENT:Authority:ENT',
+    dataSource: 'ENT',
+    publishedLineName: 'Carpooling trip ENT',
     vehicleMode: 'bus',
     estimatedCalls: {
       estimatedCall: [

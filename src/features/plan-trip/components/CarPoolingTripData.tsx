@@ -37,7 +37,6 @@ interface SnackbarState {
 }
 export interface CarPoolingTripDataProps {
   tripId?: string;
-  codespace?: string;
   // When true, the trip identified by tripId is loaded only to pre-fill the
   // form: it's saved as a brand-new trip (fresh id/code) rather than edited.
   duplicate?: boolean;
@@ -66,7 +65,6 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       onZoomToFeature,
       onZoomToAllFeatures,
       tripId,
-      codespace,
       duplicate,
       loadedFlexibleStop,
       onDepartureStopChange,
@@ -184,7 +182,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
 
     useEffect(() => {
       const loadInitialState = (id?: string) => {
-        if (initializing.current || !id || !codespace) return;
+        if (initializing.current || !id) return;
         initializing.current = true;
         queryOneExtraJourney(id)
           .then(result => {
@@ -194,14 +192,15 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
               if (duplicate) {
                 // A duplicate copies every field of the source trip but is a new
                 // trip, so it needs its own identity: drop the source id and mint
-                // a fresh journey code, lineRef and booking URL. The code is the
-                // stable key nunamnir/subula/OTP store the trip under — reusing it
-                // would overwrite the original instead of creating a copy.
-                const code = `${codespace}:ServiceJourney:${uuidv4()}`;
+                // a fresh journey code, lineRef and booking URL under the trip's
+                // own dataSource (its codespace). The code is the stable key
+                // nunamnir/subula/OTP store the trip under — reusing it would
+                // overwrite the original instead of creating a copy.
+                const code = `${state.dataSource}:ServiceJourney:${uuidv4()}`;
                 state.id = undefined;
                 state.estimatedVehicleJourneyCode = code;
-                state.lineRef = `${codespace}:CarPooling:${uuidv4()}`;
-                state.contactUrl = `${window.location.origin}/book-trip/${codespace}/${code}`;
+                state.lineRef = `${state.dataSource}:CarPooling:${uuidv4()}`;
+                state.contactUrl = `${window.location.origin}/book-trip/${state.dataSource}/${code}`;
               }
               setInitialState(state);
               setTripData(journey);
@@ -217,7 +216,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
       // source id here would make "save" overwrite the original trip instead.
       setCurrentTripId(duplicate ? undefined : tripId);
       loadInitialState(tripId);
-    }, [codespace, duplicate, loadStopsFromJourney, queryOneExtraJourney, tripId]);
+    }, [duplicate, loadStopsFromJourney, queryOneExtraJourney, tripId]);
 
     useImperativeHandle(
       ref,

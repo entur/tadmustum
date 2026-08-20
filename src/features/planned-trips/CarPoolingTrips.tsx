@@ -141,9 +141,10 @@ export default function CarPoolingTrips() {
       return;
     }
     // One argless query: nunamnir scopes the result server-side to the codespaces
-    // the caller may read, so there is nothing to fan out over. Each trip still
-    // carries its own codespace in its lineRef, so callers (edit/book navigation)
-    // can identify which tenant a row belongs to.
+    // the caller may read, so there is nothing to fan out over. Clear any error
+    // from a previous run first, so a successful refetch (the effect refires on
+    // token renewal) recovers instead of sticking on the error page.
+    setError(null);
     queryExtraJourneys()
       .then(response => {
         if (response.error) {
@@ -248,10 +249,9 @@ export default function CarPoolingTrips() {
       sortable: false,
       filterable: false,
       renderCell: params => {
-        // Codespace is encoded in the trip's lineRef as `<CODESPACE>:CarPooling:<uuid>`.
-        // It identifies which Firestore partition the trip lives in, so it must
-        // be in the URL for the edit/book pages to know which tenant to query.
-        const codespace = params.row.estimatedVehicleJourney.lineRef?.split(':')[0] ?? '';
+        // The journey's dataSource IS its codespace — read it directly, never
+        // derived from lineRef or any other reference.
+        const codespace = params.row.estimatedVehicleJourney.dataSource ?? '';
         // Edit and Book both go through write mutations on nunamnir, so only
         // show them when the user actually has admin on that codespace —
         // otherwise the buttons just lead to a 403.

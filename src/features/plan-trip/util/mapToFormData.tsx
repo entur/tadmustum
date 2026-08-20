@@ -16,12 +16,10 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
   const lastCall = calls[calls.length - 1];
 
   return {
-    // The journey's dataSource IS its codespace; fall back to the lineRef prefix
-    // for trips stored before dataSource became mandatory.
-    dataSource:
-      journey.estimatedVehicleJourney.dataSource ||
-      journey.estimatedVehicleJourney.lineRef?.split(':')[0] ||
-      '',
+    // The journey's dataSource IS its codespace — never derived from lineRef or
+    // any other reference. Every stored trip carries one; if it were ever
+    // missing, the empty value fails form validation rather than guessing.
+    dataSource: journey.estimatedVehicleJourney.dataSource || '',
     operator: journey.estimatedVehicleJourney.operatorRef,
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,

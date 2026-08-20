@@ -88,7 +88,7 @@ describe('CarPoolingTripData reset behaviour', () => {
     queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} {...props} />);
 
     // Initial load draws the trip's stops onto the map.
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
@@ -127,7 +127,7 @@ describe('CarPoolingTripData duplicate behaviour', () => {
     queryOneExtraJourney.mockResolvedValue({ data: { extraJourney: journeyFixture() } });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" duplicate {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} duplicate {...props} />);
 
     // The source trip is still loaded (its stops are drawn) to pre-fill the form.
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
@@ -147,7 +147,7 @@ describe('CarPoolingTripData duplicate behaviour', () => {
     mutate.mockResolvedValue({ data: 'ENT:ServiceJourney:new' });
     const props = mapCallbacks();
 
-    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} codespace="ENT" duplicate {...props} />);
+    renderWithRouter(<CarPoolingTripData tripId={TRIP_ID} duplicate {...props} />);
 
     await waitFor(() => expect(props.loadedFlexibleStop).toHaveBeenCalledTimes(1));
     const code = screen.getByTestId('code').textContent ?? '';
