@@ -51,7 +51,7 @@ const getStreetRoute =
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'ET-Client-Name': 'entur - tadmustum',
+        'ET-Client-Name': 'entur - carpooling-editor',
       },
       body: JSON.stringify({
         query: STREET_ROUTE_QUERY,

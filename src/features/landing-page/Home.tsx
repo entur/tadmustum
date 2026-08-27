@@ -23,7 +23,7 @@ export default function Home() {
         </Avatar>
 
         <Typography variant="h3" component="h1" fontWeight={700}>
-          Welcome to Entur's carpooling test client
+          Welcome to Entur's Carpooling Editor
         </Typography>
 
         <Typography
@@ -32,8 +32,8 @@ export default function Home() {
           color="text.secondary"
           sx={{ maxWidth: 620, fontWeight: 400 }}
         >
-          A frontend app for creating carpooling SIRI messages and making the resulting trips
-          available in a journey planner.
+          A frontend app for creating test carpooling trips and making the resulting trips available
+          in a journey planner.
         </Typography>
 
         <Stack

@@ -22,7 +22,7 @@ import type { EstimatedCall } from '../model/EstimatedCall.tsx';
 
 const createClient = (uri: string, auth?: AuthState) => {
   const headers = {
-    'ET-Client-Name': 'entur - tadmustum',
+    'ET-Client-Name': 'entur - carpooling-editor',
   } as Record<string, string>;
 
   if (auth?.user?.access_token) {
