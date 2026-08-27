@@ -9,7 +9,7 @@
   "search.filter.title": "Filter by Type",
   "search.filter.clear": "Clear All",
 
-  "user.name": "Username",
+  "user.signedInAs": "Signed in as",
   "user.userAccount": "User account",
   "user.logout": "Log out",
   "user.permissions.title": "Permissions",

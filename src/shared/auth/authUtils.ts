@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth as useOidcAuth } from 'react-oidc-context';
+import type { IdTokenClaims } from 'oidc-client-ts';
 import { useConfig } from '../../contexts/ConfigContext.tsx';
 
 /**
@@ -9,6 +10,33 @@ import { useConfig } from '../../contexts/ConfigContext.tsx';
  * URL (the app root), so the destination is carried separately.
  */
 export const POST_LOGIN_REDIRECT_KEY = 'postLoginRedirect';
+
+/**
+ * The signed-in user's display name, or undefined when the token carries none.
+ *
+ * Preferred source is the Entur-namespaced claim (`preferredNameNamespace`),
+ * which an Auth0 action adds to the id token regardless of the requested scope
+ * — we ask for `openid` only, so the standard profile claims are not guaranteed
+ * to be present. Those are still tried as a fallback for a provider that does
+ * issue them. Returns undefined rather than an empty string so callers can omit
+ * the name entirely instead of rendering a blank.
+ */
+export const pickDisplayName = (
+  profile: IdTokenClaims | undefined,
+  preferredNameNamespace?: string
+): string | undefined => {
+  if (!profile) return undefined;
+  const candidates = [
+    preferredNameNamespace ? profile[preferredNameNamespace] : undefined,
+    profile.name,
+    profile.preferred_username,
+    profile.email,
+  ];
+  const name = candidates.find(
+    (candidate): candidate is string => typeof candidate === 'string' && candidate.trim() !== ''
+  );
+  return name?.trim();
+};
 
 export interface Auth {
   isLoading: boolean;
@@ -69,7 +97,7 @@ export const useAuth = (): Auth => {
     isLoading,
     isAuthenticated,
     user: {
-      name: user?.profile[preferredNameNamespace!] as string,
+      name: pickDisplayName(user?.profile, preferredNameNamespace),
     },
     getAccessToken,
     logout,
