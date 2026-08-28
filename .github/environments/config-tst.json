@@ -6,6 +6,7 @@
   "oidcConfig": {
     "authority": "https://partner.staging.entur.org",
     "client_id": "ToKCcec3JywHuCYrxUB9a2qZlBuhaBXd",
+    "scope": "openid profile email",
     "extraQueryParams": {
       "audience": "https://api.staging.entur.io"
     }

@@ -16,6 +16,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { useAllowedCodespaces } from '../../hooks/useAllowedCodespaces.tsx';
+import { useAuth } from '../../auth';
 
 interface UserDialogProps {
   open: boolean;
@@ -26,11 +27,18 @@ interface UserDialogProps {
 export default function UserDialog({ open, onClose, onLogout }: UserDialogProps) {
   const { t } = useTranslation();
   const { allowedCodespaces } = useAllowedCodespaces();
+  const { user } = useAuth();
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t('user.userAccount')}</DialogTitle>
       <DialogContent dividers>
+        {/* Omitted rather than left blank when the id token carries no name claim. */}
+        {user?.name && (
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {t('user.signedInAs', 'Signed in as')} <strong>{user.name}</strong>
+          </Typography>
+        )}
         <Typography variant="subtitle1" gutterBottom>
           {t('user.permissions.title', 'Permissions')}
         </Typography>

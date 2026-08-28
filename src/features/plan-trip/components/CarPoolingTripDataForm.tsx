@@ -786,7 +786,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
       />
       {arrivalBeforeDeparture && (
         <Alert severity="warning">
-          The arrival time is before the departure time, so this trip would end before it starts
+          The arrival time is before the departure time, so this trip would end before it starts.
         </Alert>
       )}
       {streetRouteFailed && (

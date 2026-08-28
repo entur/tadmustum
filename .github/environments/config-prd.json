@@ -6,6 +6,7 @@
   "oidcConfig": {
     "authority": "https://partner.entur.org",
     "client_id": "EFOkJnpNqKUESr2utrgWAcFQYwyOyyab",
+    "scope": "openid profile email",
     "extraQueryParams": {
       "audience": "https://api.entur.io"
     }
