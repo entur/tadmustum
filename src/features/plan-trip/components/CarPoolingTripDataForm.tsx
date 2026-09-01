@@ -148,9 +148,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const intermediateCalls = watch('intermediateCalls');
   const tripCancellation = watch('tripCancellation');
   const streetRoute = useStreetRoute();
-  // True when the journey planner couldn't route the trip — surfaces a
-  // warning so the user knows the map line and arrival estimate are degraded.
-  const [streetRouteFailed, setStreetRouteFailed] = useState<boolean>(false);
+  // How many legs the journey planner would not route (null when routing broke
+  // outright) — surfaces a warning so the user knows those legs are straight
+  // lines on the map and guesses in the timetable.
+  const [estimatedLegs, setEstimatedLegs] = useState<number | null>(0);
   const [error, setError] = useState<AppError | undefined>(undefined);
   const [errorDismissed, setErrorDismissed] = useState<boolean>(false);
   const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
@@ -354,7 +355,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     if (routeStopsKey == null || departureMs == null) {
       // No complete route — clear any stale line from the map.
       onRouteGeometryChange?.(null);
-      setStreetRouteFailed(false);
+      setEstimatedLegs(0);
       return;
     }
     const stops: Position[] = JSON.parse(routeStopsKey);
@@ -362,14 +363,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     routeLegChain(stops, dayjs(departureMs).toISOString(), streetRoute)
       .then(chain => {
         if (cancelled) return;
-        if (!chain) {
-          // Routed but no result — let the map fall back to straight lines.
-          onRouteGeometryChange?.('failed');
-          setStreetRouteFailed(true);
-          return;
-        }
         onRouteGeometryChange?.(chain.legGeometries);
-        setStreetRouteFailed(false);
+        // A chain always comes back; legs the journey planner would not route
+        // are straight lines timed from their distance. Say so, but keep them.
+        setEstimatedLegs(chain.estimatedLegs);
         if (estimateArrivalAutomatically) {
           // Auto mode: always keep the arrival in sync with the route, so it
           // updates whenever a stop or the departure changes. The chained
@@ -380,11 +377,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }
       })
       .catch(() => {
-        // Street-routing failed; the map shows its straight-line fallback and
-        // the user can still set the arrival manually.
+        // routeLegChain absorbs planner failures itself, so this only fires on
+        // an unexpected error. Fall back to straight lines on the map.
         if (!cancelled) {
           onRouteGeometryChange?.('failed');
-          setStreetRouteFailed(true);
+          setEstimatedLegs(null);
         }
       });
     return () => {
@@ -854,13 +851,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           The arrival time is before the departure time, so this trip would end before it starts.
         </Alert>
       )}
-      {streetRouteFailed && (
+      {estimatedLegs !== 0 && (
         <Alert severity="warning">
-          Could not fetch the driving route from the journey planner. The map shows straight lines
-          between the stops instead
-          {estimateArrivalAutomatically
-            ? ', and the arrival time could not be estimated automatically.'
-            : '.'}
+          {estimatedLegs === null
+            ? 'Could not fetch the driving route from the journey planner. The map shows straight lines between the stops instead.'
+            : `The journey planner could not plan ${estimatedLegs === 1 ? 'one leg' : `${estimatedLegs} legs`} of this trip. ${estimatedLegs === 1 ? 'It is' : 'They are'} drawn as ${estimatedLegs === 1 ? 'a straight line' : 'straight lines'} on the map and timed from the distance between the stops`}
+          {estimatedLegs !== null &&
+            (estimateArrivalAutomatically ? ', so the arrival time is a rough estimate.' : '.')}
         </Alert>
       )}
       <Box display="flex" gap={1} flexWrap="wrap">

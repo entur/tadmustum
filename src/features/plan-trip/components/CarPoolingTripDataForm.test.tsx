@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
-import type { Feature, Point } from 'geojson';
+import type { Feature, Point, Position } from 'geojson';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData';
@@ -232,7 +232,58 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
     );
   });
 
-  it("reports 'failed' when the journey planner cannot route the trip", async () => {
+  it('still estimates the arrival when two stops share a location', async () => {
+    // The journey planner returns no trip patterns for a route between two
+    // identical points — there is no trip to make. Mimic that: treating such a
+    // leg as unroutable used to fail the whole chain, so a trip with two stops
+    // in the same spot lost its arrival estimate and its route line.
+    streetRoute.mockImplementation(async (from: Position, to: Position, dateTime: string) =>
+      from[0] === to[0] && from[1] === to[1]
+        ? null
+        : {
+            expectedStartTime: dateTime,
+            expectedEndTime: '2026-06-01T16:00:00.000Z',
+            duration: 0,
+            distance: 0,
+            geometry: [from, to],
+          }
+    );
+    const stopAt = (lng: number, lat: number): EstimatedCall => ({
+      order: 2,
+      stopPointRef: 'ENT:PickupPoint:1',
+      stopPointName: 'Passenger pickup',
+      destinationDisplay: 'Bergen',
+      cancellation: false,
+      departureStopAssignment: {
+        expectedFlexibleArea: {
+          polygon: { exterior: { posList: `${lng} ${lat} ${lng} ${lat}` } },
+        },
+      },
+    });
+    const onRouteGeometryChange = vi.fn();
+
+    renderForm({
+      initialState: {
+        ...editingState(),
+        estimateArrivalAutomatically: true,
+        // A pickup exactly on the departure stop.
+        intermediateCalls: [stopAt(10.7522, 59.9139)],
+      },
+      mapDepartureFlexibleStop: point(10.7522, 59.9139),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+      onRouteGeometryChange,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Arrival time \(estimated\)/i)).toHaveValue(
+        String(dayjs('2026-06-01T16:00:00.000Z'))
+      )
+    );
+    expect(screen.queryByText(/Could not fetch the driving route/i)).not.toBeInTheDocument();
+    expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
+  });
+
+  it('warns, but still draws and times the trip, when the planner will not plan a leg', async () => {
     streetRoute.mockResolvedValue(null);
     const onRouteGeometryChange = vi.fn();
     renderForm({
@@ -241,11 +292,40 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
       onRouteGeometryChange,
     });
 
-    await waitFor(() => expect(onRouteGeometryChange).toHaveBeenCalledWith('failed'));
-    // The failure is surfaced to the user, not just to the map.
-    expect(
-      screen.getByText(/Could not fetch the driving route from the journey planner/i)
-    ).toBeInTheDocument();
+    // The unplanned leg is drawn as the straight segment between the stops
+    // rather than throwing the whole route away.
+    await waitFor(() =>
+      expect(onRouteGeometryChange).toHaveBeenCalledWith([
+        [
+          [10.7522, 59.9139],
+          [5.3221, 60.3913],
+        ],
+      ])
+    );
+    expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
+    // And the user is told the times are estimates rather than left guessing.
+    expect(screen.getByText(/could not plan one leg of this trip/i)).toBeInTheDocument();
+    // Oslo to Bergen in a straight line is about 305 km, so the estimate lands
+    // hours after the 08:00 departure — a guess, but an ordered one.
+    const arrival = screen.getByLabelText(/Arrival time \(estimated\)/i) as HTMLInputElement;
+    await waitFor(() =>
+      expect(dayjs(arrival.value).isAfter(dayjs('2026-06-01T08:00:00.000Z'))).toBe(true)
+    );
+  });
+
+  it('estimates the whole route when the journey planner is unreachable', async () => {
+    streetRoute.mockRejectedValue(new Error('journey planner is down'));
+    const onRouteGeometryChange = vi.fn();
+    renderForm({
+      mapDepartureFlexibleStop: point(10.7522, 59.9139),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+      onRouteGeometryChange,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(/could not plan one leg of this trip/i)).toBeInTheDocument()
+    );
+    expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
   });
 
   it('clears the route geometry when a stop is missing', () => {

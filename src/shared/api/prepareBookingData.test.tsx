@@ -346,7 +346,46 @@ describe('prepareBookingData', () => {
     expect(calls[4].latestExpectedArrivalTime).toBe('2026-06-01T09:50:00.000Z'); // Dropoff
   });
 
-  it('keeps the existing estimate when the router cannot plan a leg', async () => {
+  it('routes a booking whose pickup lands on an existing stop', async () => {
+    // The journey planner returns no trip patterns for a route between two
+    // identical points — there is no trip to make — so a pickup placed on top
+    // of an existing stop used to fail the whole chain and leave the trip with
+    // its unrouted estimate.
+    const otpLikeRouter: RouteLeg = async (from, to, dateTime) =>
+      from[0] === to[0] && from[1] === to[1]
+        ? null
+        : {
+            expectedStartTime: dateTime,
+            expectedEndTime: dayjs(dateTime).add(10, 'minute').toISOString(),
+            duration: 600,
+            distance: 1000,
+          };
+
+    const result = await prepareBookingData(
+      tripWithIntermediates(),
+      // The pickup is exactly on Inter A.
+      baseBooking({ pickupCoordinates: [10.2, 60], dropoffCoordinates: [10.7, 60] }),
+      otpLikeRouter
+    );
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
+    const timeOf = (name: string) => {
+      const call = calls.find(c => c.stopPointName.startsWith(name));
+      return call?.expectedArrivalTime ?? call?.expectedDepartureTime;
+    };
+
+    // Four legs of ten minutes, plus the one that takes no time at all.
+    expect(timeOf('Inter A')).toBe('2026-06-01T09:10:00.000Z');
+    expect(timeOf('Passenger Pickup')).toBe('2026-06-01T09:10:00.000Z');
+    expect(timeOf('Inter B')).toBe('2026-06-01T09:20:00.000Z');
+    expect(timeOf('Passenger Dropoff')).toBe('2026-06-01T09:30:00.000Z');
+    expect(timeOf('Destination')).toBe('2026-06-01T09:40:00.000Z');
+  });
+
+  it('still times every stop when the router cannot plan a single leg', async () => {
+    // Nothing routable at all: every leg is timed from the distance between its
+    // stops instead. The booking keeps an ordered, saveable schedule rather
+    // than losing its times to a planner that will not answer.
     const failingRouter: RouteLeg = async () => null;
 
     const result = await prepareBookingData(
@@ -355,10 +394,13 @@ describe('prepareBookingData', () => {
       failingRouter
     );
 
-    // Falls back to the 1/3–2/3 estimate rather than producing broken times.
     const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
-    const pickup = calls.find(c => c.stopPointName.startsWith('Passenger Pickup'));
-    expect(pickup?.expectedDepartureTime).toBe('2026-06-01T11:00:00.000Z');
+    const times = calls.map(call => call.expectedArrivalTime ?? call.expectedDepartureTime ?? '');
+    expect(times.every(Boolean)).toBe(true);
+    // Strictly increasing: the origin departs first, every later stop follows.
+    expect(times).toEqual([...times].sort());
+    expect(new Set(times).size).toBe(times.length);
+    expect(times[0]).toBe('2026-06-01T09:00:00.000Z');
   });
 
   describe('previewBookingRoute', () => {
@@ -504,7 +546,7 @@ describe('prepareBookingData', () => {
       preview!.legGeometries!.forEach(leg => expect(leg).toHaveLength(2));
     });
 
-    it('returns no leg geometries when a leg cannot be routed', async () => {
+    it('draws straight segments and counts them when legs cannot be routed', async () => {
       const failingRouter: RouteLeg = async () => null;
 
       const preview = await routedBookingPreview(
@@ -514,7 +556,12 @@ describe('prepareBookingData', () => {
       );
 
       expect(preview).not.toBeNull();
-      expect(preview!.legGeometries).toBeNull();
+      // Six stops, so five legs — all of them estimated, each drawn as the
+      // straight segment between its stops so the map still shows the shape of
+      // the trip. The count is what the UI warns on.
+      expect(preview!.estimatedLegs).toBe(5);
+      expect(preview!.legGeometries).toHaveLength(5);
+      expect(preview!.legGeometries?.every(leg => leg.length === 2)).toBe(true);
     });
   });
 });

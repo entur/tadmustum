@@ -14,6 +14,15 @@ import { routeLegChain, type RouteLeg } from './routeLegChain.tsx';
 // helpers; the type itself lives with routeLegChain.
 export type { RouteLeg };
 
+// The calls of a booking after re-timing, with the street geometry that timed
+// them and how many legs had to be estimated because the journey planner would
+// not plan them. Geometry and count are null when nothing was routed at all.
+interface RoutedCalls {
+  calls: EstimatedCall[];
+  legGeometries: Position[][] | null;
+  estimatedLegs: number | null;
+}
+
 export interface PassengerBookingData {
   tripId: string;
   pickupCoordinates: [number, number]; // [lng, lat]
@@ -65,12 +74,13 @@ export async function prepareBookingData(
 // stop's latestExpectedArrivalTime shifts with it. Without a router (or when a
 // stop lacks a coordinate) the assembled estimate is returned unchanged.
 // Also yields the routed street geometry per leg (null when not routed), so
-// the booking map can draw the actual driving path.
+// the booking map can draw the actual driving path, and how many of those legs
+// the journey planner would not plan (null when nothing was routed at all).
 async function routeAssembledCalls(
   assembled: AssembledBooking,
   bookingData: PassengerBookingData,
   routeLeg?: RouteLeg
-): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
+): Promise<RoutedCalls> {
   if (routeLeg && assembled.canOrderByPath) {
     return applyRoutedTimes(
       assembled.orderedCalls,
@@ -80,7 +90,7 @@ async function routeAssembledCalls(
       bookingData.passengerDeviationBudget
     );
   }
-  return { calls: assembled.orderedCalls, legGeometries: null };
+  return { calls: assembled.orderedCalls, legGeometries: null, estimatedLegs: null };
 }
 
 export interface BookingRoutePreview {
@@ -98,6 +108,10 @@ export interface BookingRoutePreview {
   // calls[i+1]), for drawing the actual driving path on the booking map.
   // Null when the preview wasn't routed (sync preview, routing unavailable).
   legGeometries: Position[][] | null;
+  // How many of those legs the journey planner would not plan, and so are
+  // straight lines timed from the distance between their stops. Null when the
+  // route wasn't computed at all.
+  estimatedLegs: number | null;
 }
 
 // Synchronous preview of what a booking would do to the trip route: the new
@@ -122,6 +136,7 @@ export function previewBookingRoute(
     dropoffStopRef: assembled.dropoffStopRef,
     overCapacityStopIndex: assembled.exceededAt?.index ?? null,
     legGeometries: null,
+    estimatedLegs: null,
   };
 }
 
@@ -140,13 +155,18 @@ export async function routedBookingPreview(
   } catch {
     return null;
   }
-  const { calls, legGeometries } = await routeAssembledCalls(assembled, bookingData, routeLeg);
+  const { calls, legGeometries, estimatedLegs } = await routeAssembledCalls(
+    assembled,
+    bookingData,
+    routeLeg
+  );
   return {
     calls: renumberCalls(calls),
     pickupStopRef: assembled.pickupStopRef,
     dropoffStopRef: assembled.dropoffStopRef,
     overCapacityStopIndex: assembled.exceededAt?.index ?? null,
     legGeometries,
+    estimatedLegs,
   };
 }
 
@@ -404,21 +424,24 @@ function applyOccupancy(
 
 // Re-times the sequence using real car-driving durations. Routes each leg in
 // turn from the driver's departure, accumulating arrival times. Returns the
-// calls unchanged (and no geometry) if there is no departure time or any leg
-// can't be planned, so a routing hiccup never yields a half-updated schedule
-// or a half-drawn route.
+// calls unchanged (and no geometry) only when there is no departure time to
+// start from; a leg the journey planner will not plan is timed from its
+// straight-line distance instead (see routeLegChain), so one awkward stop never
+// costs the whole booking its schedule.
 async function applyRoutedTimes(
   orderedCalls: EstimatedCall[],
   coords: LngLat[],
   originDeparture: string | undefined,
   routeLeg: RouteLeg,
   passengerDeviationBudget?: number
-): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
-  if (!originDeparture) return { calls: orderedCalls, legGeometries: null };
+): Promise<RoutedCalls> {
+  if (!originDeparture) return { calls: orderedCalls, legGeometries: null, estimatedLegs: null };
 
-  const chain = await routeLegChain(coords, originDeparture, routeLeg);
-  if (!chain) return { calls: orderedCalls, legGeometries: null };
-  const { arrivals, legGeometries } = chain;
+  const { arrivals, legGeometries, estimatedLegs } = await routeLegChain(
+    coords,
+    originDeparture,
+    routeLeg
+  );
 
   const lastIndex = orderedCalls.length - 1;
   const calls = orderedCalls.map((call, index) => {
@@ -444,7 +467,7 @@ async function applyRoutedTimes(
     }
     return updated;
   });
-  return { calls, legGeometries };
+  return { calls, legGeometries, estimatedLegs };
 }
 
 // New latest-arrival deadline for a stop after its scheduled time moved to

@@ -130,6 +130,9 @@ export default function PassengerTripBooking() {
   // routing (nothing drawn), 'failed' when it can't be routed (the map shows
   // its straight-line fallback).
   const [tripLegGeometries, setTripLegGeometries] = useState<RouteLegGeometries>(null);
+  // How many legs of that route the journey planner would not plan, and so are
+  // straight lines timed from the distance between their stops.
+  const [tripEstimatedLegs, setTripEstimatedLegs] = useState<number | null>(null);
 
   useEffect(() => {
     if (!trip) {
@@ -152,10 +155,17 @@ export default function PassengerTripBooking() {
     let cancelled = false;
     routeLegChain(coords as Position[], departure, getStreetRoute)
       .then(chain => {
-        if (!cancelled) setTripLegGeometries(chain ? chain.legGeometries : 'failed');
+        // A chain always comes back: legs the journey planner would not plan
+        // are straight lines timed from their distance, reported separately so
+        // the passenger is told rather than shown a silent guess.
+        if (cancelled) return;
+        setTripLegGeometries(chain.legGeometries);
+        setTripEstimatedLegs(chain.estimatedLegs);
       })
       .catch(() => {
-        if (!cancelled) setTripLegGeometries('failed');
+        if (cancelled) return;
+        setTripLegGeometries('failed');
+        setTripEstimatedLegs(null);
       });
     return () => {
       cancelled = true;
@@ -432,6 +442,8 @@ export default function PassengerTripBooking() {
   const displayedLegGeometries: RouteLegGeometries = activePreview
     ? (activePreview.legGeometries ?? 'failed')
     : tripLegGeometries;
+  // Legs of whatever is on the map that were estimated rather than planned.
+  const displayedEstimatedLegs = activePreview ? activePreview.estimatedLegs : tripEstimatedLegs;
 
   if (loading) {
     return (
@@ -801,6 +813,15 @@ export default function PassengerTripBooking() {
                 <Alert severity="warning" sx={{ mb: 2 }}>
                   Could not fetch the driving route from the journey planner. The map shows straight
                   lines between the stops instead, and stop times may be rough estimates.
+                </Alert>
+              )}
+              {displayedLegGeometries !== 'failed' && !!displayedEstimatedLegs && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  The journey planner could not plan{' '}
+                  {displayedEstimatedLegs === 1 ? 'one leg' : `${displayedEstimatedLegs} legs`} of
+                  this route. {displayedEstimatedLegs === 1 ? 'It is' : 'They are'} drawn as
+                  {displayedEstimatedLegs === 1 ? ' a straight line' : ' straight lines'} on the
+                  map, and timed from the distance between the stops.
                 </Alert>
               )}
               <PassengerBookingMap
