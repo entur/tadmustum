@@ -406,10 +406,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const vehicleCapacity = estimatedCalls[0]?.expectedDepartureCapacities?.[0]?.totalCapacity;
 
   // Display info per stop, matching the booking view: the driver's origin and
-  // destination are labelled Departure/Destination; everything in between (the
-  // driver's own stops and any passengers' pickup/dropoff) is shown as a
-  // neutral, numbered "Intermediate stop N". Marker colours mirror the map:
-  // green start, blue intermediate, red destination.
+  // destination are labelled Departure/Destination, everything in between (the
+  // driver's own stops and any passengers' pickup/dropoff) as an intermediate
+  // stop. Every stop is shown by its own name — they are all named after the
+  // place they are at, the driver's automatically and a passenger's when the
+  // booking is made — with a number to fall back on if a stop has no name at
+  // all. Marker colours mirror the map: green start, blue intermediate, red
+  // destination.
   let intermediateCounter = 0;
   const stopDisplays = estimatedCalls.map((call, index) => {
     const isFirst = index === 0;
@@ -440,7 +443,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     return {
       color: 'primary' as const,
       label: 'Intermediate stop',
-      name: `Intermediate stop ${intermediateCounter}`,
+      name: call.stopPointName || `Intermediate stop ${intermediateCounter}`,
       time:
         call.aimedArrivalTime ||
         call.aimedDepartureTime ||

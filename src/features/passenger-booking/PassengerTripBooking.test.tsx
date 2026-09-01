@@ -303,7 +303,7 @@ describe('PassengerTripBooking', () => {
     expect(screen.getByText('Your dropoff')).toBeInTheDocument();
   });
 
-  it("renames the driver's intermediate stop to 'Intermediate stop 1' in the route list", async () => {
+  it("shows the driver's intermediate stop by its own name in the route list", async () => {
     const user = userEvent.setup();
     queryExtraJourney.mockResolvedValue({ data: { extraJourney: tripWithIntermediate } });
 
@@ -311,9 +311,26 @@ describe('PassengerTripBooking', () => {
     await screen.findByText('Oslo S → Bergen stasjon');
     await selectPickupAndDropoff(user);
 
-    expect(await screen.findByText('Intermediate stop 1')).toBeInTheDocument();
-    // The raw place name is not shown for the intermediate stop.
-    expect(screen.queryByText('Hønefoss')).not.toBeInTheDocument();
+    // Stops are named after the place they are at — the driver's and other
+    // passengers' alike — so there is nothing to hide behind a number.
+    expect(await screen.findByText('Hønefoss')).toBeInTheDocument();
+    expect(screen.queryByText('Intermediate stop 1')).not.toBeInTheDocument();
+    // The chip still says what kind of stop it is.
+    expect(screen.getAllByText('Intermediate stop').length).toBeGreaterThan(0);
+  });
+
+  it("names this booking's own stops after the nearest place", async () => {
+    const user = userEvent.setup();
+    queryExtraJourney.mockResolvedValue({ data: { extraJourney: trip } });
+
+    renderAt();
+    await screen.findByText('Oslo S → Bergen stasjon');
+    await selectPickupAndDropoff(user);
+
+    // The stub map selects central Oslo and central Bergen.
+    expect(await screen.findByText('Basarhallene')).toBeInTheDocument();
+    expect(screen.getByText('Bergen')).toBeInTheDocument();
+    expect(screen.queryByText(/Passenger Pickup/)).not.toBeInTheDocument();
   });
 
   it("shows the driver's cancelled stop as cancelled in the route list", async () => {
@@ -328,7 +345,7 @@ describe('PassengerTripBooking', () => {
 
     // The stop is still listed — the passenger can see the driver dropped it —
     // and is labelled as cancelled rather than looking like a stop that is served.
-    const stopName = await screen.findByText('Intermediate stop 1');
+    const stopName = await screen.findByText('Hønefoss');
     expect(stopName).toBeInTheDocument();
     expect(screen.getByText('Cancelled')).toBeInTheDocument();
     expect(stopName).toHaveStyle({ 'text-decoration': 'line-through' });

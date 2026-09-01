@@ -564,13 +564,18 @@ export default function PassengerTripBooking() {
       };
     }
     intermediateCounter += 1;
+    // Every stop is shown by its own name: the driver's stops are named after
+    // the place they are at, and so are other passengers' pickups and dropoffs
+    // (see bookingStopNames), so there is nothing to hide behind a number. A
+    // stop that somehow has no name still gets a readable one.
+    const name = call.stopPointName || `Intermediate stop ${intermediateCounter}`;
     return {
       icon: FiberManualRecord,
       color: 'primary' as const,
       markerNumber: stopNumber as number | null,
       label: 'Intermediate stop',
-      warningLabel: `Intermediate stop ${intermediateCounter}`,
-      name: `Intermediate stop ${intermediateCounter}`,
+      warningLabel: name,
+      name,
       time:
         call.aimedArrivalTime ||
         call.aimedDepartureTime ||

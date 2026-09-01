@@ -9,6 +9,7 @@ import {
 } from '../../features/passenger-booking/util/shortestPath.tsx';
 import loadFeatureFromFlexArea from '../../features/plan-trip/util/loadFeatureFromFlexArea.tsx';
 import { chainGeometries, routeLegChain, type RouteLeg } from './routeLegChain.tsx';
+import { loadNearestPlaceName } from '../geo/loadNearestPlaceName.tsx';
 
 // Re-exported for callers that pass the street router into the booking
 // helpers; the type itself lives with routeLegChain.
@@ -22,6 +23,43 @@ interface RoutedCalls {
   legGeometries: Position[][] | null;
   estimatedLegs: number | null;
 }
+
+// What a booking's own pickup and dropoff are called once saved.
+interface BookingStopNames {
+  pickup: string;
+  dropoff: string;
+}
+
+// Last resort when the place list cannot be loaded, and what the synchronous
+// preview shows until it has: the coordinates the passenger picked.
+const coordinateName = ([lng, lat]: [number, number]): string =>
+  `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+const coordinateNames = (bookingData: PassengerBookingData): BookingStopNames => ({
+  pickup: coordinateName(bookingData.pickupCoordinates),
+  dropoff: coordinateName(bookingData.dropoffCoordinates),
+});
+
+/**
+ * Names a booking's pickup and dropoff after the nearest known place, the way
+ * the trip form names the driver's own stops — "Grünerløkka, Oslo" rather than
+ * a pair of coordinates or a bare "Passenger Pickup", so the stop reads the
+ * same to the driver, in the trip list, and everywhere downstream.
+ *
+ * Never rejects: if the place list will not load, the coordinates stand in.
+ */
+const bookingStopNames = async (bookingData: PassengerBookingData): Promise<BookingStopNames> => {
+  const fallback = coordinateNames(bookingData);
+  try {
+    const nearestPlaceName = await loadNearestPlaceName();
+    return {
+      pickup: nearestPlaceName(bookingData.pickupCoordinates) || fallback.pickup,
+      dropoff: nearestPlaceName(bookingData.dropoffCoordinates) || fallback.dropoff,
+    };
+  } catch {
+    return fallback;
+  }
+};
 
 export interface PassengerBookingData {
   tripId: string;
@@ -50,7 +88,7 @@ export async function prepareBookingData(
 
   // Over-capacity bookings are allowed (the UI warns about them), so we don't
   // reject here — occupancy is still computed so every stop reflects the load.
-  const assembled = assembleBooking(originalTrip, bookingData);
+  const assembled = assembleBooking(originalTrip, bookingData, await bookingStopNames(bookingData));
   const { calls: orderedCalls } = await routeAssembledCalls(assembled, bookingData, routeLeg);
 
   const updatedTrip: Extrajourney = {
@@ -149,9 +187,10 @@ export async function routedBookingPreview(
   bookingData: PassengerBookingData,
   routeLeg: RouteLeg
 ): Promise<BookingRoutePreview | null> {
+  const stopNames = await bookingStopNames(bookingData);
   let assembled: AssembledBooking;
   try {
-    assembled = assembleBooking(originalTrip, bookingData);
+    assembled = assembleBooking(originalTrip, bookingData, stopNames);
   } catch {
     return null;
   }
@@ -188,7 +227,8 @@ interface AssembledBooking {
 // over-capacity (reported via the returned `exceededAt`).
 function assembleBooking(
   originalTrip: Extrajourney,
-  bookingData: PassengerBookingData
+  bookingData: PassengerBookingData,
+  stopNames: BookingStopNames = coordinateNames(bookingData)
 ): AssembledBooking {
   // The journey's dataSource IS its codespace — nunamnir authorizes the booking
   // write on it and validates the journey's own references against it. Never
@@ -223,7 +263,7 @@ function assembleBooking(
   const pickupStop: EstimatedCall = {
     order: 0,
     stopPointRef: `${codespace}:PickupPoint:${uuidv4()}`,
-    stopPointName: `Passenger Pickup (${bookingData.pickupCoordinates[1].toFixed(4)}, ${bookingData.pickupCoordinates[0].toFixed(4)})`,
+    stopPointName: stopNames.pickup,
     destinationDisplay: lastCall.destinationDisplay,
     aimedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
     expectedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
@@ -253,7 +293,7 @@ function assembleBooking(
   const dropoffStop: EstimatedCall = {
     order: 0,
     stopPointRef: `${codespace}:DropoffPoint:${uuidv4()}`,
-    stopPointName: `Passenger Dropoff (${bookingData.dropoffCoordinates[1].toFixed(4)}, ${bookingData.dropoffCoordinates[0].toFixed(4)})`,
+    stopPointName: stopNames.dropoff,
     destinationDisplay: lastCall.destinationDisplay,
     aimedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     expectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),

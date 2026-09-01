@@ -6,6 +6,7 @@ import type { Feature, Point, Position } from 'geojson';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData';
+import type { Extrajourney } from '../../../shared/model/Extrajourney';
 import type { EstimatedCall } from '../../../shared/model/EstimatedCall';
 
 const streetRoute = vi.fn();
@@ -92,7 +93,9 @@ const editingState = (): CarPoolingTripDataFormData => ({
 });
 
 const formElement = (
-  props: Partial<typeof baseProps & { initialState: CarPoolingTripDataFormData }> = {}
+  props: Partial<
+    typeof baseProps & { initialState: CarPoolingTripDataFormData; tripData: Extrajourney }
+  > = {}
 ) => (
   <LocalizationProvider dateAdapter={AdapterDayjs}>
     <CarPoolingTripDataForm {...baseProps} {...props} />
@@ -100,7 +103,9 @@ const formElement = (
 );
 
 const renderForm = (
-  props: Partial<typeof baseProps & { initialState: CarPoolingTripDataFormData }> = {}
+  props: Partial<
+    typeof baseProps & { initialState: CarPoolingTripDataFormData; tripData: Extrajourney }
+  > = {}
 ) => render(formElement(props));
 
 describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
@@ -400,6 +405,57 @@ describe('CarPoolingTripDataForm — trip duration warning', () => {
     });
 
     expect(screen.getByText(/longer than 2.5 hours/i)).toBeInTheDocument();
+  });
+});
+
+describe('CarPoolingTripDataForm — the trip route list', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    streetRoute.mockResolvedValue(null);
+  });
+
+  // The stop list is only rendered for a trip that already exists.
+  const tripWith = (intermediateName: string) =>
+    ({
+      id: 'ENT:ServiceJourney:42',
+      estimatedVehicleJourney: {
+        estimatedCalls: {
+          estimatedCall: [
+            {
+              order: 1,
+              stopPointName: 'Oslo S',
+              aimedDepartureTime: '2026-06-01T08:00:00.000Z',
+            },
+            {
+              order: 2,
+              stopPointName: intermediateName,
+              aimedArrivalTime: '2026-06-01T10:00:00.000Z',
+            },
+            {
+              order: 3,
+              stopPointName: 'Bergen stasjon',
+              aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+            },
+          ],
+        },
+      },
+    }) as unknown as Extrajourney;
+
+  it('shows every stop by its own name', () => {
+    renderForm({ initialState: editingState(), tripData: tripWith('Hønefoss') });
+
+    // Stops are named after the place they are at, so a driver reading the list
+    // can tell which stop is which.
+    expect(screen.getByText('Hønefoss')).toBeInTheDocument();
+    expect(screen.queryByText('Intermediate stop 1')).not.toBeInTheDocument();
+    // The chip still says what kind of stop it is.
+    expect(screen.getByText('Intermediate stop')).toBeInTheDocument();
+  });
+
+  it('numbers a stop that has no name of its own', () => {
+    renderForm({ initialState: editingState(), tripData: tripWith('') });
+
+    expect(screen.getByText('Intermediate stop 1')).toBeInTheDocument();
   });
 });
 
