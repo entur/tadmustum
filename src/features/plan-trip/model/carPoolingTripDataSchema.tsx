@@ -43,16 +43,12 @@ const dateSchema = Yup.mixed<Dayjs>().dayjs('Not a valid date');
 
 export const carPoolingTripDataSchema = Yup.object({
   dataSource: Yup.string().required(),
-  operator: Yup.string()
-    .required()
-    // The operator field is currently dead data downstream (see ROR pipeline:
-    // Carpooling Editor -> nunamnir -> subula -> Carpooling Monitor, and OTP's
-    // CarpoolTrip.provider — no consumer reads it). Until something actually
-    // depends on the value, restrict to Entur to avoid producing data that might
-    // be wrong but never noticed.
-    .matches(/^ENT:/, 'Only Entur is accepted as operator for now'),
+  // Two characters, not three: automatic stop naming fills these in from real
+  // place names, and Norway and Sweden have two-letter ones (Ås, Ål, Ed). A
+  // three-character floor would reject a correct automatic name in a field the
+  // user cannot edit while automatic naming is on.
   departureStopName: Yup.string()
-    .min(3, 'Departure stop name must be at least 3 characters')
+    .min(2, 'Departure stop name must be at least 2 characters')
     .required(),
   departureDatetime: dateSchema
     .required()
@@ -69,7 +65,7 @@ export const carPoolingTripDataSchema = Yup.object({
   departureFlexibleStop: positionSchema.required('Please place the departure stop on the map.'),
   departureCancellation: Yup.boolean().required(),
   destinationStopName: Yup.string()
-    .min(3, 'Destination stop name must be at least 3 characters')
+    .min(2, 'Destination stop name must be at least 2 characters')
     .required(),
   destinationDatetime: dateSchema.required(),
   destinationFlexibleStop: positionSchema.required('Please place the destination stop on the map.'),

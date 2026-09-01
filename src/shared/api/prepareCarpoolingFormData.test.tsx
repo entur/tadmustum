@@ -11,7 +11,6 @@ const baseForm = (
   overrides: Partial<CarPoolingTripDataFormData> = {}
 ): CarPoolingTripDataFormData => ({
   dataSource: 'ENT',
-  operator: 'ENT:Operator:1',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
   departureFlexibleStop: [10.7522, 59.9139],
@@ -82,6 +81,18 @@ describe('prepareCarpoolingFormData', () => {
     const result = prepareCarpoolingFormData(baseForm());
 
     expect(result.input.estimatedVehicleJourney.lineRef).toBe('ENT:CarPooling:fixed-uuid');
+  });
+
+  it('always publishes the Entur operatorRef, whatever the codespace', () => {
+    // The form has no operator field: the value is fixed, so it can never be
+    // left empty, fetched from an API, or carried over from another codespace.
+    expect(prepareCarpoolingFormData(baseForm()).input.estimatedVehicleJourney.operatorRef).toBe(
+      'ENT:Operator:ENT'
+    );
+    expect(
+      prepareCarpoolingFormData(baseForm({ dataSource: 'GOA' })).input.estimatedVehicleJourney
+        .operatorRef
+    ).toBe('ENT:Operator:ENT');
   });
 
   it('reuses the provided lineRef when present', () => {

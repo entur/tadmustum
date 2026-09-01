@@ -26,7 +26,11 @@ import {
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import type { Position } from 'geojson';
 import StopOccupancy from '../../shared/components/StopOccupancy';
-import { routeLegChain, type RouteLegGeometries } from '../../shared/api/routeLegChain';
+import {
+  chainGeometries,
+  routeLegChain,
+  type RouteLegGeometries,
+} from '../../shared/api/routeLegChain';
 import loadFeatureFromFlexArea from '../plan-trip/util/loadFeatureFromFlexArea';
 import {
   routedBookingPreview,
@@ -38,6 +42,7 @@ import PassengerBookingMap from './components/PassengerBookingMap';
 import { useBookPassengerRide } from './hooks/useBookPassengerRide';
 import { userFacingMessage } from '../../shared/error-message/userFacingMessage.tsx';
 import { useAllowedCodespaces } from '../../shared/hooks/useAllowedCodespaces';
+import { STOP_COLORS } from './util/stopColors.tsx';
 
 interface PassengerBookingFormData {
   origin: string;
@@ -56,16 +61,24 @@ function StopMarker({
   icon: Icon,
   color,
   size = 24,
+  cancelled = false,
 }: {
   markerNumber: number | null;
   icon: SvgIconComponent;
   color: 'success' | 'error' | 'primary';
   size?: number;
+  cancelled?: boolean;
 }) {
   if (markerNumber == null) {
-    return <Icon color={color} sx={{ fontSize: size }} />;
+    return <Icon color={cancelled ? 'disabled' : color} sx={{ fontSize: size }} />;
   }
-  const background = color === 'success' ? '#4CAF50' : color === 'error' ? '#f44336' : '#2196F3';
+  const background = cancelled
+    ? STOP_COLORS.cancelled
+    : color === 'success'
+      ? STOP_COLORS.origin
+      : color === 'error'
+        ? STOP_COLORS.destination
+        : STOP_COLORS.intermediate;
   return (
     <Box
       sx={{
@@ -108,7 +121,7 @@ export default function PassengerTripBooking() {
     origin: '',
     destination: '',
     numberOfPassengers: 1,
-    passengerDeviationBudget: 5,
+    passengerDeviationBudget: 12,
   });
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -130,13 +143,22 @@ export default function PassengerTripBooking() {
   // routing (nothing drawn), 'failed' when it can't be routed (the map shows
   // its straight-line fallback).
   const [tripLegGeometries, setTripLegGeometries] = useState<RouteLegGeometries>(null);
+  // How many legs of that route the journey planner would not plan, and so are
+  // straight lines timed from the distance between their stops.
+  const [tripEstimatedLegs, setTripEstimatedLegs] = useState<number | null>(null);
 
   useEffect(() => {
     if (!trip) {
       setTripLegGeometries(null);
       return;
     }
-    const calls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+    const allCalls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+    // The vehicle drives past a cancelled stop, not to it, so it is no part of
+    // the route — the same rule the trip editor follows. The ends anchor the
+    // route whatever their state.
+    const calls = allCalls.filter(
+      (call, index) => index === 0 || index === allCalls.length - 1 || !call.cancellation
+    );
     const coords = calls.map(
       call =>
         loadFeatureFromFlexArea(call.departureStopAssignment?.expectedFlexibleArea)?.geometry
@@ -152,10 +174,17 @@ export default function PassengerTripBooking() {
     let cancelled = false;
     routeLegChain(coords as Position[], departure, getStreetRoute)
       .then(chain => {
-        if (!cancelled) setTripLegGeometries(chain ? chain.legGeometries : 'failed');
+        // A chain always comes back: legs the journey planner would not plan
+        // are straight lines timed from their distance, reported separately so
+        // the passenger is told rather than shown a silent guess.
+        if (cancelled) return;
+        setTripLegGeometries(chainGeometries(chain));
+        setTripEstimatedLegs(chain.estimatedLegs);
       })
       .catch(() => {
-        if (!cancelled) setTripLegGeometries('failed');
+        if (cancelled) return;
+        setTripLegGeometries('failed');
+        setTripEstimatedLegs(null);
       });
     return () => {
       cancelled = true;
@@ -432,6 +461,8 @@ export default function PassengerTripBooking() {
   const displayedLegGeometries: RouteLegGeometries = activePreview
     ? (activePreview.legGeometries ?? 'failed')
     : tripLegGeometries;
+  // Legs of whatever is on the map that were estimated rather than planned.
+  const displayedEstimatedLegs = activePreview ? activePreview.estimatedLegs : tripEstimatedLegs;
 
   if (loading) {
     return (
@@ -471,6 +502,7 @@ export default function PassengerTripBooking() {
     const isFirst = index === 0;
     const isLast = index === estimatedCalls.length - 1;
     const latestTime = call.latestExpectedArrivalTime;
+    const cancelled = call.cancellation ?? false;
 
     if (currentPickupRef && call.stopPointRef === currentPickupRef) {
       return {
@@ -483,6 +515,7 @@ export default function PassengerTripBooking() {
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Pickup' as const,
         latestTime,
+        cancelled,
       };
     }
     if (currentDropoffRef && call.stopPointRef === currentDropoffRef) {
@@ -496,6 +529,7 @@ export default function PassengerTripBooking() {
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Dropoff' as const,
         latestTime,
+        cancelled,
       };
     }
 
@@ -512,6 +546,7 @@ export default function PassengerTripBooking() {
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Departure' as const,
         latestTime,
+        cancelled,
       };
     }
     if (isLast) {
@@ -525,16 +560,22 @@ export default function PassengerTripBooking() {
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Arrival' as const,
         latestTime,
+        cancelled,
       };
     }
     intermediateCounter += 1;
+    // Every stop is shown by its own name: the driver's stops are named after
+    // the place they are at, and so are other passengers' pickups and dropoffs
+    // (see bookingStopNames), so there is nothing to hide behind a number. A
+    // stop that somehow has no name still gets a readable one.
+    const name = call.stopPointName || `Intermediate stop ${intermediateCounter}`;
     return {
       icon: FiberManualRecord,
       color: 'primary' as const,
       markerNumber: stopNumber as number | null,
       label: 'Intermediate stop',
-      warningLabel: `Intermediate stop ${intermediateCounter}`,
-      name: `Intermediate stop ${intermediateCounter}`,
+      warningLabel: name,
+      name,
       time:
         call.aimedArrivalTime ||
         call.aimedDepartureTime ||
@@ -542,6 +583,7 @@ export default function PassengerTripBooking() {
         call.expectedDepartureTime,
       timeType: 'Stop' as const,
       latestTime,
+      cancelled,
     };
   });
 
@@ -619,10 +661,18 @@ export default function PassengerTripBooking() {
                             markerNumber={stopInfo.markerNumber}
                             icon={stopInfo.icon}
                             color={stopInfo.color}
+                            cancelled={stopInfo.cancelled}
                           />
                           <Box sx={{ flex: 1 }}>
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <Typography variant="body2" fontWeight={500}>
+                            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                              <Typography
+                                variant="body2"
+                                fontWeight={500}
+                                sx={{
+                                  textDecoration: stopInfo.cancelled ? 'line-through' : 'none',
+                                  color: stopInfo.cancelled ? 'text.disabled' : 'text.primary',
+                                }}
+                              >
                                 {stopInfo.name}
                               </Typography>
                               <Chip
@@ -632,9 +682,23 @@ export default function PassengerTripBooking() {
                                 color={stopInfo.color}
                                 sx={{ fontSize: '0.7rem', height: '20px' }}
                               />
+                              {stopInfo.cancelled && (
+                                <Chip
+                                  label="Cancelled"
+                                  size="small"
+                                  color="error"
+                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                />
+                              )}
                             </Box>
                             {stopInfo.time && (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  textDecoration: stopInfo.cancelled ? 'line-through' : 'none',
+                                }}
+                              >
                                 {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
                                 {stopInfo.latestTime && (
                                   <>
@@ -801,6 +865,15 @@ export default function PassengerTripBooking() {
                 <Alert severity="warning" sx={{ mb: 2 }}>
                   Could not fetch the driving route from the journey planner. The map shows straight
                   lines between the stops instead, and stop times may be rough estimates.
+                </Alert>
+              )}
+              {displayedLegGeometries !== 'failed' && !!displayedEstimatedLegs && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  The journey planner could not plan{' '}
+                  {displayedEstimatedLegs === 1 ? 'one leg' : `${displayedEstimatedLegs} legs`} of
+                  this route. {displayedEstimatedLegs === 1 ? 'It is' : 'They are'} drawn as
+                  {displayedEstimatedLegs === 1 ? ' a straight line' : ' straight lines'} on the
+                  map, and timed from the distance between the stops.
                 </Alert>
               )}
               <PassengerBookingMap

@@ -28,7 +28,6 @@ import { useAllowedCodespaces } from '../../../shared/hooks/useAllowedCodespaces
 import { useStreetRoute } from '../hooks/useStreetRoute.tsx';
 import type { Feature, Point, Position } from 'geojson';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData.tsx';
-import { ENTUR_OPERATOR } from '../model/enturOperator.tsx';
 import {
   carPoolingTripDataSchema,
   MAX_TRIP_DURATION_MINUTES,
@@ -37,8 +36,13 @@ import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
 import StopOccupancy from '../../../shared/components/StopOccupancy.tsx';
-import { routeLegChain, type RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
+import {
+  chainGeometries,
+  routeLegChain,
+  type RouteLegGeometries,
+} from '../../../shared/api/routeLegChain.tsx';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
+import { loadNearestPlaceName } from '../../../shared/geo/loadNearestPlaceName.tsx';
 import dayjs from 'dayjs';
 
 export interface CarPoolingTripDataFormProps {
@@ -116,10 +120,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     mode: 'onBlur', // or "onChange", depending on UX preference
     defaultValues: {
       dataSource: '',
-      operator: ENTUR_OPERATOR.id,
       departureStopName: 'Origin',
       departureDatetime: defaultDeparture,
       estimateArrivalAutomatically: true,
+      setStopNamesAutomatically: true,
       departureFlexibleStop: null,
       departureCancellation: false,
       destinationStopName: 'Destination',
@@ -136,21 +140,22 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
 
   const dataSource = watch('dataSource');
   const contactUrl = watch('contactUrl');
-  const operator = watch('operator');
   const departureFlexibleStop: Position | null = watch('departureFlexibleStop');
   const destinationFlexibleStop: Position | null = watch('destinationFlexibleStop');
   const departureDatetime = watch('departureDatetime');
   const destinationDatetime = watch('destinationDatetime');
   const driverDeviationBudget = watch('driverDeviationBudget');
   const estimateArrivalAutomatically = watch('estimateArrivalAutomatically');
+  const setStopNamesAutomatically = watch('setStopNamesAutomatically');
   const departureCancellation = watch('departureCancellation');
   const destinationCancellation = watch('destinationCancellation');
   const intermediateCalls = watch('intermediateCalls');
   const tripCancellation = watch('tripCancellation');
   const streetRoute = useStreetRoute();
-  // True when the journey planner couldn't route the trip — surfaces a
-  // warning so the user knows the map line and arrival estimate are degraded.
-  const [streetRouteFailed, setStreetRouteFailed] = useState<boolean>(false);
+  // How many legs the journey planner would not route (null when routing broke
+  // outright) — surfaces a warning so the user knows those legs are straight
+  // lines on the map and guesses in the timetable.
+  const [estimatedLegs, setEstimatedLegs] = useState<number | null>(0);
   const [error, setError] = useState<AppError | undefined>(undefined);
   const [errorDismissed, setErrorDismissed] = useState<boolean>(false);
   const [initialStateSet, setInitialStateSet] = useState<boolean>(false);
@@ -179,14 +184,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         setValue('estimatedVehicleJourneyCode', code);
       }
       setValue('contactUrl', `${window.location.origin}/book-trip/${dataSource}/${code}`);
-    }
-
-    // The operator is hardcoded to Entur, so re-assert it after an existing trip
-    // has been loaded: a trip created earlier can carry another codespace's
-    // operatorRef, and with the picker locked that value would fail validation
-    // with no way for the user to correct it.
-    if (operator !== ENTUR_OPERATOR.id) {
-      setValue('operator', ENTUR_OPERATOR.id);
     }
 
     if (mapDepartureFlexibleStop) {
@@ -232,7 +229,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     adminCodespaces,
     dataSource,
     contactUrl,
-    operator,
     mapDepartureFlexibleStop,
     mapDestinationFlexibleStop,
     setValue,
@@ -248,6 +244,65 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const destinationLng = destinationFlexibleStop?.[0];
   const destinationLat = destinationFlexibleStop?.[1];
   const departureMs = departureDatetime?.isValid() ? departureDatetime.valueOf() : undefined;
+
+  // Automatic stop names: each placed stop is named after the nearest place in
+  // the bundled place list, so dropping a pin on the map is enough to get a
+  // name a driver recognises. Purely local once the list is loaded — no request
+  // to a naming service, nothing that can leave a stop unnamed — and it only
+  // ever writes while the option is on, so a name typed by hand (option off) or
+  // loaded from a saved trip is never overwritten. Turning the option off keeps
+  // the last automatic name rather than reverting it, matching how the
+  // automatic arrival estimate behaves.
+  useEffect(() => {
+    const departurePlaced = departureLng != null && departureLat != null;
+    const destinationPlaced = destinationLng != null && destinationLat != null;
+    if (!setStopNamesAutomatically || (!departurePlaced && !destinationPlaced)) {
+      // Nothing on the map yet — the stops keep their default names.
+      return;
+    }
+
+    let cancelled = false;
+    // The place list is a lazily loaded chunk, so the name lands a tick after
+    // the stop does.
+    loadNearestPlaceName()
+      .then(nearestPlaceName => {
+        if (cancelled) {
+          return;
+        }
+        const rename = (
+          field: 'departureStopName' | 'destinationStopName',
+          lng: number | undefined,
+          lat: number | undefined
+        ) => {
+          if (lng == null || lat == null) {
+            return;
+          }
+          const name = nearestPlaceName([lng, lat]);
+          if (name && getValues(field) !== name) {
+            setValue(field, name, { shouldValidate: true });
+          }
+        };
+        rename('departureStopName', departureLng, departureLat);
+        rename('destinationStopName', destinationLng, destinationLat);
+      })
+      .catch(() => {
+        // The chunk could not be loaded (an offline tab, say). The stops keep
+        // the names they have and the trip still saves; unticking the option
+        // hands the fields back to the user.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    setStopNamesAutomatically,
+    departureLng,
+    departureLat,
+    destinationLng,
+    destinationLat,
+    getValues,
+    setValue,
+  ]);
 
   // Warn (but don't block) when the trip span — arrival plus the driver's deviation budget,
   // minus departure — exceeds the limit OTP enforces, so the driver knows a longer trip will be
@@ -304,7 +359,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     if (routeStopsKey == null || departureMs == null) {
       // No complete route — clear any stale line from the map.
       onRouteGeometryChange?.(null);
-      setStreetRouteFailed(false);
+      setEstimatedLegs(0);
       return;
     }
     const stops: Position[] = JSON.parse(routeStopsKey);
@@ -312,14 +367,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     routeLegChain(stops, dayjs(departureMs).toISOString(), streetRoute)
       .then(chain => {
         if (cancelled) return;
-        if (!chain) {
-          // Routed but no result — let the map fall back to straight lines.
-          onRouteGeometryChange?.('failed');
-          setStreetRouteFailed(true);
-          return;
-        }
-        onRouteGeometryChange?.(chain.legGeometries);
-        setStreetRouteFailed(false);
+        // A chain always comes back; legs the journey planner would not route
+        // are straight lines timed from their distance. Say so, but keep them.
+        onRouteGeometryChange?.(chainGeometries(chain));
+        setEstimatedLegs(chain.estimatedLegs);
         if (estimateArrivalAutomatically) {
           // Auto mode: always keep the arrival in sync with the route, so it
           // updates whenever a stop or the departure changes. The chained
@@ -330,11 +381,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         }
       })
       .catch(() => {
-        // Street-routing failed; the map shows its straight-line fallback and
-        // the user can still set the arrival manually.
+        // routeLegChain absorbs planner failures itself, so this only fires on
+        // an unexpected error. Fall back to straight lines on the map.
         if (!cancelled) {
           onRouteGeometryChange?.('failed');
-          setStreetRouteFailed(true);
+          setEstimatedLegs(null);
         }
       });
     return () => {
@@ -355,10 +406,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
   const vehicleCapacity = estimatedCalls[0]?.expectedDepartureCapacities?.[0]?.totalCapacity;
 
   // Display info per stop, matching the booking view: the driver's origin and
-  // destination are labelled Departure/Destination; everything in between (the
-  // driver's own stops and any passengers' pickup/dropoff) is shown as a
-  // neutral, numbered "Intermediate stop N". Marker colours mirror the map:
-  // green start, blue intermediate, red destination.
+  // destination are labelled Departure/Destination, everything in between (the
+  // driver's own stops and any passengers' pickup/dropoff) as an intermediate
+  // stop. Every stop is shown by its own name — they are all named after the
+  // place they are at, the driver's automatically and a passenger's when the
+  // booking is made — with a number to fall back on if a stop has no name at
+  // all. Marker colours mirror the map: green start, blue intermediate, red
+  // destination.
   let intermediateCounter = 0;
   const stopDisplays = estimatedCalls.map((call, index) => {
     const isFirst = index === 0;
@@ -389,7 +443,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     return {
       color: 'primary' as const,
       label: 'Intermediate stop',
-      name: `Intermediate stop ${intermediateCounter}`,
+      name: call.stopPointName || `Intermediate stop ${intermediateCounter}`,
       time:
         call.aimedArrivalTime ||
         call.aimedDepartureTime ||
@@ -454,6 +508,50 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             {tripCancellation ? <Replay fontSize="small" /> : <Cancel fontSize="small" />}
           </IconButton>
         )}
+      </Box>
+
+      {/* How the form fills itself in. Both options only ever write into fields
+          the user can still take over by switching the option off, and both are
+          off when an existing trip is opened so nothing saved is recomputed. */}
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
+        <Typography variant="subtitle1" component="h2" gutterBottom>
+          Form options
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Controller
+            name="estimateArrivalAutomatically"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={!!field.value}
+                    onChange={event => field.onChange(event.target.checked)}
+                  />
+                }
+                label="Estimate arrival time automatically"
+              />
+            )}
+          />
+          <Controller
+            name="setStopNamesAutomatically"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={!!field.value}
+                    onChange={event => field.onChange(event.target.checked)}
+                  />
+                }
+                label="Set stop names automatically"
+              />
+            )}
+          />
+          <FormHelperText>
+            Stop names are taken from the nearest known place to each stop on the map.
+          </FormHelperText>
+        </Box>
       </Box>
 
       {/* All Stops Display */}
@@ -632,30 +730,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           </FormHelperText>
         </FormControl>
       )}
-      <FormControl fullWidth required error={!!errors.operator} margin="normal">
-        <InputLabel id="operator-label">Operator</InputLabel>
-        <Controller
-          name="operator"
-          control={control}
-          render={({ field }) => {
-            return (
-              // Only Entur is accepted as the operator for now and the field has
-              // no downstream consumer yet (see the notice below), so the operator
-              // is hardcoded (ENTUR_OPERATOR) instead of being picked out of the
-              // journey planner's per-environment operator list. Kept as a locked
-              // Select so the value stays visible in the form.
-              <Select {...field} labelId="operator-label" label="Operator" disabled>
-                <MenuItem value={ENTUR_OPERATOR.id}>{ENTUR_OPERATOR.name}</MenuItem>
-              </Select>
-            );
-          }}
-        />
-        <FormHelperText>{errors.operator?.message}</FormHelperText>
-        <Alert severity="warning" sx={{ mt: 1 }}>
-          The operator value currently has no effect downstream. Only Entur is accepted until a
-          consumer starts using this field.
-        </Alert>
-      </FormControl>
       <Typography variant="h6" component="h2">
         Departure
       </Typography>
@@ -666,7 +740,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           return (
             <TextField
               {...field}
-              label="Departure stop name"
+              label={
+                setStopNamesAutomatically
+                  ? 'Departure stop name (automatic)'
+                  : 'Departure stop name'
+              }
+              disabled={!!setStopNamesAutomatically}
               error={!!errors.departureStopName}
               helperText={errors.departureStopName?.message}
               required
@@ -734,7 +813,12 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           return (
             <TextField
               {...field}
-              label="Destination stop name"
+              label={
+                setStopNamesAutomatically
+                  ? 'Destination stop name (automatic)'
+                  : 'Destination stop name'
+              }
+              disabled={!!setStopNamesAutomatically}
               error={!!errors.destinationStopName}
               helperText={errors.destinationStopName?.message}
               required
@@ -742,21 +826,6 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             />
           );
         }}
-      />
-      <Controller
-        name="estimateArrivalAutomatically"
-        control={control}
-        render={({ field }) => (
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={!!field.value}
-                onChange={event => field.onChange(event.target.checked)}
-              />
-            }
-            label="Estimate arrival time automatically"
-          />
-        )}
       />
       <Controller
         name="destinationDatetime"
@@ -789,13 +858,13 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           The arrival time is before the departure time, so this trip would end before it starts.
         </Alert>
       )}
-      {streetRouteFailed && (
+      {estimatedLegs !== 0 && (
         <Alert severity="warning">
-          Could not fetch the driving route from the journey planner. The map shows straight lines
-          between the stops instead
-          {estimateArrivalAutomatically
-            ? ', and the arrival time could not be estimated automatically.'
-            : '.'}
+          {estimatedLegs === null
+            ? 'Could not fetch the driving route from the journey planner. The map shows straight lines between the stops instead.'
+            : `The journey planner could not plan ${estimatedLegs === 1 ? 'one leg' : `${estimatedLegs} legs`} of this trip. ${estimatedLegs === 1 ? 'It is' : 'They are'} drawn as ${estimatedLegs === 1 ? 'a straight line' : 'straight lines'} on the map and timed from the distance between the stops`}
+          {estimatedLegs !== null &&
+            (estimateArrivalAutomatically ? ', so the arrival time is a rough estimate.' : '.')}
         </Alert>
       )}
       <Box display="flex" gap={1} flexWrap="wrap">

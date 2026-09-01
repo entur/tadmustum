@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
-import type { Feature, Point } from 'geojson';
+import type { Feature, Point, Position } from 'geojson';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import type { CarPoolingTripDataFormData } from '../model/CarPoolingTripDataFormData';
+import type { Extrajourney } from '../../../shared/model/Extrajourney';
 import type { EstimatedCall } from '../../../shared/model/EstimatedCall';
 
 const streetRoute = vi.fn();
@@ -72,11 +73,11 @@ const point = (lng: number, lat: number): Feature<Point> => ({
 
 const editingState = (): CarPoolingTripDataFormData => ({
   dataSource: 'ENT',
-  operator: 'ENT:Operator:1',
   id: 'ENT:ServiceJourney:42',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
   estimateArrivalAutomatically: false,
+  setStopNamesAutomatically: false,
   departureFlexibleStop: [10.7522, 59.9139],
   departureCancellation: false,
   destinationStopName: 'Bergen stasjon',
@@ -91,14 +92,21 @@ const editingState = (): CarPoolingTripDataFormData => ({
   onboardCount: 1,
 });
 
+const formElement = (
+  props: Partial<
+    typeof baseProps & { initialState: CarPoolingTripDataFormData; tripData: Extrajourney }
+  > = {}
+) => (
+  <LocalizationProvider dateAdapter={AdapterDayjs}>
+    <CarPoolingTripDataForm {...baseProps} {...props} />
+  </LocalizationProvider>
+);
+
 const renderForm = (
-  props: Partial<typeof baseProps & { initialState: CarPoolingTripDataFormData }> = {}
-) =>
-  render(
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <CarPoolingTripDataForm {...baseProps} {...props} />
-    </LocalizationProvider>
-  );
+  props: Partial<
+    typeof baseProps & { initialState: CarPoolingTripDataFormData; tripData: Extrajourney }
+  > = {}
+) => render(formElement(props));
 
 describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
   beforeEach(() => {
@@ -229,8 +237,111 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
     );
   });
 
-  it("reports 'failed' when the journey planner cannot route the trip", async () => {
-    streetRoute.mockResolvedValue(null);
+  it('still estimates the arrival when two stops share a location', async () => {
+    // The journey planner returns no trip patterns for a route between two
+    // identical points — there is no trip to make. Mimic that: treating such a
+    // leg as unroutable used to fail the whole chain, so a trip with two stops
+    // in the same spot lost its arrival estimate and its route line.
+    streetRoute.mockImplementation(async (from: Position, to: Position, dateTime: string) =>
+      from[0] === to[0] && from[1] === to[1]
+        ? null
+        : {
+            expectedStartTime: dateTime,
+            expectedEndTime: '2026-06-01T16:00:00.000Z',
+            duration: 0,
+            distance: 0,
+            geometry: [from, to],
+          }
+    );
+    const stopAt = (lng: number, lat: number): EstimatedCall => ({
+      order: 2,
+      stopPointRef: 'ENT:PickupPoint:1',
+      stopPointName: 'Passenger pickup',
+      destinationDisplay: 'Bergen',
+      cancellation: false,
+      departureStopAssignment: {
+        expectedFlexibleArea: {
+          polygon: { exterior: { posList: `${lng} ${lat} ${lng} ${lat}` } },
+        },
+      },
+    });
+    const onRouteGeometryChange = vi.fn();
+
+    renderForm({
+      initialState: {
+        ...editingState(),
+        estimateArrivalAutomatically: true,
+        // A pickup exactly on the departure stop.
+        intermediateCalls: [stopAt(10.7522, 59.9139)],
+      },
+      mapDepartureFlexibleStop: point(10.7522, 59.9139),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+      onRouteGeometryChange,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Arrival time \(estimated\)/i)).toHaveValue(
+        String(dayjs('2026-06-01T16:00:00.000Z'))
+      )
+    );
+    expect(screen.queryByText(/Could not fetch the driving route/i)).not.toBeInTheDocument();
+    expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
+  });
+
+  it('warns, but still draws and times the trip, when one leg cannot be planned', async () => {
+    // A trip through an intermediate stop, where only the second leg is one the
+    // journey planner will not plan.
+    streetRoute.mockImplementation(async (from: Position, to: Position, dateTime: string) =>
+      from[0] === 10.9
+        ? null
+        : {
+            expectedStartTime: dateTime,
+            expectedEndTime: '2026-06-01T09:00:00.000Z',
+            duration: 0,
+            distance: 0,
+            geometry: [from, to],
+          }
+    );
+    const onRouteGeometryChange = vi.fn();
+
+    renderForm({
+      initialState: {
+        ...editingState(),
+        estimateArrivalAutomatically: true,
+        intermediateCalls: [
+          {
+            order: 2,
+            stopPointRef: 'ENT:PickupPoint:1',
+            stopPointName: 'Passenger pickup',
+            destinationDisplay: 'Bergen',
+            cancellation: false,
+            departureStopAssignment: {
+              expectedFlexibleArea: {
+                polygon: { exterior: { posList: '10.9 59.95 10.9 59.95' } },
+              },
+            },
+          },
+        ],
+      },
+      mapDepartureFlexibleStop: point(10.7522, 59.9139),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+      onRouteGeometryChange,
+    });
+
+    // Two legs come back: the planned one, and the straight segment standing in
+    // for the leg the planner declined — rather than the whole route being lost.
+    await waitFor(() => expect(screen.getByText(/could not plan one leg/i)).toBeInTheDocument());
+    expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
+    const drawn = onRouteGeometryChange.mock.calls.map(([geometry]) => geometry).at(-1);
+    expect(drawn).toHaveLength(2);
+    expect(drawn[1]).toEqual([
+      [10.9, 59.95],
+      [5.3221, 60.3913],
+    ]);
+  });
+
+  it('still times the trip when the journey planner is unreachable', async () => {
+    streetRoute.mockRejectedValue(new Error('journey planner is down'));
     const onRouteGeometryChange = vi.fn();
     renderForm({
       mapDepartureFlexibleStop: point(10.7522, 59.9139),
@@ -238,11 +349,14 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
       onRouteGeometryChange,
     });
 
+    // Nothing was planned, so the map shows its dashed straight line as before…
     await waitFor(() => expect(onRouteGeometryChange).toHaveBeenCalledWith('failed'));
-    // The failure is surfaced to the user, not just to the map.
-    expect(
-      screen.getByText(/Could not fetch the driving route from the journey planner/i)
-    ).toBeInTheDocument();
+    // …but the arrival is still estimated from the distance rather than left
+    // empty: Oslo to Bergen is about 305 km, so it lands hours after departure.
+    const arrival = screen.getByLabelText(/Arrival time \(estimated\)/i) as HTMLInputElement;
+    await waitFor(() =>
+      expect(dayjs(arrival.value).isAfter(dayjs('2026-06-01T08:00:00.000Z'))).toBe(true)
+    );
   });
 
   it('clears the route geometry when a stop is missing', () => {
@@ -294,32 +408,175 @@ describe('CarPoolingTripDataForm — trip duration warning', () => {
   });
 });
 
-describe('CarPoolingTripDataForm — operator is locked to Entur', () => {
+describe('CarPoolingTripDataForm — the trip route list', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     streetRoute.mockResolvedValue(null);
   });
 
-  it('disables the operator picker and defaults it to the Entur operator', async () => {
-    renderForm();
+  // The stop list is only rendered for a trip that already exists.
+  const tripWith = (intermediateName: string) =>
+    ({
+      id: 'ENT:ServiceJourney:42',
+      estimatedVehicleJourney: {
+        estimatedCalls: {
+          estimatedCall: [
+            {
+              order: 1,
+              stopPointName: 'Oslo S',
+              aimedDepartureTime: '2026-06-01T08:00:00.000Z',
+            },
+            {
+              order: 2,
+              stopPointName: intermediateName,
+              aimedArrivalTime: '2026-06-01T10:00:00.000Z',
+            },
+            {
+              order: 3,
+              stopPointName: 'Bergen stasjon',
+              aimedArrivalTime: '2026-06-01T15:00:00.000Z',
+            },
+          ],
+        },
+      },
+    }) as unknown as Extrajourney;
 
-    // Only Entur is accepted as the operator for now, so the picker is locked and
-    // can't be changed to another (backend-rejected) operator.
-    const operator = screen.getByRole('combobox', { name: 'Operator' });
-    expect(operator).toHaveAttribute('aria-disabled', 'true');
+  it('shows every stop by its own name', () => {
+    renderForm({ initialState: editingState(), tripData: tripWith('Hønefoss') });
 
-    // The value is hardcoded rather than fetched, so the required field passes
-    // validation immediately — no journey-planner round trip to wait for.
-    await waitFor(() => expect(operator).toHaveTextContent('Entur'));
+    // Stops are named after the place they are at, so a driver reading the list
+    // can tell which stop is which.
+    expect(screen.getByText('Hønefoss')).toBeInTheDocument();
+    expect(screen.queryByText('Intermediate stop 1')).not.toBeInTheDocument();
+    // The chip still says what kind of stop it is.
+    expect(screen.getByText('Intermediate stop')).toBeInTheDocument();
   });
 
-  it('replaces another codespace operator on an existing trip with Entur', async () => {
-    // A trip created before the operator was locked down can carry any codespace's
-    // operatorRef. Entur is the only accepted value and the picker is disabled, so
-    // the form must overwrite it — otherwise the trip could never be saved again.
-    renderForm({ initialState: { ...editingState(), operator: 'GOA:Operator:GOA' } });
+  it('numbers a stop that has no name of its own', () => {
+    renderForm({ initialState: editingState(), tripData: tripWith('') });
 
-    const operator = screen.getByRole('combobox', { name: 'Operator' });
-    await waitFor(() => expect(operator).toHaveTextContent('Entur'));
+    expect(screen.getByText('Intermediate stop 1')).toBeInTheDocument();
+  });
+});
+
+describe('CarPoolingTripDataForm — no operator field', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    streetRoute.mockResolvedValue(null);
+  });
+
+  it('does not render an operator picker', () => {
+    // The operatorRef is a constant written by prepareCarpoolingFormData, so
+    // there is nothing to pick, nothing to fetch and nothing that can fail.
+    renderForm();
+
+    expect(screen.queryByRole('combobox', { name: 'Operator' })).not.toBeInTheDocument();
+  });
+});
+
+describe('CarPoolingTripDataForm — automatic stop names', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    streetRoute.mockResolvedValue(null);
+  });
+
+  const departureName = () => screen.getByLabelText(/Departure stop name/i);
+  const destinationName = () => screen.getByLabelText(/Destination stop name/i);
+
+  it('defaults a new trip to automatic names, with both name fields disabled', () => {
+    renderForm();
+
+    expect(screen.getByRole('checkbox', { name: 'Set stop names automatically' })).toBeChecked();
+    expect(departureName()).toBeDisabled();
+    expect(destinationName()).toBeDisabled();
+  });
+
+  it('names both stops after the nearest known place once they are on the map', async () => {
+    renderForm({
+      mapDepartureFlexibleStop: point(10.758, 59.923),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+    });
+
+    // The pin is in Grünerløkka, a district of Oslo: the list is fine-grained
+    // enough to name the district, and qualifies it with the municipality.
+    await waitFor(() => expect(departureName()).toHaveValue('Grünerløkka, Oslo'));
+    expect(destinationName()).toHaveValue('Bergen');
+  });
+
+  it('keeps the default names until a stop is placed', async () => {
+    renderForm();
+
+    await waitFor(() => expect(departureName()).toHaveValue('Origin'));
+    expect(destinationName()).toHaveValue('Destination');
+  });
+
+  it('renames a stop when it moves on the map', async () => {
+    const { rerender } = renderForm({ mapDepartureFlexibleStop: point(10.758, 59.923) });
+    await waitFor(() => expect(departureName()).toHaveValue('Grünerløkka, Oslo'));
+
+    rerender(formElement({ mapDepartureFlexibleStop: point(10.3951, 63.4305) }));
+
+    await waitFor(() => expect(departureName()).toHaveValue('Trondheim'));
+  });
+
+  it('lets the user type a name once automatic naming is turned off', async () => {
+    const user = userEvent.setup();
+    renderForm({ mapDepartureFlexibleStop: point(10.3951, 63.4305) });
+    await waitFor(() => expect(departureName()).toHaveValue('Trondheim'));
+
+    await user.click(screen.getByRole('checkbox', { name: 'Set stop names automatically' }));
+
+    // The last automatic name is kept as the starting point rather than reverted.
+    expect(departureName()).toBeEnabled();
+    expect(departureName()).toHaveValue('Trondheim');
+
+    await user.clear(departureName());
+    await user.type(departureName(), 'Trondheim bussterminal');
+    expect(departureName()).toHaveValue('Trondheim bussterminal');
+  });
+
+  it('never overwrites a typed name while automatic naming is off', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderForm();
+    await user.click(screen.getByRole('checkbox', { name: 'Set stop names automatically' }));
+    await user.clear(departureName());
+    await user.type(departureName(), 'Behind the church');
+
+    // Placing a stop on the map must not rename it now that the user owns the field.
+    rerender(formElement({ mapDepartureFlexibleStop: point(10.7522, 59.9139) }));
+
+    expect(departureName()).toHaveValue('Behind the church');
+  });
+
+  it('defaults an existing trip to automatic naming off, keeping its saved names', async () => {
+    renderForm({
+      initialState: editingState(),
+      mapDepartureFlexibleStop: point(10.758, 59.923),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('checkbox', { name: 'Set stop names automatically' })
+      ).not.toBeChecked()
+    );
+    expect(departureName()).toHaveValue('Oslo S');
+    expect(destinationName()).toHaveValue('Bergen stasjon');
+    expect(departureName()).toBeEnabled();
+  });
+
+  it('renames the stops of an existing trip once the option is switched on', async () => {
+    const user = userEvent.setup();
+    renderForm({
+      initialState: editingState(),
+      mapDepartureFlexibleStop: point(10.758, 59.923),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+    });
+    await waitFor(() => expect(departureName()).toHaveValue('Oslo S'));
+
+    await user.click(screen.getByRole('checkbox', { name: 'Set stop names automatically' }));
+
+    await waitFor(() => expect(departureName()).toHaveValue('Grünerløkka, Oslo'));
+    expect(destinationName()).toHaveValue('Bergen');
   });
 });

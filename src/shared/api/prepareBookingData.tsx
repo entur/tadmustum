@@ -8,11 +8,58 @@ import {
   insertStopsByShortestPath,
 } from '../../features/passenger-booking/util/shortestPath.tsx';
 import loadFeatureFromFlexArea from '../../features/plan-trip/util/loadFeatureFromFlexArea.tsx';
-import { routeLegChain, type RouteLeg } from './routeLegChain.tsx';
+import { chainGeometries, routeLegChain, type RouteLeg } from './routeLegChain.tsx';
+import { loadNearestPlaceName } from '../geo/loadNearestPlaceName.tsx';
 
 // Re-exported for callers that pass the street router into the booking
 // helpers; the type itself lives with routeLegChain.
 export type { RouteLeg };
+
+// The calls of a booking after re-timing, with the street geometry that timed
+// them and how many legs had to be estimated because the journey planner would
+// not plan them. Geometry and count are null when nothing was routed at all.
+interface RoutedCalls {
+  calls: EstimatedCall[];
+  legGeometries: Position[][] | null;
+  estimatedLegs: number | null;
+}
+
+// What a booking's own pickup and dropoff are called once saved.
+interface BookingStopNames {
+  pickup: string;
+  dropoff: string;
+}
+
+// Last resort when the place list cannot be loaded, and what the synchronous
+// preview shows until it has: the coordinates the passenger picked.
+const coordinateName = ([lng, lat]: [number, number]): string =>
+  `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+const coordinateNames = (bookingData: PassengerBookingData): BookingStopNames => ({
+  pickup: coordinateName(bookingData.pickupCoordinates),
+  dropoff: coordinateName(bookingData.dropoffCoordinates),
+});
+
+/**
+ * Names a booking's pickup and dropoff after the nearest known place, the way
+ * the trip form names the driver's own stops — "Grünerløkka, Oslo" rather than
+ * a pair of coordinates or a bare "Passenger Pickup", so the stop reads the
+ * same to the driver, in the trip list, and everywhere downstream.
+ *
+ * Never rejects: if the place list will not load, the coordinates stand in.
+ */
+const bookingStopNames = async (bookingData: PassengerBookingData): Promise<BookingStopNames> => {
+  const fallback = coordinateNames(bookingData);
+  try {
+    const nearestPlaceName = await loadNearestPlaceName();
+    return {
+      pickup: nearestPlaceName(bookingData.pickupCoordinates) || fallback.pickup,
+      dropoff: nearestPlaceName(bookingData.dropoffCoordinates) || fallback.dropoff,
+    };
+  } catch {
+    return fallback;
+  }
+};
 
 export interface PassengerBookingData {
   tripId: string;
@@ -41,7 +88,7 @@ export async function prepareBookingData(
 
   // Over-capacity bookings are allowed (the UI warns about them), so we don't
   // reject here — occupancy is still computed so every stop reflects the load.
-  const assembled = assembleBooking(originalTrip, bookingData);
+  const assembled = assembleBooking(originalTrip, bookingData, await bookingStopNames(bookingData));
   const { calls: orderedCalls } = await routeAssembledCalls(assembled, bookingData, routeLeg);
 
   const updatedTrip: Extrajourney = {
@@ -65,12 +112,13 @@ export async function prepareBookingData(
 // stop's latestExpectedArrivalTime shifts with it. Without a router (or when a
 // stop lacks a coordinate) the assembled estimate is returned unchanged.
 // Also yields the routed street geometry per leg (null when not routed), so
-// the booking map can draw the actual driving path.
+// the booking map can draw the actual driving path, and how many of those legs
+// the journey planner would not plan (null when nothing was routed at all).
 async function routeAssembledCalls(
   assembled: AssembledBooking,
   bookingData: PassengerBookingData,
   routeLeg?: RouteLeg
-): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
+): Promise<RoutedCalls> {
   if (routeLeg && assembled.canOrderByPath) {
     return applyRoutedTimes(
       assembled.orderedCalls,
@@ -80,7 +128,7 @@ async function routeAssembledCalls(
       bookingData.passengerDeviationBudget
     );
   }
-  return { calls: assembled.orderedCalls, legGeometries: null };
+  return { calls: assembled.orderedCalls, legGeometries: null, estimatedLegs: null };
 }
 
 export interface BookingRoutePreview {
@@ -98,6 +146,10 @@ export interface BookingRoutePreview {
   // calls[i+1]), for drawing the actual driving path on the booking map.
   // Null when the preview wasn't routed (sync preview, routing unavailable).
   legGeometries: Position[][] | null;
+  // How many of those legs the journey planner would not plan, and so are
+  // straight lines timed from the distance between their stops. Null when the
+  // route wasn't computed at all.
+  estimatedLegs: number | null;
 }
 
 // Synchronous preview of what a booking would do to the trip route: the new
@@ -122,6 +174,7 @@ export function previewBookingRoute(
     dropoffStopRef: assembled.dropoffStopRef,
     overCapacityStopIndex: assembled.exceededAt?.index ?? null,
     legGeometries: null,
+    estimatedLegs: null,
   };
 }
 
@@ -134,19 +187,25 @@ export async function routedBookingPreview(
   bookingData: PassengerBookingData,
   routeLeg: RouteLeg
 ): Promise<BookingRoutePreview | null> {
+  const stopNames = await bookingStopNames(bookingData);
   let assembled: AssembledBooking;
   try {
-    assembled = assembleBooking(originalTrip, bookingData);
+    assembled = assembleBooking(originalTrip, bookingData, stopNames);
   } catch {
     return null;
   }
-  const { calls, legGeometries } = await routeAssembledCalls(assembled, bookingData, routeLeg);
+  const { calls, legGeometries, estimatedLegs } = await routeAssembledCalls(
+    assembled,
+    bookingData,
+    routeLeg
+  );
   return {
     calls: renumberCalls(calls),
     pickupStopRef: assembled.pickupStopRef,
     dropoffStopRef: assembled.dropoffStopRef,
     overCapacityStopIndex: assembled.exceededAt?.index ?? null,
     legGeometries,
+    estimatedLegs,
   };
 }
 
@@ -168,7 +227,8 @@ interface AssembledBooking {
 // over-capacity (reported via the returned `exceededAt`).
 function assembleBooking(
   originalTrip: Extrajourney,
-  bookingData: PassengerBookingData
+  bookingData: PassengerBookingData,
+  stopNames: BookingStopNames = coordinateNames(bookingData)
 ): AssembledBooking {
   // The journey's dataSource IS its codespace — nunamnir authorizes the booking
   // write on it and validates the journey's own references against it. Never
@@ -203,7 +263,7 @@ function assembleBooking(
   const pickupStop: EstimatedCall = {
     order: 0,
     stopPointRef: `${codespace}:PickupPoint:${uuidv4()}`,
-    stopPointName: `Passenger Pickup (${bookingData.pickupCoordinates[1].toFixed(4)}, ${bookingData.pickupCoordinates[0].toFixed(4)})`,
+    stopPointName: stopNames.pickup,
     destinationDisplay: lastCall.destinationDisplay,
     aimedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
     expectedDepartureTime: bookingData.pickupTime || pickupTime.toISOString(),
@@ -233,7 +293,7 @@ function assembleBooking(
   const dropoffStop: EstimatedCall = {
     order: 0,
     stopPointRef: `${codespace}:DropoffPoint:${uuidv4()}`,
-    stopPointName: `Passenger Dropoff (${bookingData.dropoffCoordinates[1].toFixed(4)}, ${bookingData.dropoffCoordinates[0].toFixed(4)})`,
+    stopPointName: stopNames.dropoff,
     destinationDisplay: lastCall.destinationDisplay,
     aimedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
     expectedArrivalTime: bookingData.dropoffTime || dropoffTime.toISOString(),
@@ -274,6 +334,11 @@ function assembleBooking(
     call,
     coord: callCoordinate(call),
   }));
+  // A cancelled stop is not visited, so it takes no part in the ordering (and
+  // none in the routing either — see applyRoutedTimes). It still travels with
+  // the trip: SIRI keeps cancelled calls, and dropping one here would quietly
+  // delete the driver's decision to cancel it.
+  const activeMiddle = existingMiddle.filter(entry => !entry.call.cancellation);
   const pickupEntry: CallEntry = { call: pickupStop, coord: bookingData.pickupCoordinates };
   const dropoffEntry: CallEntry = { call: dropoffStop, coord: bookingData.dropoffCoordinates };
 
@@ -286,19 +351,21 @@ function assembleBooking(
   const canOrderByPath =
     originCoord != null &&
     destinationCoord != null &&
-    existingMiddle.every(entry => entry.coord != null) &&
+    activeMiddle.every(entry => entry.coord != null) &&
     pickupEntry.coord != null &&
     dropoffEntry.coord != null;
 
-  const orderedMiddle: CallEntry[] = canOrderByPath
+  const orderedActiveMiddle: CallEntry[] = canOrderByPath
     ? insertStopsByShortestPath(
         originCoord,
         destinationCoord,
-        existingMiddle.map(entry => ({ item: entry, coord: entry.coord as LngLat })),
+        activeMiddle.map(entry => ({ item: entry, coord: entry.coord as LngLat })),
         { item: pickupEntry, coord: pickupEntry.coord as LngLat },
         { item: dropoffEntry, coord: dropoffEntry.coord as LngLat }
       )
-    : [...existingMiddle, pickupEntry, dropoffEntry];
+    : [...activeMiddle, pickupEntry, dropoffEntry];
+
+  const orderedMiddle = withCancelledRestored(existingMiddle, orderedActiveMiddle);
 
   const orderedEntries: CallEntry[] = [
     { call: firstCall, coord: originCoord },
@@ -328,6 +395,36 @@ function assembleBooking(
 
 // A call paired with its map coordinate (null when it has no resolvable area).
 type CallEntry = { call: EstimatedCall; coord: LngLat | null };
+
+// Puts the cancelled stops back into an ordered middle sequence, each one in
+// the place it held among its neighbours. The ordering above only ever sees the
+// stops the vehicle actually visits, but the trip is written back with every
+// call it arrived with — cancelled ones included, still marked cancelled.
+const withCancelledRestored = (
+  originalMiddle: CallEntry[],
+  orderedActiveMiddle: CallEntry[]
+): CallEntry[] => {
+  const merged: CallEntry[] = [];
+  let next = 0;
+  for (const entry of originalMiddle) {
+    if (entry.call.cancellation) {
+      merged.push(entry);
+      continue;
+    }
+    // Take everything the ordering placed ahead of this stop (this booking's
+    // pickup or dropoff), then the stop itself.
+    while (next < orderedActiveMiddle.length) {
+      const placed = orderedActiveMiddle[next++];
+      merged.push(placed);
+      if (placed === entry) break;
+    }
+  }
+  // Whatever the ordering placed after the last stop the vehicle visits.
+  while (next < orderedActiveMiddle.length) {
+    merged.push(orderedActiveMiddle[next++]);
+  }
+  return merged;
+};
 
 // Index of the first stop whose running occupancy exceeds capacity, plus that
 // count. The index is into the ordered calls, so the UI can map it to the same
@@ -404,23 +501,42 @@ function applyOccupancy(
 
 // Re-times the sequence using real car-driving durations. Routes each leg in
 // turn from the driver's departure, accumulating arrival times. Returns the
-// calls unchanged (and no geometry) if there is no departure time or any leg
-// can't be planned, so a routing hiccup never yields a half-updated schedule
-// or a half-drawn route.
+// calls unchanged (and no geometry) only when there is no departure time to
+// start from; a leg the journey planner will not plan is timed from its
+// straight-line distance instead (see routeLegChain), so one awkward stop never
+// costs the whole booking its schedule.
+//
+// Cancelled stops are driven past, not to: they are left out of the routed
+// sequence and keep the times they already carry, so the schedule reflects the
+// trip that will actually be driven — the same rule the trip editor applies.
 async function applyRoutedTimes(
   orderedCalls: EstimatedCall[],
   coords: LngLat[],
   originDeparture: string | undefined,
   routeLeg: RouteLeg,
   passengerDeviationBudget?: number
-): Promise<{ calls: EstimatedCall[]; legGeometries: Position[][] | null }> {
-  if (!originDeparture) return { calls: orderedCalls, legGeometries: null };
-
-  const chain = await routeLegChain(coords, originDeparture, routeLeg);
-  if (!chain) return { calls: orderedCalls, legGeometries: null };
-  const { arrivals, legGeometries } = chain;
+): Promise<RoutedCalls> {
+  if (!originDeparture) return { calls: orderedCalls, legGeometries: null, estimatedLegs: null };
 
   const lastIndex = orderedCalls.length - 1;
+  // The ends anchor the route whatever their state; only the stops in between
+  // can be skipped for being cancelled.
+  const routedIndices = orderedCalls
+    .map((_, index) => index)
+    .filter(index => index === 0 || index === lastIndex || !orderedCalls[index].cancellation);
+
+  const chain = await routeLegChain(
+    routedIndices.map(index => coords[index]),
+    originDeparture,
+    routeLeg
+  );
+  const { arrivals, estimatedLegs } = chain;
+  // Nothing planned at all means there is no route to draw — the map falls back
+  // to its dashed straight line, exactly as it did before any of it was routed.
+  const drawn = chainGeometries(chain);
+  const legGeometries = drawn === 'failed' ? null : drawn;
+  const arrivalByIndex = new Map(routedIndices.map((index, leg) => [index, arrivals[leg]]));
+
   const calls = orderedCalls.map((call, index) => {
     if (index === 0) {
       // Origin keeps its planned departure; mirror it onto the expected time.
@@ -430,7 +546,11 @@ async function applyRoutedTimes(
         expectedDepartureTime: originDeparture,
       };
     }
-    const arrival = arrivals[index];
+    const arrival = arrivalByIndex.get(index);
+    if (arrival == null) {
+      // A cancelled stop: nothing is driven to it, so it keeps its own times.
+      return call;
+    }
     const updated: EstimatedCall = {
       ...call,
       aimedArrivalTime: arrival,
@@ -444,7 +564,7 @@ async function applyRoutedTimes(
     }
     return updated;
   });
-  return { calls, legGeometries };
+  return { calls, legGeometries, estimatedLegs };
 }
 
 // New latest-arrival deadline for a stop after its scheduled time moved to

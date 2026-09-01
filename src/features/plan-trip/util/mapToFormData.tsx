@@ -20,7 +20,6 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
     // any other reference. Every stored trip carries one; if it were ever
     // missing, the empty value fails form validation rather than guessing.
     dataSource: journey.estimatedVehicleJourney.dataSource || '',
-    operator: journey.estimatedVehicleJourney.operatorRef,
     id: journey.id,
     lineRef: journey.estimatedVehicleJourney.lineRef,
     estimatedVehicleJourneyCode: journey.estimatedVehicleJourney.estimatedVehicleJourneyCode,
@@ -29,6 +28,9 @@ const mapToFormData = (journey: Extrajourney): CarPoolingTripDataFormData => {
     // Editing an existing trip keeps its saved arrival — auto-estimate off by
     // default so opening the editor never silently recomputes the arrival.
     estimateArrivalAutomatically: false,
+    // Same for the names: an existing trip keeps the names it was saved with
+    // rather than being renamed after the nearest place the moment it opens.
+    setStopNamesAutomatically: false,
     departureFlexibleStop: flexAreaToPosition(
       firstCall.departureStopAssignment?.expectedFlexibleArea
     ),

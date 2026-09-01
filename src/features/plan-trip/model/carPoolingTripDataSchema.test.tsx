@@ -7,7 +7,6 @@ import { carPoolingTripDataSchema, TRIP_EXPIRY_DAYS } from './carPoolingTripData
 // fixed calendar date that would drift into the past as the suite ages.
 const validInput = () => ({
   dataSource: 'ENT',
-  operator: 'ENT:Operator:1',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs().add(1, 'day'),
   departureFlexibleStop: [10.7522, 59.9139],
@@ -30,27 +29,29 @@ describe('carPoolingTripDataSchema', () => {
   });
 
   it.each(['departureStopName', 'destinationStopName'])(
-    'requires %s to be at least 3 characters',
+    'requires %s to be at least 2 characters',
     async field => {
       await expect(
-        carPoolingTripDataSchema.validate({ ...validInput(), [field]: 'ab' })
-      ).rejects.toThrow(/at least 3 characters/);
+        carPoolingTripDataSchema.validate({ ...validInput(), [field]: 'a' })
+      ).rejects.toThrow(/at least 2 characters/);
     }
   );
 
-  it.each(['dataSource', 'operator'])('requires %s', async field => {
-    const input = { ...validInput(), [field]: undefined };
+  it.each(['departureStopName', 'destinationStopName'])(
+    'accepts a two-letter place name for %s',
+    async field => {
+      // Automatic stop naming produces real place names, and Ås, Ål and Ed are
+      // two letters long.
+      await expect(
+        carPoolingTripDataSchema.validate({ ...validInput(), [field]: 'Ås' })
+      ).resolves.toBeDefined();
+    }
+  );
+
+  it('requires dataSource', async () => {
+    const input = { ...validInput(), dataSource: undefined };
     await expect(carPoolingTripDataSchema.validate(input)).rejects.toThrow();
   });
-
-  it.each(['ATB:Operator:1', 'RUT:Operator:99', 'foo'])(
-    'rejects non-Entur operator %s',
-    async value => {
-      await expect(
-        carPoolingTripDataSchema.validate({ ...validInput(), operator: value })
-      ).rejects.toThrow(/Only Entur is accepted/);
-    }
-  );
 
   it('requires departureFlexibleStop with a helpful message', async () => {
     await expect(
