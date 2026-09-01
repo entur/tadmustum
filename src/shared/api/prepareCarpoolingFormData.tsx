@@ -3,6 +3,7 @@ import type { Extrajourney } from '../model/Extrajourney.tsx';
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
 import { encodePointAsCircularArea } from '../model/circularAreaCodec.tsx';
+import { ENTUR_OPERATOR_ID } from '../model/enturOperator.tsx';
 
 function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
   input: Extrajourney;
@@ -40,7 +41,10 @@ function prepareCarpoolingFormData(formData: CarPoolingTripDataFormData): {
         publishedLineName: `Carpooling trip ${codespace}`,
         groupOfLinesRef: '', // TODO: Mandatory in SIRI profile. Unused. Check to see if mandatory in schema.
         externalLineRef: '', // TODO: Reference back to original line which usually a evj is an replacement for... Check to see if mandatory in schema
-        operatorRef: formData.operator,
+        // Hardcoded, never taken from the form or an API: only Entur publishes
+        // carpool trips and nothing downstream reads the value (see
+        // ENTUR_OPERATOR_ID).
+        operatorRef: ENTUR_OPERATOR_ID,
         monitored: true,
         dataSource: codespace,
         cancellation: formData.tripCancellation,

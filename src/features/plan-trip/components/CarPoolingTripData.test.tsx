@@ -48,7 +48,6 @@ const TRIP_ID = 'ENT:ServiceJourney:42';
 const journeyFixture = (): Extrajourney => {
   const form: CarPoolingTripDataFormData = {
     dataSource: 'ENT',
-    operator: 'ENT:Operator:1',
     id: TRIP_ID,
     departureStopName: 'Oslo S',
     departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),

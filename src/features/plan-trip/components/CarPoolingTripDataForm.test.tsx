@@ -72,11 +72,11 @@ const point = (lng: number, lat: number): Feature<Point> => ({
 
 const editingState = (): CarPoolingTripDataFormData => ({
   dataSource: 'ENT',
-  operator: 'ENT:Operator:1',
   id: 'ENT:ServiceJourney:42',
   departureStopName: 'Oslo S',
   departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
   estimateArrivalAutomatically: false,
+  setStopNamesAutomatically: false,
   departureFlexibleStop: [10.7522, 59.9139],
   departureCancellation: false,
   destinationStopName: 'Bergen stasjon',
@@ -91,14 +91,17 @@ const editingState = (): CarPoolingTripDataFormData => ({
   onboardCount: 1,
 });
 
+const formElement = (
+  props: Partial<typeof baseProps & { initialState: CarPoolingTripDataFormData }> = {}
+) => (
+  <LocalizationProvider dateAdapter={AdapterDayjs}>
+    <CarPoolingTripDataForm {...baseProps} {...props} />
+  </LocalizationProvider>
+);
+
 const renderForm = (
   props: Partial<typeof baseProps & { initialState: CarPoolingTripDataFormData }> = {}
-) =>
-  render(
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <CarPoolingTripDataForm {...baseProps} {...props} />
-    </LocalizationProvider>
-  );
+) => render(formElement(props));
 
 describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
   beforeEach(() => {
@@ -294,32 +297,124 @@ describe('CarPoolingTripDataForm — trip duration warning', () => {
   });
 });
 
-describe('CarPoolingTripDataForm — operator is locked to Entur', () => {
+describe('CarPoolingTripDataForm — no operator field', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     streetRoute.mockResolvedValue(null);
   });
 
-  it('disables the operator picker and defaults it to the Entur operator', async () => {
+  it('does not render an operator picker', () => {
+    // The operatorRef is a constant written by prepareCarpoolingFormData, so
+    // there is nothing to pick, nothing to fetch and nothing that can fail.
     renderForm();
 
-    // Only Entur is accepted as the operator for now, so the picker is locked and
-    // can't be changed to another (backend-rejected) operator.
-    const operator = screen.getByRole('combobox', { name: 'Operator' });
-    expect(operator).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByRole('combobox', { name: 'Operator' })).not.toBeInTheDocument();
+  });
+});
 
-    // The value is hardcoded rather than fetched, so the required field passes
-    // validation immediately — no journey-planner round trip to wait for.
-    await waitFor(() => expect(operator).toHaveTextContent('Entur'));
+describe('CarPoolingTripDataForm — automatic stop names', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    streetRoute.mockResolvedValue(null);
   });
 
-  it('replaces another codespace operator on an existing trip with Entur', async () => {
-    // A trip created before the operator was locked down can carry any codespace's
-    // operatorRef. Entur is the only accepted value and the picker is disabled, so
-    // the form must overwrite it — otherwise the trip could never be saved again.
-    renderForm({ initialState: { ...editingState(), operator: 'GOA:Operator:GOA' } });
+  const departureName = () => screen.getByLabelText(/Departure stop name/i);
+  const destinationName = () => screen.getByLabelText(/Destination stop name/i);
 
-    const operator = screen.getByRole('combobox', { name: 'Operator' });
-    await waitFor(() => expect(operator).toHaveTextContent('Entur'));
+  it('defaults a new trip to automatic names, with both name fields disabled', () => {
+    renderForm();
+
+    expect(screen.getByRole('checkbox', { name: 'Set stop names automatically' })).toBeChecked();
+    expect(departureName()).toBeDisabled();
+    expect(destinationName()).toBeDisabled();
+  });
+
+  it('names both stops after the nearest known place once they are on the map', async () => {
+    renderForm({
+      mapDepartureFlexibleStop: point(10.758, 59.923),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+    });
+
+    // The pin is in Grünerløkka, a district of Oslo: the list is fine-grained
+    // enough to name the district, and qualifies it with the municipality.
+    await waitFor(() => expect(departureName()).toHaveValue('Grünerløkka, Oslo'));
+    expect(destinationName()).toHaveValue('Bergen');
+  });
+
+  it('keeps the default names until a stop is placed', async () => {
+    renderForm();
+
+    await waitFor(() => expect(departureName()).toHaveValue('Origin'));
+    expect(destinationName()).toHaveValue('Destination');
+  });
+
+  it('renames a stop when it moves on the map', async () => {
+    const { rerender } = renderForm({ mapDepartureFlexibleStop: point(10.758, 59.923) });
+    await waitFor(() => expect(departureName()).toHaveValue('Grünerløkka, Oslo'));
+
+    rerender(formElement({ mapDepartureFlexibleStop: point(10.3951, 63.4305) }));
+
+    await waitFor(() => expect(departureName()).toHaveValue('Trondheim'));
+  });
+
+  it('lets the user type a name once automatic naming is turned off', async () => {
+    const user = userEvent.setup();
+    renderForm({ mapDepartureFlexibleStop: point(10.3951, 63.4305) });
+    await waitFor(() => expect(departureName()).toHaveValue('Trondheim'));
+
+    await user.click(screen.getByRole('checkbox', { name: 'Set stop names automatically' }));
+
+    // The last automatic name is kept as the starting point rather than reverted.
+    expect(departureName()).toBeEnabled();
+    expect(departureName()).toHaveValue('Trondheim');
+
+    await user.clear(departureName());
+    await user.type(departureName(), 'Trondheim bussterminal');
+    expect(departureName()).toHaveValue('Trondheim bussterminal');
+  });
+
+  it('never overwrites a typed name while automatic naming is off', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderForm();
+    await user.click(screen.getByRole('checkbox', { name: 'Set stop names automatically' }));
+    await user.clear(departureName());
+    await user.type(departureName(), 'Behind the church');
+
+    // Placing a stop on the map must not rename it now that the user owns the field.
+    rerender(formElement({ mapDepartureFlexibleStop: point(10.7522, 59.9139) }));
+
+    expect(departureName()).toHaveValue('Behind the church');
+  });
+
+  it('defaults an existing trip to automatic naming off, keeping its saved names', async () => {
+    renderForm({
+      initialState: editingState(),
+      mapDepartureFlexibleStop: point(10.758, 59.923),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('checkbox', { name: 'Set stop names automatically' })
+      ).not.toBeChecked()
+    );
+    expect(departureName()).toHaveValue('Oslo S');
+    expect(destinationName()).toHaveValue('Bergen stasjon');
+    expect(departureName()).toBeEnabled();
+  });
+
+  it('renames the stops of an existing trip once the option is switched on', async () => {
+    const user = userEvent.setup();
+    renderForm({
+      initialState: editingState(),
+      mapDepartureFlexibleStop: point(10.758, 59.923),
+      mapDestinationFlexibleStop: point(5.3221, 60.3913),
+    });
+    await waitFor(() => expect(departureName()).toHaveValue('Oslo S'));
+
+    await user.click(screen.getByRole('checkbox', { name: 'Set stop names automatically' }));
+
+    await waitFor(() => expect(departureName()).toHaveValue('Grünerløkka, Oslo'));
+    expect(destinationName()).toHaveValue('Bergen');
   });
 });

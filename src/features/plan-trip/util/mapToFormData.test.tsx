@@ -15,13 +15,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('round-trips every form field through the SIRI payload', () => {
     const original: CarPoolingTripDataFormData = {
       dataSource: 'ENT',
-      operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
       estimatedVehicleJourneyCode: 'EVJ-42',
       departureStopName: 'Oslo S',
       departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
       estimateArrivalAutomatically: false,
+      setStopNamesAutomatically: false,
       departureFlexibleStop: [10.7522, 59.9139],
       departureCancellation: false,
       destinationStopName: 'Bergen stasjon',
@@ -45,13 +45,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('round-trips cancellation flags on departure and destination', () => {
     const original: CarPoolingTripDataFormData = {
       dataSource: 'ENT',
-      operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
       estimatedVehicleJourneyCode: 'EVJ-42',
       departureStopName: 'Oslo S',
       departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
       estimateArrivalAutomatically: false,
+      setStopNamesAutomatically: false,
       departureFlexibleStop: [10.7522, 59.9139],
       departureCancellation: true,
       destinationStopName: 'Bergen stasjon',
@@ -76,13 +76,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('round-trips tripCancellation through estimatedVehicleJourney.cancellation', () => {
     const original: CarPoolingTripDataFormData = {
       dataSource: 'ENT',
-      operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
       estimatedVehicleJourneyCode: 'EVJ-42',
       departureStopName: 'Oslo S',
       departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
       estimateArrivalAutomatically: false,
+      setStopNamesAutomatically: false,
       departureFlexibleStop: [10.7522, 59.9139],
       departureCancellation: false,
       destinationStopName: 'Bergen stasjon',
@@ -107,13 +107,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('preserves intermediate calls and their cancellation flags through round-trip', () => {
     const original: CarPoolingTripDataFormData = {
       dataSource: 'ENT',
-      operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
       estimatedVehicleJourneyCode: 'EVJ-42',
       departureStopName: 'Oslo S',
       departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
       estimateArrivalAutomatically: false,
+      setStopNamesAutomatically: false,
       departureFlexibleStop: [10.7522, 59.9139],
       departureCancellation: false,
       destinationStopName: 'Bergen stasjon',
@@ -168,13 +168,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('maps a missing dataSource to an empty string — never derived from lineRef', () => {
     const original: CarPoolingTripDataFormData = {
       dataSource: 'ENT',
-      operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
       estimatedVehicleJourneyCode: 'EVJ-42',
       departureStopName: 'Oslo S',
       departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
       estimateArrivalAutomatically: false,
+      setStopNamesAutomatically: false,
       departureFlexibleStop: [10.7522, 59.9139],
       departureCancellation: false,
       destinationStopName: 'Bergen stasjon',
@@ -201,13 +201,13 @@ describe('mapToFormData (round-trip with prepareCarpoolingFormData)', () => {
   it('round-trips when optional numeric/url fields are null', () => {
     const original: CarPoolingTripDataFormData = {
       dataSource: 'ENT',
-      operator: 'ENT:Operator:1',
       id: 'ENT:ServiceJourney:42',
       lineRef: 'ENT:Line:existing',
       estimatedVehicleJourneyCode: 'EVJ-42',
       departureStopName: 'Oslo S',
       departureDatetime: dayjs('2026-06-01T08:00:00.000Z'),
       estimateArrivalAutomatically: false,
+      setStopNamesAutomatically: false,
       departureFlexibleStop: [10.7522, 59.9139],
       departureCancellation: false,
       destinationStopName: 'Bergen stasjon',

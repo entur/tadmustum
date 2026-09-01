@@ -68,7 +68,6 @@ const renderForm = (override: Partial<ComponentProps<typeof CarPoolingTripDataFo
 // trip's fixed ATB-scoped identity.
 const editingInitialState: CarPoolingTripDataFormData = {
   dataSource: 'ATB',
-  operator: 'ENT:Operator:1',
   id: 'ATB:ServiceJourney:fixed-123',
   lineRef: 'ATB:CarPooling:fixed-123',
   estimatedVehicleJourneyCode: 'ATB:ServiceJourney:fixed-123',
