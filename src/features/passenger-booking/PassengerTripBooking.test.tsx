@@ -217,7 +217,8 @@ describe('PassengerTripBooking', () => {
       pickupCoordinates: [10.7522, 59.9139],
       dropoffCoordinates: [5.3221, 60.3913],
       numberOfPassengers: 1,
-      passengerDeviationBudget: 5,
+      // The form's default, unchanged by this test.
+      passengerDeviationBudget: 12,
     });
 
     expect(await screen.findByText(/Ride booking confirmed/)).toBeInTheDocument();

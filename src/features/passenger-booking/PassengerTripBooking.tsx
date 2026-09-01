@@ -108,7 +108,7 @@ export default function PassengerTripBooking() {
     origin: '',
     destination: '',
     numberOfPassengers: 1,
-    passengerDeviationBudget: 5,
+    passengerDeviationBudget: 12,
   });
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
