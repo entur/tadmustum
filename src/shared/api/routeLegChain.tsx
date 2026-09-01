@@ -125,3 +125,15 @@ export async function routeLegChain(
 
   return { arrivals, legGeometries, estimatedLegs, totalLegs: Math.max(0, coords.length - 1) };
 }
+
+/**
+ * What a map should draw for a routed chain.
+ *
+ * A chain of nothing but estimates is not a route: the map's dashed
+ * straight-line fallback is the established signal for "this is not the real
+ * driving path", so it is used rather than passing off straight segments as a
+ * planned route. A chain the planner did plan — even partly — is drawn as it
+ * came back, with `estimatedLegs` telling the user which parts are guesses.
+ */
+export const chainGeometries = (chain: RoutedLegChain): RouteLegGeometries =>
+  chain.totalLegs > 0 && chain.estimatedLegs === chain.totalLegs ? 'failed' : chain.legGeometries;

@@ -15,6 +15,7 @@ import type { Feature, LineString, Point } from 'geojson';
 import type { RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
 import RouteLineLayers from '../../../shared/components/RouteLineLayers.tsx';
 import loadFeatureFromFlexArea from '../../plan-trip/util/loadFeatureFromFlexArea.tsx';
+import { STOP_COLORS } from '../util/stopColors.tsx';
 
 interface PassengerBookingMapProps {
   trip: Extrajourney | null;
@@ -64,6 +65,7 @@ export default function PassengerBookingMap({
           stopName: call.stopPointName,
           type: index === 0 ? 'pickup' : index === tripData.length - 1 ? 'dropoff' : 'stop',
           order: call.order,
+          cancelled: call.cancellation ?? false,
         };
         areas.push(feature);
       }
@@ -77,7 +79,12 @@ export default function PassengerBookingMap({
   // line always matches the route list. Falls back to the trip's own call order
   // before a preview is available (e.g. only one of pickup/dropoff selected).
   const createRouteLineString = useCallback((): Feature<LineString> | null => {
-    const calls = routeCalls && routeCalls.length >= 2 ? routeCalls : tripData;
+    const allCalls = routeCalls && routeCalls.length >= 2 ? routeCalls : tripData;
+    // A cancelled stop is driven past, not to, so the line skips it — the ends
+    // anchor the route whatever their state.
+    const calls = allCalls.filter(
+      (call, index) => index === 0 || index === allCalls.length - 1 || !call.cancellation
+    );
     if (calls.length < 2) return null;
 
     const coordinates = calls
@@ -181,12 +188,14 @@ export default function PassengerBookingMap({
         {flexibleAreas.map((area, index) => {
           const [centerLng, centerLat] = area.geometry.coordinates;
 
-          const color =
-            area.properties?.type === 'pickup'
-              ? '#4CAF50'
+          const cancelled = area.properties?.cancelled === true;
+          const color = cancelled
+            ? STOP_COLORS.cancelled
+            : area.properties?.type === 'pickup'
+              ? STOP_COLORS.origin
               : area.properties?.type === 'dropoff'
-                ? '#f44336'
-                : '#2196F3';
+                ? STOP_COLORS.destination
+                : STOP_COLORS.intermediate;
 
           return (
             <Marker key={`marker-${index}`} longitude={centerLng} latitude={centerLat}>

@@ -26,7 +26,11 @@ import {
 import type { Extrajourney } from '../../shared/model/Extrajourney';
 import type { Position } from 'geojson';
 import StopOccupancy from '../../shared/components/StopOccupancy';
-import { routeLegChain, type RouteLegGeometries } from '../../shared/api/routeLegChain';
+import {
+  chainGeometries,
+  routeLegChain,
+  type RouteLegGeometries,
+} from '../../shared/api/routeLegChain';
 import loadFeatureFromFlexArea from '../plan-trip/util/loadFeatureFromFlexArea';
 import {
   routedBookingPreview,
@@ -38,6 +42,7 @@ import PassengerBookingMap from './components/PassengerBookingMap';
 import { useBookPassengerRide } from './hooks/useBookPassengerRide';
 import { userFacingMessage } from '../../shared/error-message/userFacingMessage.tsx';
 import { useAllowedCodespaces } from '../../shared/hooks/useAllowedCodespaces';
+import { STOP_COLORS } from './util/stopColors.tsx';
 
 interface PassengerBookingFormData {
   origin: string;
@@ -56,16 +61,24 @@ function StopMarker({
   icon: Icon,
   color,
   size = 24,
+  cancelled = false,
 }: {
   markerNumber: number | null;
   icon: SvgIconComponent;
   color: 'success' | 'error' | 'primary';
   size?: number;
+  cancelled?: boolean;
 }) {
   if (markerNumber == null) {
-    return <Icon color={color} sx={{ fontSize: size }} />;
+    return <Icon color={cancelled ? 'disabled' : color} sx={{ fontSize: size }} />;
   }
-  const background = color === 'success' ? '#4CAF50' : color === 'error' ? '#f44336' : '#2196F3';
+  const background = cancelled
+    ? STOP_COLORS.cancelled
+    : color === 'success'
+      ? STOP_COLORS.origin
+      : color === 'error'
+        ? STOP_COLORS.destination
+        : STOP_COLORS.intermediate;
   return (
     <Box
       sx={{
@@ -139,7 +152,13 @@ export default function PassengerTripBooking() {
       setTripLegGeometries(null);
       return;
     }
-    const calls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+    const allCalls = trip.estimatedVehicleJourney.estimatedCalls?.estimatedCall ?? [];
+    // The vehicle drives past a cancelled stop, not to it, so it is no part of
+    // the route — the same rule the trip editor follows. The ends anchor the
+    // route whatever their state.
+    const calls = allCalls.filter(
+      (call, index) => index === 0 || index === allCalls.length - 1 || !call.cancellation
+    );
     const coords = calls.map(
       call =>
         loadFeatureFromFlexArea(call.departureStopAssignment?.expectedFlexibleArea)?.geometry
@@ -159,7 +178,7 @@ export default function PassengerTripBooking() {
         // are straight lines timed from their distance, reported separately so
         // the passenger is told rather than shown a silent guess.
         if (cancelled) return;
-        setTripLegGeometries(chain.legGeometries);
+        setTripLegGeometries(chainGeometries(chain));
         setTripEstimatedLegs(chain.estimatedLegs);
       })
       .catch(() => {
@@ -483,6 +502,7 @@ export default function PassengerTripBooking() {
     const isFirst = index === 0;
     const isLast = index === estimatedCalls.length - 1;
     const latestTime = call.latestExpectedArrivalTime;
+    const cancelled = call.cancellation ?? false;
 
     if (currentPickupRef && call.stopPointRef === currentPickupRef) {
       return {
@@ -495,6 +515,7 @@ export default function PassengerTripBooking() {
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Pickup' as const,
         latestTime,
+        cancelled,
       };
     }
     if (currentDropoffRef && call.stopPointRef === currentDropoffRef) {
@@ -508,6 +529,7 @@ export default function PassengerTripBooking() {
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Dropoff' as const,
         latestTime,
+        cancelled,
       };
     }
 
@@ -524,6 +546,7 @@ export default function PassengerTripBooking() {
         time: call.aimedDepartureTime || call.expectedDepartureTime,
         timeType: 'Departure' as const,
         latestTime,
+        cancelled,
       };
     }
     if (isLast) {
@@ -537,6 +560,7 @@ export default function PassengerTripBooking() {
         time: call.aimedArrivalTime || call.expectedArrivalTime,
         timeType: 'Arrival' as const,
         latestTime,
+        cancelled,
       };
     }
     intermediateCounter += 1;
@@ -554,6 +578,7 @@ export default function PassengerTripBooking() {
         call.expectedDepartureTime,
       timeType: 'Stop' as const,
       latestTime,
+      cancelled,
     };
   });
 
@@ -631,10 +656,18 @@ export default function PassengerTripBooking() {
                             markerNumber={stopInfo.markerNumber}
                             icon={stopInfo.icon}
                             color={stopInfo.color}
+                            cancelled={stopInfo.cancelled}
                           />
                           <Box sx={{ flex: 1 }}>
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <Typography variant="body2" fontWeight={500}>
+                            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                              <Typography
+                                variant="body2"
+                                fontWeight={500}
+                                sx={{
+                                  textDecoration: stopInfo.cancelled ? 'line-through' : 'none',
+                                  color: stopInfo.cancelled ? 'text.disabled' : 'text.primary',
+                                }}
+                              >
                                 {stopInfo.name}
                               </Typography>
                               <Chip
@@ -644,9 +677,23 @@ export default function PassengerTripBooking() {
                                 color={stopInfo.color}
                                 sx={{ fontSize: '0.7rem', height: '20px' }}
                               />
+                              {stopInfo.cancelled && (
+                                <Chip
+                                  label="Cancelled"
+                                  size="small"
+                                  color="error"
+                                  sx={{ fontSize: '0.7rem', height: '20px' }}
+                                />
+                              )}
                             </Box>
                             {stopInfo.time && (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  textDecoration: stopInfo.cancelled ? 'line-through' : 'none',
+                                }}
+                              >
                                 {stopInfo.timeType}: {new Date(stopInfo.time).toLocaleString()}
                                 {stopInfo.latestTime && (
                                   <>

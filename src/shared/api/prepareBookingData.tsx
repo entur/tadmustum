@@ -8,7 +8,7 @@ import {
   insertStopsByShortestPath,
 } from '../../features/passenger-booking/util/shortestPath.tsx';
 import loadFeatureFromFlexArea from '../../features/plan-trip/util/loadFeatureFromFlexArea.tsx';
-import { routeLegChain, type RouteLeg } from './routeLegChain.tsx';
+import { chainGeometries, routeLegChain, type RouteLeg } from './routeLegChain.tsx';
 
 // Re-exported for callers that pass the street router into the booking
 // helpers; the type itself lives with routeLegChain.
@@ -294,6 +294,11 @@ function assembleBooking(
     call,
     coord: callCoordinate(call),
   }));
+  // A cancelled stop is not visited, so it takes no part in the ordering (and
+  // none in the routing either — see applyRoutedTimes). It still travels with
+  // the trip: SIRI keeps cancelled calls, and dropping one here would quietly
+  // delete the driver's decision to cancel it.
+  const activeMiddle = existingMiddle.filter(entry => !entry.call.cancellation);
   const pickupEntry: CallEntry = { call: pickupStop, coord: bookingData.pickupCoordinates };
   const dropoffEntry: CallEntry = { call: dropoffStop, coord: bookingData.dropoffCoordinates };
 
@@ -306,19 +311,21 @@ function assembleBooking(
   const canOrderByPath =
     originCoord != null &&
     destinationCoord != null &&
-    existingMiddle.every(entry => entry.coord != null) &&
+    activeMiddle.every(entry => entry.coord != null) &&
     pickupEntry.coord != null &&
     dropoffEntry.coord != null;
 
-  const orderedMiddle: CallEntry[] = canOrderByPath
+  const orderedActiveMiddle: CallEntry[] = canOrderByPath
     ? insertStopsByShortestPath(
         originCoord,
         destinationCoord,
-        existingMiddle.map(entry => ({ item: entry, coord: entry.coord as LngLat })),
+        activeMiddle.map(entry => ({ item: entry, coord: entry.coord as LngLat })),
         { item: pickupEntry, coord: pickupEntry.coord as LngLat },
         { item: dropoffEntry, coord: dropoffEntry.coord as LngLat }
       )
-    : [...existingMiddle, pickupEntry, dropoffEntry];
+    : [...activeMiddle, pickupEntry, dropoffEntry];
+
+  const orderedMiddle = withCancelledRestored(existingMiddle, orderedActiveMiddle);
 
   const orderedEntries: CallEntry[] = [
     { call: firstCall, coord: originCoord },
@@ -348,6 +355,36 @@ function assembleBooking(
 
 // A call paired with its map coordinate (null when it has no resolvable area).
 type CallEntry = { call: EstimatedCall; coord: LngLat | null };
+
+// Puts the cancelled stops back into an ordered middle sequence, each one in
+// the place it held among its neighbours. The ordering above only ever sees the
+// stops the vehicle actually visits, but the trip is written back with every
+// call it arrived with — cancelled ones included, still marked cancelled.
+const withCancelledRestored = (
+  originalMiddle: CallEntry[],
+  orderedActiveMiddle: CallEntry[]
+): CallEntry[] => {
+  const merged: CallEntry[] = [];
+  let next = 0;
+  for (const entry of originalMiddle) {
+    if (entry.call.cancellation) {
+      merged.push(entry);
+      continue;
+    }
+    // Take everything the ordering placed ahead of this stop (this booking's
+    // pickup or dropoff), then the stop itself.
+    while (next < orderedActiveMiddle.length) {
+      const placed = orderedActiveMiddle[next++];
+      merged.push(placed);
+      if (placed === entry) break;
+    }
+  }
+  // Whatever the ordering placed after the last stop the vehicle visits.
+  while (next < orderedActiveMiddle.length) {
+    merged.push(orderedActiveMiddle[next++]);
+  }
+  return merged;
+};
 
 // Index of the first stop whose running occupancy exceeds capacity, plus that
 // count. The index is into the ordered calls, so the UI can map it to the same
@@ -428,6 +465,10 @@ function applyOccupancy(
 // start from; a leg the journey planner will not plan is timed from its
 // straight-line distance instead (see routeLegChain), so one awkward stop never
 // costs the whole booking its schedule.
+//
+// Cancelled stops are driven past, not to: they are left out of the routed
+// sequence and keep the times they already carry, so the schedule reflects the
+// trip that will actually be driven — the same rule the trip editor applies.
 async function applyRoutedTimes(
   orderedCalls: EstimatedCall[],
   coords: LngLat[],
@@ -437,13 +478,25 @@ async function applyRoutedTimes(
 ): Promise<RoutedCalls> {
   if (!originDeparture) return { calls: orderedCalls, legGeometries: null, estimatedLegs: null };
 
-  const { arrivals, legGeometries, estimatedLegs } = await routeLegChain(
-    coords,
+  const lastIndex = orderedCalls.length - 1;
+  // The ends anchor the route whatever their state; only the stops in between
+  // can be skipped for being cancelled.
+  const routedIndices = orderedCalls
+    .map((_, index) => index)
+    .filter(index => index === 0 || index === lastIndex || !orderedCalls[index].cancellation);
+
+  const chain = await routeLegChain(
+    routedIndices.map(index => coords[index]),
     originDeparture,
     routeLeg
   );
+  const { arrivals, estimatedLegs } = chain;
+  // Nothing planned at all means there is no route to draw — the map falls back
+  // to its dashed straight line, exactly as it did before any of it was routed.
+  const drawn = chainGeometries(chain);
+  const legGeometries = drawn === 'failed' ? null : drawn;
+  const arrivalByIndex = new Map(routedIndices.map((index, leg) => [index, arrivals[leg]]));
 
-  const lastIndex = orderedCalls.length - 1;
   const calls = orderedCalls.map((call, index) => {
     if (index === 0) {
       // Origin keeps its planned departure; mirror it onto the expected time.
@@ -453,7 +506,11 @@ async function applyRoutedTimes(
         expectedDepartureTime: originDeparture,
       };
     }
-    const arrival = arrivals[index];
+    const arrival = arrivalByIndex.get(index);
+    if (arrival == null) {
+      // A cancelled stop: nothing is driven to it, so it keeps its own times.
+      return call;
+    }
     const updated: EstimatedCall = {
       ...call,
       aimedArrivalTime: arrival,

@@ -346,6 +346,102 @@ describe('prepareBookingData', () => {
     expect(calls[4].latestExpectedArrivalTime).toBe('2026-06-01T09:50:00.000Z'); // Dropoff
   });
 
+  it('keeps a cancelled stop in the trip but out of the route', async () => {
+    // Inter A is cancelled: the vehicle drives past it, so it must not be
+    // routed to, must not move the other stops' times, and must still come back
+    // in the payload — cancelling a stop is the driver's decision, not ours to
+    // drop.
+    const trip = tripWithIntermediates();
+    trip.estimatedVehicleJourney.estimatedCalls.estimatedCall[1] = {
+      ...trip.estimatedVehicleJourney.estimatedCalls.estimatedCall[1],
+      cancellation: true,
+      aimedArrivalTime: '2026-06-01T10:00:00.000Z',
+      expectedArrivalTime: '2026-06-01T10:00:00.000Z',
+    };
+    const routedLegs: [number, number][][] = [];
+    const tenMinPerLeg: RouteLeg = async (from, to, dateTime) => {
+      routedLegs.push([from as [number, number], to as [number, number]]);
+      return {
+        expectedStartTime: dateTime,
+        expectedEndTime: dayjs(dateTime).add(10, 'minute').toISOString(),
+        duration: 600,
+        distance: 1000,
+      };
+    };
+
+    const result = await prepareBookingData(
+      trip,
+      baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] }),
+      tenMinPerLeg
+    );
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
+    const cancelledCall = calls.find(call => call.stopPointName === 'Inter A');
+    expect(cancelledCall?.cancellation).toBe(true);
+    // Still between the origin and Inter B, where the driver left it.
+    expect(calls.map(call => call.stopPointName.replace(/ \(.*/, ''))).toEqual([
+      'Origin',
+      'Inter A',
+      'Passenger Pickup',
+      'Inter B',
+      'Passenger Dropoff',
+      'Destination',
+    ]);
+    // Its own times are untouched — nothing was routed to it.
+    expect(cancelledCall?.expectedArrivalTime).toBe('2026-06-01T10:00:00.000Z');
+    // Nor through it: no leg starts or ends at 10.2.
+    expect(routedLegs.flat().some(([lng]) => lng === 10.2)).toBe(false);
+    // The stops that are served are timed as if it were not there: origin
+    // 09:00 -> pickup 09:10 -> Inter B 09:20 -> dropoff 09:30 -> destination 09:40.
+    const timeOf = (name: string) => {
+      const call = calls.find(c => c.stopPointName.startsWith(name));
+      return call?.expectedArrivalTime ?? call?.expectedDepartureTime;
+    };
+    expect(timeOf('Passenger Pickup')).toBe('2026-06-01T09:10:00.000Z');
+    expect(timeOf('Inter B')).toBe('2026-06-01T09:20:00.000Z');
+    expect(timeOf('Destination')).toBe('2026-06-01T09:40:00.000Z');
+  });
+
+  it('ignores a cancelled stop when choosing where the pickup goes', async () => {
+    // Inter B (10.6) is cancelled, so the shortest path is measured over the
+    // stops that are actually visited: origin(10.0) -> Inter A(10.2) ->
+    // pickup(10.3) -> dropoff(10.7) -> destination(11.0). The pickup is no
+    // longer pushed in front of a stop nobody stops at.
+    const trip = tripWithIntermediates();
+    trip.estimatedVehicleJourney.estimatedCalls.estimatedCall[2] = {
+      ...trip.estimatedVehicleJourney.estimatedCalls.estimatedCall[2],
+      cancellation: true,
+    };
+
+    const result = await prepareBookingData(
+      trip,
+      baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] })
+    );
+
+    const calls = result.input.estimatedVehicleJourney.estimatedCalls.estimatedCall;
+    const served = calls.filter(call => !call.cancellation);
+    expect(served.map(call => call.stopPointName.replace(/ \(.*/, ''))).toEqual([
+      'Origin',
+      'Inter A',
+      'Passenger Pickup',
+      'Passenger Dropoff',
+      'Destination',
+    ]);
+    // The cancelled stop stays with the neighbour it had — it just no longer
+    // has a say in where anything else goes.
+    expect(calls.map(call => call.stopPointName.replace(/ \(.*/, ''))).toEqual([
+      'Origin',
+      'Inter A',
+      'Inter B',
+      'Passenger Pickup',
+      'Passenger Dropoff',
+      'Destination',
+    ]);
+    expect(calls.find(call => call.stopPointName === 'Inter B')?.cancellation).toBe(true);
+    // Renumbered as one sequence, cancelled stop included.
+    expect(calls.map(call => call.order)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
   it('routes a booking whose pickup lands on an existing stop', async () => {
     // The journey planner returns no trip patterns for a route between two
     // identical points — there is no trip to make — so a pickup placed on top
@@ -546,7 +642,7 @@ describe('prepareBookingData', () => {
       preview!.legGeometries!.forEach(leg => expect(leg).toHaveLength(2));
     });
 
-    it('draws straight segments and counts them when legs cannot be routed', async () => {
+    it('counts the legs it could not route, and draws none of them', async () => {
       const failingRouter: RouteLeg = async () => null;
 
       const preview = await routedBookingPreview(
@@ -556,12 +652,33 @@ describe('prepareBookingData', () => {
       );
 
       expect(preview).not.toBeNull();
-      // Six stops, so five legs — all of them estimated, each drawn as the
-      // straight segment between its stops so the map still shows the shape of
-      // the trip. The count is what the UI warns on.
+      // Six stops, so five legs, none of them planned. The count is what the UI
+      // warns on; the geometry is dropped so the map falls back to its dashed
+      // straight line rather than passing guesses off as a driving route.
       expect(preview!.estimatedLegs).toBe(5);
+      expect(preview!.legGeometries).toBeNull();
+    });
+
+    it('draws the legs it could route and counts the ones it could not', async () => {
+      // Only the leg arriving at Inter B (10.6) is unroutable.
+      const partialRouter: RouteLeg = async (_from, to, dateTime) =>
+        to[0] === 10.6
+          ? null
+          : {
+              expectedStartTime: dateTime,
+              expectedEndTime: dayjs(dateTime).add(10, 'minute').toISOString(),
+              duration: 600,
+              distance: 1000,
+            };
+
+      const preview = await routedBookingPreview(
+        tripWithIntermediates(),
+        baseBooking({ pickupCoordinates: [10.3, 60], dropoffCoordinates: [10.7, 60] }),
+        partialRouter
+      );
+
+      expect(preview!.estimatedLegs).toBe(1);
       expect(preview!.legGeometries).toHaveLength(5);
-      expect(preview!.legGeometries?.every(leg => leg.length === 2)).toBe(true);
     });
   });
 });

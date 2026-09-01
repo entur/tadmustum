@@ -36,7 +36,11 @@ import { humanizeCode } from '../../../shared/error-message/humanizeCode.tsx';
 import type { AppError } from '../../../shared/error-message/AppError.tsx';
 import type { Extrajourney } from '../../../shared/model/Extrajourney.tsx';
 import StopOccupancy from '../../../shared/components/StopOccupancy.tsx';
-import { routeLegChain, type RouteLegGeometries } from '../../../shared/api/routeLegChain.tsx';
+import {
+  chainGeometries,
+  routeLegChain,
+  type RouteLegGeometries,
+} from '../../../shared/api/routeLegChain.tsx';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
 import { loadNearestPlaceName } from '../../../shared/geo/loadNearestPlaceName.tsx';
 import dayjs from 'dayjs';
@@ -363,9 +367,9 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
     routeLegChain(stops, dayjs(departureMs).toISOString(), streetRoute)
       .then(chain => {
         if (cancelled) return;
-        onRouteGeometryChange?.(chain.legGeometries);
         // A chain always comes back; legs the journey planner would not route
         // are straight lines timed from their distance. Say so, but keep them.
+        onRouteGeometryChange?.(chainGeometries(chain));
         setEstimatedLegs(chain.estimatedLegs);
         if (estimateArrivalAutomatically) {
           // Auto mode: always keep the arrival in sync with the route, so it

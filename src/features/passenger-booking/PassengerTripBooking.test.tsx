@@ -144,6 +144,19 @@ const tripWithIntermediate = {
   },
 } as unknown as Extrajourney;
 
+// The same trip, but the driver has cancelled the intermediate stop.
+const tripWithCancelledIntermediate = {
+  ...tripWithIntermediate,
+  estimatedVehicleJourney: {
+    ...tripWithIntermediate.estimatedVehicleJourney,
+    estimatedCalls: {
+      estimatedCall: tripWithIntermediate.estimatedVehicleJourney.estimatedCalls.estimatedCall.map(
+        (call, index) => (index === 1 ? { ...call, cancellation: true } : call)
+      ),
+    },
+  },
+} as unknown as Extrajourney;
+
 const renderAt = (path = '/book-trip/ENT/ENT:ServiceJourney:1') =>
   renderWithRouter(<PassengerTripBooking />, { path, route: '/book-trip/:codespace/:tripId' });
 
@@ -301,6 +314,24 @@ describe('PassengerTripBooking', () => {
     expect(await screen.findByText('Intermediate stop 1')).toBeInTheDocument();
     // The raw place name is not shown for the intermediate stop.
     expect(screen.queryByText('Hønefoss')).not.toBeInTheDocument();
+  });
+
+  it("shows the driver's cancelled stop as cancelled in the route list", async () => {
+    const user = userEvent.setup();
+    queryExtraJourney.mockResolvedValue({
+      data: { extraJourney: tripWithCancelledIntermediate },
+    });
+
+    renderAt();
+    await screen.findByText('Oslo S → Bergen stasjon');
+    await selectPickupAndDropoff(user);
+
+    // The stop is still listed — the passenger can see the driver dropped it —
+    // and is labelled as cancelled rather than looking like a stop that is served.
+    const stopName = await screen.findByText('Intermediate stop 1');
+    expect(stopName).toBeInTheDocument();
+    expect(screen.getByText('Cancelled')).toBeInTheDocument();
+    expect(stopName).toHaveStyle({ 'text-decoration': 'line-through' });
   });
 
   it('warns when the booking exceeds vehicle capacity but still allows booking', async () => {

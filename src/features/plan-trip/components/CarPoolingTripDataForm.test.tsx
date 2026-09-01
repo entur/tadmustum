@@ -283,37 +283,59 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
     expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
   });
 
-  it('warns, but still draws and times the trip, when the planner will not plan a leg', async () => {
-    streetRoute.mockResolvedValue(null);
+  it('warns, but still draws and times the trip, when one leg cannot be planned', async () => {
+    // A trip through an intermediate stop, where only the second leg is one the
+    // journey planner will not plan.
+    streetRoute.mockImplementation(async (from: Position, to: Position, dateTime: string) =>
+      from[0] === 10.9
+        ? null
+        : {
+            expectedStartTime: dateTime,
+            expectedEndTime: '2026-06-01T09:00:00.000Z',
+            duration: 0,
+            distance: 0,
+            geometry: [from, to],
+          }
+    );
     const onRouteGeometryChange = vi.fn();
+
     renderForm({
+      initialState: {
+        ...editingState(),
+        estimateArrivalAutomatically: true,
+        intermediateCalls: [
+          {
+            order: 2,
+            stopPointRef: 'ENT:PickupPoint:1',
+            stopPointName: 'Passenger pickup',
+            destinationDisplay: 'Bergen',
+            cancellation: false,
+            departureStopAssignment: {
+              expectedFlexibleArea: {
+                polygon: { exterior: { posList: '10.9 59.95 10.9 59.95' } },
+              },
+            },
+          },
+        ],
+      },
       mapDepartureFlexibleStop: point(10.7522, 59.9139),
       mapDestinationFlexibleStop: point(5.3221, 60.3913),
       onRouteGeometryChange,
     });
 
-    // The unplanned leg is drawn as the straight segment between the stops
-    // rather than throwing the whole route away.
-    await waitFor(() =>
-      expect(onRouteGeometryChange).toHaveBeenCalledWith([
-        [
-          [10.7522, 59.9139],
-          [5.3221, 60.3913],
-        ],
-      ])
-    );
+    // Two legs come back: the planned one, and the straight segment standing in
+    // for the leg the planner declined — rather than the whole route being lost.
+    await waitFor(() => expect(screen.getByText(/could not plan one leg/i)).toBeInTheDocument());
     expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
-    // And the user is told the times are estimates rather than left guessing.
-    expect(screen.getByText(/could not plan one leg of this trip/i)).toBeInTheDocument();
-    // Oslo to Bergen in a straight line is about 305 km, so the estimate lands
-    // hours after the 08:00 departure — a guess, but an ordered one.
-    const arrival = screen.getByLabelText(/Arrival time \(estimated\)/i) as HTMLInputElement;
-    await waitFor(() =>
-      expect(dayjs(arrival.value).isAfter(dayjs('2026-06-01T08:00:00.000Z'))).toBe(true)
-    );
+    const drawn = onRouteGeometryChange.mock.calls.map(([geometry]) => geometry).at(-1);
+    expect(drawn).toHaveLength(2);
+    expect(drawn[1]).toEqual([
+      [10.9, 59.95],
+      [5.3221, 60.3913],
+    ]);
   });
 
-  it('estimates the whole route when the journey planner is unreachable', async () => {
+  it('still times the trip when the journey planner is unreachable', async () => {
     streetRoute.mockRejectedValue(new Error('journey planner is down'));
     const onRouteGeometryChange = vi.fn();
     renderForm({
@@ -322,10 +344,14 @@ describe('CarPoolingTripDataForm — automatic arrival estimate', () => {
       onRouteGeometryChange,
     });
 
+    // Nothing was planned, so the map shows its dashed straight line as before…
+    await waitFor(() => expect(onRouteGeometryChange).toHaveBeenCalledWith('failed'));
+    // …but the arrival is still estimated from the distance rather than left
+    // empty: Oslo to Bergen is about 305 km, so it lands hours after departure.
+    const arrival = screen.getByLabelText(/Arrival time \(estimated\)/i) as HTMLInputElement;
     await waitFor(() =>
-      expect(screen.getByText(/could not plan one leg of this trip/i)).toBeInTheDocument()
+      expect(dayjs(arrival.value).isAfter(dayjs('2026-06-01T08:00:00.000Z'))).toBe(true)
     );
-    expect(onRouteGeometryChange).not.toHaveBeenCalledWith('failed');
   });
 
   it('clears the route geometry when a stop is missing', () => {
