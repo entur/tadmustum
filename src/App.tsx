@@ -51,7 +51,7 @@ export default function App() {
   const { theme } = useAppTheme(useCustomFeatures);
 
   return (
-    <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+    <BrowserRouter>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <SearchProvider>
           <ThemeProvider theme={theme}>
