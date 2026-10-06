@@ -22,8 +22,7 @@ import type { Feature, Point, LineString } from 'geojson';
 import type { RouteLegGeometries } from '../api/routeLegChain.tsx';
 import RouteLineLayers from './RouteLineLayers.tsx';
 import { MAPBOXDRAW_DEFAULT_CONSTRUCTOR } from '../util/MAPBOXDRAW_DEFAULT_CONSTRUCTOR.tsx';
-import type { IControl } from 'maplibre-gl';
-import maplibregl from 'maplibre-gl';
+import { LngLatBounds, type IControl } from 'maplibre-gl';
 import { Box } from '@mui/material';
 
 export type EditableMapCallbacks = {
@@ -50,6 +49,11 @@ export type EditableMapHandle = {
   removeAllFeatures: () => void;
   zoomToFeature: (id: string) => void;
   zoomToAllFeatures: () => void;
+};
+
+// MapboxDraw fires its own draw.* events, which maplibre-gl's event typings do not include.
+type DrawEventTarget = {
+  on<E>(type: `draw.${string}`, listener: (e: E) => void): void;
 };
 
 export interface MapMode {
@@ -115,9 +119,10 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
 
     const mapBoxDrawDefaultOnAdd = useCallback(
       (map: MapRef | null): void => {
-        map?.on('draw.create', onMapboxDrawCreate);
-        map?.on('draw.delete', onMapboxDrawDelete);
-        map?.on('draw.modechange', onMapboxDrawModeChange);
+        const drawEvents = map as DrawEventTarget | null;
+        drawEvents?.on('draw.create', onMapboxDrawCreate);
+        drawEvents?.on('draw.delete', onMapboxDrawDelete);
+        drawEvents?.on('draw.modechange', onMapboxDrawModeChange);
       },
       [onMapboxDrawDelete, onMapboxDrawCreate, onMapboxDrawModeChange]
     );
@@ -244,7 +249,7 @@ const EditableMap = forwardRef<EditableMapHandle, EditableMapProps>(
         if (allCoords.length === 0) return;
 
         const firstCoord = allCoords[0];
-        const bounds = new maplibregl.LngLatBounds(firstCoord, firstCoord);
+        const bounds = new LngLatBounds(firstCoord, firstCoord);
 
         // Extend bounds to include all coordinates
         allCoords.forEach(coord => bounds.extend(coord));

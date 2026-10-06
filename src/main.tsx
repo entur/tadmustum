@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
+import './shared/util/maplibreWorker.ts';
 import { fetchConfig } from './shared/config/fetchConfig.ts';
 import { ConfigContext } from './contexts/ConfigContext.tsx';
 import { AuthProvider } from './shared/auth';
