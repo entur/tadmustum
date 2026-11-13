@@ -22,6 +22,7 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
 import mapToFormData from '../util/mapToFormData.tsx';
+import createBookingUrl from '../util/createBookingUrl.tsx';
 import { userFacingMessage } from '../../../shared/error-message/userFacingMessage.tsx';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
@@ -200,7 +201,7 @@ const CarPoolingTripData = forwardRef<CarPoolingTripDataHandle, CarPoolingTripDa
                 state.id = undefined;
                 state.estimatedVehicleJourneyCode = code;
                 state.lineRef = `${state.dataSource}:CarPooling:${uuidv4()}`;
-                state.contactUrl = `${window.location.origin}/book-trip/${state.dataSource}/${code}`;
+                state.contactUrl = createBookingUrl(state.dataSource, code);
               }
               setInitialState(state);
               setTripData(journey);

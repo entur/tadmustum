@@ -103,7 +103,9 @@ describe('CarPoolingTripDataForm — booking URL tracks the selected data source
     // New trips default to the ENT codespace, so the booking URL is an ENT URL whose
     // embedded code is an ENT:ServiceJourney code.
     await waitFor(() =>
-      expect(bookingUrl().value).toMatch(/\/book-trip\/ENT\/ENT:ServiceJourney:/)
+      expect(bookingUrl().value).toMatch(
+        /\/book-trip\/ENT\/ENT:ServiceJourney:[^?]+\?from_coordinate=\{from\}&to_coordinate=\{to\}$/
+      )
     );
 
     // Switch to the ATB codespace.

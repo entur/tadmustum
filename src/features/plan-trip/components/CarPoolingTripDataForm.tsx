@@ -42,6 +42,7 @@ import {
   type RouteLegGeometries,
 } from '../../../shared/api/routeLegChain.tsx';
 import loadFeatureFromFlexArea from '../util/loadFeatureFromFlexArea.tsx';
+import createBookingUrl from '../util/createBookingUrl.tsx';
 import { loadNearestPlaceName } from '../../../shared/geo/loadNearestPlaceName.tsx';
 import dayjs from 'dayjs';
 
@@ -183,7 +184,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
         code = `${dataSource}:ServiceJourney:${uuidv4()}`;
         setValue('estimatedVehicleJourneyCode', code);
       }
-      setValue('contactUrl', `${window.location.origin}/book-trip/${dataSource}/${code}`);
+      setValue('contactUrl', createBookingUrl(dataSource, code));
     }
 
     if (mapDepartureFlexibleStop) {
@@ -702,10 +703,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                     const newCodespace = String(event.target.value);
                     const newCode = `${newCodespace}:ServiceJourney:${uuidv4()}`;
                     setValue('estimatedVehicleJourneyCode', newCode);
-                    setValue(
-                      'contactUrl',
-                      `${window.location.origin}/book-trip/${newCodespace}/${newCode}`
-                    );
+                    setValue('contactUrl', createBookingUrl(newCodespace, newCode));
                   }}
                 >
                   <MenuItem value="" disabled>
