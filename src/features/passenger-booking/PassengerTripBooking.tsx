@@ -209,9 +209,9 @@ export default function PassengerTripBooking() {
   };
 
   // Update URL parameters when coordinates change. Parameter names and value
-  // format (`lat,lng` with 6-decimal precision) match what OpenTripPlanner's
-  // carpooling module appends to the booking URL so the same link round-trips
-  // between OTP-generated and app-shared URLs.
+  // format (`lat,lng` with 6-decimal precision) match the booking URL OpenTripPlanner
+  // expands from createBookingUrl's template, so the same link round-trips between
+  // OTP-generated and app-shared URLs.
   const formatCoordinate = (coords: [number, number]) =>
     `${coords[1].toFixed(6)},${coords[0].toFixed(6)}`;
 
