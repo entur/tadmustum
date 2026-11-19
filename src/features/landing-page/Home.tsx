@@ -22,7 +22,7 @@ export default function Home() {
           <CarpoolIcon sx={{ fontSize: 60 }} />
         </Avatar>
 
-        <Typography variant="h3" component="h1" fontWeight={700}>
+        <Typography variant="h3" component="h1" sx={{ fontWeight: 700 }}>
           Welcome to Entur's Carpooling Editor
         </Typography>
 

@@ -22,7 +22,7 @@ export default function StopOccupancy({ onboardCount, totalCapacity }: StopOccup
 
   return (
     <Tooltip title="Passengers on board / total capacity as the vehicle departs this stop">
-      <Box display="flex" alignItems="center" gap={0.5} sx={{ color }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color }}>
         <People sx={{ fontSize: 16 }} />
         <Typography
           variant="caption"

@@ -466,7 +466,7 @@ export default function PassengerTripBooking() {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <Typography>Loading trip details...</Typography>
       </Box>
     );
@@ -474,7 +474,7 @@ export default function PassengerTripBooking() {
 
   if (error || !trip) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <Alert severity="error">{error || 'Trip not found'}</Alert>
       </Box>
     );
@@ -608,7 +608,7 @@ export default function PassengerTripBooking() {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Stack spacing={2}>
-                <Box display="flex" alignItems="center" gap={1}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <DirectionsCar color="primary" />
                   <Typography variant="h6">
                     {estimatedCalls[0]?.stopPointName} →{' '}
@@ -620,13 +620,20 @@ export default function PassengerTripBooking() {
 
                 {/* Route Information - All Stops */}
                 <Box>
-                  <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Typography variant="subtitle2" color="primary">
                       Trip Route ({estimatedCalls.length} stops)
                       {isPreview && ' — preview with your stops'}
                     </Typography>
                     {routePending && (
-                      <Box display="flex" alignItems="center" gap={0.5} color="text.secondary">
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          color: 'text.secondary',
+                        }}
+                      >
                         <CircularProgress size={14} aria-label="Updating route" />
                         <Typography variant="caption">updating route…</Typography>
                       </Box>
@@ -656,7 +663,10 @@ export default function PassengerTripBooking() {
                       const stopInfo = stopDisplays[index];
 
                       return (
-                        <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
+                        <Box
+                          key={call.order || index}
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        >
                           <StopMarker
                             markerNumber={stopInfo.markerNumber}
                             icon={stopInfo.icon}
@@ -664,11 +674,18 @@ export default function PassengerTripBooking() {
                             cancelled={stopInfo.cancelled}
                           />
                           <Box sx={{ flex: 1 }}>
-                            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                flexWrap: 'wrap',
+                              }}
+                            >
                               <Typography
                                 variant="body2"
-                                fontWeight={500}
                                 sx={{
+                                  fontWeight: 500,
                                   textDecoration: stopInfo.cancelled ? 'line-through' : 'none',
                                   color: stopInfo.cancelled ? 'text.disabled' : 'text.primary',
                                 }}
@@ -804,7 +821,7 @@ export default function PassengerTripBooking() {
                   </Alert>
                 )}
 
-                <Box display="flex" gap={2} flexWrap="wrap">
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   <Button
                     variant="contained"
                     onClick={handleBookRide}

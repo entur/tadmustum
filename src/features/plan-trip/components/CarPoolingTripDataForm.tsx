@@ -486,7 +486,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           {error?.code ? `${humanizeCode(error.code)}: ${error.message}` : error?.message}
         </Alert>
       </Snackbar>
-      <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Typography
           variant="h5"
           component="h1"
@@ -594,7 +594,10 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
               };
 
               return (
-                <Box key={call.order || index} display="flex" alignItems="center" gap={2}>
+                <Box
+                  key={call.order || index}
+                  sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                >
                   <Box
                     sx={{
                       width: 24,
@@ -615,11 +618,11 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
                     {index + 1}
                   </Box>
                   <Box sx={{ flex: 1 }}>
-                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       <Typography
                         variant="body2"
-                        fontWeight={500}
                         sx={{
+                          fontWeight: 500,
                           textDecoration: cancelled ? 'line-through' : 'none',
                           color: cancelled ? 'text.disabled' : 'text.primary',
                         }}
@@ -775,7 +778,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
           );
         }}
       />
-      <Box display="flex" gap={1} flexWrap="wrap">
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button
           variant="contained"
           disabled={!!departureFlexibleStop || !drawingStopsAllowed}
@@ -865,7 +868,7 @@ export default function CarPoolingTripDataForm(props: CarPoolingTripDataFormProp
             (estimateArrivalAutomatically ? ', so the arrival time is a rough estimate.' : '.')}
         </Alert>
       )}
-      <Box display="flex" gap={1} flexWrap="wrap">
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button
           variant="contained"
           disabled={!!destinationFlexibleStop || !drawingStopsAllowed}
