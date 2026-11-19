@@ -12,7 +12,7 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           # Pinned: Node 22.23.0 / 24.17.0 carry nodejs/node#63989, a keep-alive
