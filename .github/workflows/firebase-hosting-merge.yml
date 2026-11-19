@@ -50,7 +50,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
-    uses: entur/gha-firebase/.github/workflows/firebase-hosting-deploy.yml@v1.2.7
+    uses: entur/gha-firebase/.github/workflows/firebase-hosting-deploy.yml@v1.3.0
     with:
       gcp_project_id: ent-tadmustum-dev
       environment: dev
@@ -83,7 +83,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
-    uses: entur/gha-firebase/.github/workflows/firebase-hosting-deploy.yml@v1.2.7
+    uses: entur/gha-firebase/.github/workflows/firebase-hosting-deploy.yml@v1.3.0
     with:
       gcp_project_id: ent-tadmustum-tst
       environment: tst
@@ -116,7 +116,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
-    uses: entur/gha-firebase/.github/workflows/firebase-hosting-deploy.yml@v1.2.7
+    uses: entur/gha-firebase/.github/workflows/firebase-hosting-deploy.yml@v1.3.0
     with:
       gcp_project_id: ent-tadmustum-prd
       environment: prd
