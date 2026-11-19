@@ -19,7 +19,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Archive build
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: dist
           path: dist
@@ -39,7 +39,7 @@ jobs:
       - name: Copy theme config
         run: cp .github/environments/theme-dev.json dist/theme-dev.json
       - name: Archive dev build
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: dist-dev
           path: dist
@@ -72,7 +72,7 @@ jobs:
       - name: Copy theme config
         run: cp .github/environments/theme-tst.json dist/theme-tst.json
       - name: Archive tst build
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: dist-tst
           path: dist
@@ -105,7 +105,7 @@ jobs:
       - name: Copy theme config
         run: cp .github/environments/theme-prd.json dist/theme-prd.json
       - name: Archive prd build
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: dist-prd
           path: dist
