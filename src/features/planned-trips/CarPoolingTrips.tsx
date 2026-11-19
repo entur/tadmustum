@@ -345,7 +345,7 @@ export default function CarPoolingTrips() {
       },
       renderCell: params => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Typography variant="body2" fontWeight="bold">
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
             {params.value}
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -434,10 +434,7 @@ export default function CarPoolingTrips() {
       <Stack
         direction="row"
         spacing={2}
-        alignItems="center"
-        justifyContent="center"
-        flexWrap="wrap"
-        sx={{ mb: 1 }}
+        sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', mb: 1 }}
       >
         <FormControlLabel
           control={

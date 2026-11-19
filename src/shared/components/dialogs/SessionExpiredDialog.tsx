@@ -22,7 +22,6 @@ export default function SessionExpiredDialog() {
   return (
     <Dialog
       open={isSessionExpired}
-      disableEscapeKeyDown
       slotProps={{
         backdrop: { style: { pointerEvents: 'none' } },
       }}
