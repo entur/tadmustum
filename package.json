@@ -33,7 +33,7 @@
     "@apollo/client": "^3.13.8",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@hookform/resolvers": "^5.0.1",
+    "@hookform/resolvers": "^7.0.7",
     "@mapbox/mapbox-gl-draw": "^1.4.3",
     "@mui/icons-material": "^9.5.0",
     "@mui/material": "^9.5.0",
